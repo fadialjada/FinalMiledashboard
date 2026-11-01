@@ -2500,6 +2500,63 @@
             return `${header}${header && String(note || '').trim() ? ': ' : ''}${String(note || '').trim()}` + (driverCallSegmentInfo(call) ? '\n'+driverCallIssueLines(call).map(([label,value])=>label+': '+value).join('\n') : '');
         };
 
+        const moveMetricsRows = (rows, index, direction) => {
+            if (!Array.isArray(rows) || !Number.isInteger(index) || ![-1, 1].includes(direction)
+                || index < 0 || index >= rows.length || index + direction < 0 || index + direction >= rows.length) return rows;
+            const next = [...rows];
+            [next[index], next[index + direction]] = [next[index + direction], next[index]];
+            return next;
+        };
+        const moveMetricsEditingIndex = (editingIndex, index, direction) => editingIndex === index
+            ? index + direction : editingIndex === index + direction ? index : editingIndex;
+        const editMetricsRow = (data, tab, index, field, value) => {
+            const numbers = tab === 'feedback' ? { score: 10 } : { surveyCnt: Infinity, surveyAvg: 10, onTime: 100, completion: 100, exchange: 100 };
+            const fields = tab === 'feedback' ? ['date', 'firstName', 'lastName', 'type', 'score', 'orderNum', 'comment']
+                : ['firstName', 'lastName', 'surveyCnt', 'surveyAvg', 'onTime', 'completion', 'exchange'];
+            const rows = data.metricsTracker?.[tab];
+            if (!['wtd', 'mtd', 'feedback'].includes(tab) || !fields.includes(field) || !rows?.[index]) return data;
+            let nextValue = String(value ?? '');
+            if (field in numbers) {
+                const number = Number(value);
+                nextValue = Math.min(numbers[field], Math.max(0, Number.isFinite(number) ? number : 0));
+                if (field === 'surveyCnt') nextValue = Math.trunc(nextValue);
+            }
+            return { ...data, metricsTracker: { ...data.metricsTracker,
+                [tab]: rows.map((row, i) => i === index ? { ...row, [field]: nextValue } : row) } };
+        };
+        const mergeMetricsRowOrder = (before = [], local = [], merged = []) => {
+            if (![before, local, merged].every(rows => Array.isArray(rows) && rows.every(row => row?.id != null))) return merged;
+            const ids = rows => rows.map(row => String(row.id));
+            const baseIds = ids(before), localIds = ids(local);
+            const baseSet = new Set(baseIds), localSet = new Set(localIds);
+            const commonBefore = baseIds.filter(id => localSet.has(id));
+            const commonLocal = localIds.filter(id => baseSet.has(id));
+            if (JSON.stringify(commonBefore) === JSON.stringify(commonLocal)) return merged;
+            const saved = new Map(merged.map(row => [String(row.id), row]));
+            const result = localIds.filter(id => saved.has(id)).map(id => saved.get(id));
+            merged.forEach((row, index) => {
+                if (localSet.has(String(row.id))) return;
+                const nextKnown = merged.slice(index + 1).find(next => localSet.has(String(next.id)));
+                const position = nextKnown ? result.findIndex(next => String(next.id) === String(nextKnown.id)) : -1;
+                result.splice(position < 0 ? result.length : position, 0, row);
+            });
+            return result;
+        };
+        const mergeMetricsTrackerOrder = (before, local, merged) => {
+            if (!merged) return merged;
+            const next = { ...merged };
+            ['wtd', 'mtd', 'feedback'].forEach(tab => {
+                if (Array.isArray(merged[tab])) next[tab] = mergeMetricsRowOrder(before?.[tab], local?.[tab], merged[tab]);
+            });
+            return next;
+        };
+        const MetricsRowControls = ({ tab, index, count, editing, onMove, onEdit }) => <>
+            <button type="button" aria-label={`Move ${tab.toUpperCase()} row ${index + 1} up`} disabled={index === 0} onClick={() => onMove(-1)} className="p-1.5 text-slate-400 hover:text-indigo-300 disabled:opacity-25 disabled:cursor-default rounded-md transition-colors"><ArrowUp className="w-4 h-4" /></button>
+            <button type="button" aria-label={`Move ${tab.toUpperCase()} row ${index + 1} down`} disabled={index === count - 1} onClick={() => onMove(1)} className="p-1.5 text-slate-400 hover:text-indigo-300 disabled:opacity-25 disabled:cursor-default rounded-md transition-colors"><ArrowUp className="w-4 h-4 rotate-180" /></button>
+            <button type="button" aria-label={`${editing ? 'Finish editing' : 'Edit'} ${tab.toUpperCase()} row ${index + 1}`} onClick={onEdit} className={`p-1.5 rounded-md transition-colors ${editing ? 'text-emerald-300 bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-300'}`}>{editing ? <Check className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}</button>
+        </>;
+
+
         const normalizeMetricsNameData = (value) => {
             const next = JSON.parse(JSON.stringify(value || {}));
             if (!next.metricsTracker) return next;
@@ -2704,6 +2761,59 @@
                 };
             };
 
+            const uniformRouteState = (rows = []) => rows.map((row, index) => ({
+                id: String(row?.id ?? `row-${index}`),
+                uniform: Boolean(row?.uniform),
+                note: String(row?.uniformNote || '').trim()
+            })).sort((a, b) => a.id.localeCompare(b.id));
+
+            const markUniformAuditChanges = (before = [], after = []) => {
+                const previous = new Map(before.map((row, index) => [String(row?.id ?? `row-${index}`), row]));
+                return after.map((row, index) => {
+                    if (!row) return row;
+                    const old = previous.get(String(row.id ?? `row-${index}`));
+                    const changed = old && (Boolean(old.uniform) !== Boolean(row.uniform)
+                        || String(old.uniformNote || '').trim() !== String(row.uniformNote || '').trim());
+                    return changed || old?.uniformAuditRecorded === true
+                        ? { ...row, uniformAuditRecorded: true } : row;
+                });
+            };
+
+            const getUniformCountState = (inputData) => {
+                const d = inputData || DEFAULT_DATA;
+                const auto = getAutoRouteCounts(d);
+                const rows = getCountableRouteRows(d).filter(row => !isSameDayRoute(row));
+                const states = uniformRouteState(rows);
+                const entry = d.loadout?.uniformCountManual;
+                const baseline = Array.isArray(entry?.routeStates) ? entry.routeStates : null;
+                const previous = new Map((baseline || []).map(row => [row.id, row]));
+                const auditChanged = states.some(row => {
+                    const old = previous.get(row.id);
+                    return old && (old.uniform !== row.uniform || old.note !== row.note);
+                });
+                const audited = auditChanged || rows.some(row => row.uniformAuditRecorded === true
+                    || String(row.uniformNote || '').trim());
+                const sameRoutes = baseline && baseline.length === states.length
+                    && states.every(row => previous.has(row.id));
+                const hasManual = !audited && sameRoutes && Number.isInteger(entry?.count) && entry.count >= 0;
+                const total = auto.hasRows ? auto.routes : Math.max(0, Number(d.loadout?.metrics?.[0]?.value) || 0);
+                const count = hasManual ? entry.count : auto.hasRows ? auto.uniformCount : Number(d.loadout?.uniformCount) || 0;
+                return { count: Math.min(total, Math.max(0, count)), fromRoutes: auto.hasRows && !hasManual,
+                    manualEditable: !audited };
+            };
+
+            const withManualUniformCount = (inputData, value) => {
+                const d = JSON.parse(JSON.stringify(inputData || DEFAULT_DATA));
+                if (!getUniformCountState(d).manualEditable) return d;
+                const auto = getAutoRouteCounts(d);
+                const total = auto.hasRows ? auto.routes : Math.max(0, Number(d.loadout?.metrics?.[0]?.value) || 0);
+                const count = Math.min(total, Math.max(0, Number(String(value ?? '').replace(/\D/g, '')) || 0));
+                d.loadout = { ...d.loadout, uniformCount: String(count), uniformCountManual: { count,
+                    routeStates: uniformRouteState(getCountableRouteRows(d).filter(row => !isSameDayRoute(row))) } };
+                return d;
+            };
+
+
             const getNextDayRouteCounts = (inputData) => {
                 const routes = getCountableRouteRows(inputData || { routeTable: [] }).filter(route => !isSameDayRoute(route));
                 const confirmed = routes.filter(route => {
@@ -2713,7 +2823,7 @@
                 return { planned: routes.length, confirmed: confirmed.length };
             };
 
-            const withAutoRouteMetrics = (inputData) => {
+            const withAutoRouteMetrics = (inputData, { syncUniformCount = true } = {}) => {
                 const cloned = JSON.parse(JSON.stringify(inputData || DEFAULT_DATA));
                 if (!cloned.loadout) cloned.loadout = {};
                 if (!Array.isArray(cloned.loadout.metrics)) cloned.loadout.metrics = [{ label:"Total Routes", value:"0" }, { label:"Number of Same Day Routes", value:"0" }];
@@ -2721,7 +2831,7 @@
                 const autoCounts = getAutoRouteCounts(cloned);
                 cloned.loadout.metrics[0] = { ...(cloned.loadout.metrics[0] || {}), label:"Total Routes", value: String(autoCounts.routes) };
                 cloned.loadout.metrics[1] = { ...(cloned.loadout.metrics[1] || {}), label:"Number of Same Day Routes", value: String(autoCounts.sameDayRoutes) };
-                if (autoCounts.hasRows) cloned.loadout.uniformCount = String(autoCounts.uniformCount);
+                if (syncUniformCount && autoCounts.hasRows) cloned.loadout.uniformCount = String(getUniformCountState(cloned).count);
                 return cloned;
             };
 
@@ -3872,6 +3982,14 @@
                     if (identified) {
                         const keyOf = item => String(item.id ?? item.uid);
                         const left = new Map(a.map(item => [keyOf(item), item])), right = new Map(b.map(item => [keyOf(item), item]));
+                        if (/^metricsTracker\.(wtd|mtd|feedback)$/.test(path)) {
+                            const sharedBefore = a.filter(row => right.has(keyOf(row)));
+                            const sharedAfter = b.filter(row => left.has(keyOf(row)));
+                            if (sharedBefore.map(keyOf).join('\0') !== sharedAfter.map(keyOf).join('\0')) {
+                                const names = rows => rows.map(row => [row.firstName, row.lastName].filter(Boolean).join(' ') || keyOf(row)).join(' → ').slice(0, 1200);
+                                changes.push({ field: path + '.rowOrder', before: names(sharedBefore), after: names(sharedAfter) });
+                            }
+                        }
                         [...new Set([...left.keys(), ...right.keys()])].forEach(key => walk(left.get(key), right.get(key), path + '[' + key + ']', depth + 1));
                     } else {
                         for (let index = 0; index < Math.max(a.length, b.length); index++) walk(a[index], b[index], path + '[' + index + ']', depth + 1);
@@ -4565,7 +4683,7 @@
             const selected = choice && saved?.preloadArrival.assignmentId === choice.preloadArrival.assignmentId ? saved : choice;
             // Treat the designation as one shared choice. A live update must not
             // merge different assignments or carry an old team's confirmation forward.
-            return { ...merged, routeTable: (merged.routeTable || []).map(row => {
+            return { ...merged, ...(merged.metricsTracker ? { metricsTracker: mergeMetricsTrackerOrder(baseline?.metricsTracker, local?.metricsTracker, merged.metricsTracker) } : {}), routeTable: (merged.routeTable || []).map(row => {
                 if (!row) return row;
                 const { preloadArrival, ...rest } = row;
                 return selected && String(row.id) === String(selected.id)
@@ -4649,7 +4767,7 @@
                         ...(assignmentChanged ? { status: 'Pending' } : {}),
                         lastUpdatedBy: draft.lastUpdatedBy, lastUpdatedAt: draft.lastUpdatedAt }, { merge: true });
                 }
-                if (owner || accountHasPermission(auth.currentUser, 'routes') || accountHasPermission(auth.currentUser, 'overview')) merged = withAutoRouteMetrics(merged);
+                if (owner || accountHasPermission(auth.currentUser, 'routes') || accountHasPermission(auth.currentUser, 'overview')) merged = withAutoRouteMetrics(merged, { syncUniformCount: owner || accountHasPermission(auth.currentUser, 'overview') });
                 if (!owner && !snapshot.exists()) {
                     for (const [field, key] of [['routeTable','routes'],['metricsTracker','metrics'],['midDay','overview'],['endOfDay','overview']]) {
                         if (!accountHasPermission(auth.currentUser, key)) delete merged[field];
@@ -8772,8 +8890,9 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const applyLocalRouteTableChange = nextRows => {
                 if (!user || !isEditing || activeTab !== 'routes' || routesSubTab !== 'table' || !canEditSection('routes') || isLoading) return;
                 const token = crypto.randomUUID();
-                setLocalRouteAssignmentEdit(previous => createLocalRouteAssignmentEdit(previous, data.routeTable, nextRows, user.uid, activeDate, token));
-                setData(previous => ({ ...previous, routeTable: nextRows }));
+                const auditedRows = markUniformAuditChanges(data.routeTable, nextRows);
+                setLocalRouteAssignmentEdit(previous => createLocalRouteAssignmentEdit(previous, data.routeTable, auditedRows, user.uid, activeDate, token));
+                setData(previous => ({ ...previous, routeTable: auditedRows }));
             };
             const [historyData, setHistoryData] = useState([]);
             const [activeUsers, setActiveUsers] = useState([]);
@@ -8796,6 +8915,32 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const [editBonusName, setEditBonusName] = useState({ firstName: '', lastName: '' });
             const [newBonusDriver, setNewBonusDriver] = useState({ firstName: '', lastName: '' });
             const [editingWtdIdx, setEditingWtdIdx] = useState(null);
+            const [editingMetricsRow, setEditingMetricsRow] = useState(null);
+            useEffect(() => { setEditingMetricsRow(null); }, [metricsSubTab, activeDate, isEditMode, user?.uid]);
+            const isMetricRowEditing = index => isEditing && editingMetricsRow?.tab === metricsSubTab && editingMetricsRow.index === index;
+            const moveMetricRow = (index, direction) => {
+                if (!isEditing || activeTab !== 'metrics' || !canEditSection('metrics')) return;
+                const rows = data.metricsTracker?.[metricsSubTab] || [];
+                if (moveMetricsRows(rows, index, direction) === rows) return;
+                setData(previous => ({ ...previous, metricsTracker: { ...previous.metricsTracker,
+                    [metricsSubTab]: moveMetricsRows(previous.metricsTracker?.[metricsSubTab] || [], index, direction) } }));
+                setEditingMetricsRow(previous => previous?.tab === metricsSubTab
+                    ? { ...previous, index: moveMetricsEditingIndex(previous.index, index, direction) } : previous);
+            };
+            const metricRowField = (row, index, field, label, options = {}) => {
+                const inputClass = 'bg-slate-950 border border-indigo-500/50 rounded px-2 py-1 text-xs text-white outline-none focus:ring-1 focus:ring-indigo-500 ';
+                const change = event => {
+                    if (!isEditing || activeTab !== 'metrics' || !canEditSection('metrics')) return;
+                    const value = event.target.value;
+                    setData(previous => editMetricsRow(previous, metricsSubTab, index, field, value));
+                };
+                const ariaLabel = `${metricsSubTab.toUpperCase()} ${label} row ${index + 1}`;
+                return field === 'comment'
+                    ? <textarea aria-label={ariaLabel} value={row[field] ?? ''} rows={3} onChange={change} className={inputClass + 'w-full min-w-[15rem] resize-y'} />
+                    : <input aria-label={ariaLabel} type={options.numeric ? 'number' : 'text'} min={options.numeric ? 0 : undefined} max={options.max} step={options.numeric ? (field === 'surveyCnt' ? '1' : '0.01') : undefined} value={row[field] ?? ''} onChange={change} className={inputClass + (options.numeric ? 'w-20 text-center' : 'w-full min-w-[6rem]')} />;
+            };
+
+
 
             const [historyDateFrom, setHistoryDateFrom] = useState('');
             const [historyDateTo, setHistoryDateTo] = useState('');
@@ -9908,7 +10053,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 try {
                     let currentUid ="local";
                     if(auth && auth.currentUser) currentUid = auth.currentUser.uid;
-                    const dataToSave = normalizeMetricsNameData(withAutoRouteMetrics(data));
+                    const dataToSave = normalizeMetricsNameData(withAutoRouteMetrics(data, { syncUniformCount: canEditSection('overview') }));
                     const baseline = dailySnapshotRef.current.date === activeDate ? dailySnapshotRef.current.data : dataToSave;
                     let invalidCallNote=null;
                     const callValidationError=validateChangedDriverCalls(dataToSave.shiftNotes,baseline?.shiftNotes,note=>invalidCallNote=note);
@@ -10265,7 +10410,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 const basicCount = Number(d.loadout?.basicDeliveryCount) || 0;
                 const thresholdCount = Number(d.loadout?.thresholdCount) || 0;
                 const whiteGloveCount = Number(d.loadout?.whiteGloveCount) || 0;
-                const uniform = autoRouteCounts.hasRows ? autoRouteCounts.uniformCount : Math.min(Number(d.loadout?.uniformCount) || 0, routes);
+                const uniformState = getUniformCountState(d);
+                const uniform = uniformState.count;
                 const offDock = Math.min(Number(d.loadout?.offDockCount) || 0, routes);
                 const eta = Math.min(Number(d.loadout?.etaCount) || 0, routes);
                 const comp = autoRouteCounts.completedRoutes;
@@ -10297,7 +10443,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
 
                 return { 
                     otd, executionScore, damageRate, offDockPerc, etaPerc, compPerc, uniformPerc,
-                    uniformCount: uniform, uniformFromRoutes: autoRouteCounts.hasRows, 
+                    uniformCount: uniform, uniformFromRoutes: uniformState.fromRoutes, uniformManualEditable: uniformState.manualEditable, 
                     routes, sameDayRoutes, orders, pickups, basicCount, thresholdCount, whiteGloveCount, missedDeliv, earlyViolations, escPerc, podPerc, notHomePerc, claimsPerc, checkedInCount, checkedInPerc, completedRoutesCount: comp 
                 };
             };
@@ -12987,7 +13133,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
 
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                         {[
-                                            { label:"Teams in Uniform", count: String(currentKPI.uniformCount || 0), total: currentKPI.routes, perc: currentKPI.uniformPerc, key: 'uniformCount', section: 'loadout', target: '100%', prev: trends.yesterday.uniformPerc, autoFromRoutes: currentKPI.uniformFromRoutes },
+                                            { label:"Teams in Uniform", count: String(currentKPI.uniformCount || 0), total: currentKPI.routes, perc: currentKPI.uniformPerc, key: 'uniformCount', section: 'loadout', target: '100%', prev: trends.yesterday.uniformPerc, autoFromRoutes: !currentKPI.uniformManualEditable },
                                             { label:"Routes Dispatched by 7 AM", count: String(data.loadout?.offDockCount ||"0"), total: currentKPI.routes, perc: currentKPI.offDockPerc, key: 'offDockCount', section: 'loadout', target: '100%', prev: trends.yesterday.offDockPerc },
                                             { label:"Early Delivery Violation", count: String(data.midDay?.earlyCount ||"0"), total: currentKPI.orders, perc: currentKPI.earlyViolations, key: 'earlyCount', section: 'midDay', isException: true, target: '0', prev: trends.yesterday.earlyViolations, inverse: true }
                                         ].map((item, idx) => {
@@ -13017,7 +13163,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                         <TrendIndicator current={item.perc} previous={item.prev} inverse={item.inverse} isPercent={!item.isException} />
                                                     </div>
                                                     {isEditing && !item.autoFromRoutes ? (
-                                                        <input className="w-full bg-slate-900 text-xl font-bold p-1 rounded focus:ring-1 focus:ring-indigo-500 outline-none border border-slate-600 text-white placeholder-slate-500" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={String(item.count) === '0' ? '' : String(item.count)} onChange={(e) => { const nd = JSON.parse(JSON.stringify(data)); const digits = String(e.target.value).replace(/\D/g, ''); const rawVal = digits === '' ? 0 : Math.max(0, Number(digits) || 0); nd[item.section][item.key] = item.isException ? String(rawVal) : String(Math.min(rawVal, Number(item.total || 0))); setData(nd); }} />
+                                                        <input aria-label={item.label} className="w-full bg-slate-900 text-xl font-bold p-1 rounded focus:ring-1 focus:ring-indigo-500 outline-none border border-slate-600 text-white placeholder-slate-500" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={String(item.count) === '0' ? '' : String(item.count)} onChange={(e) => { if (item.key === 'uniformCount') { setData(withManualUniformCount(data, e.target.value)); return; } const nd = JSON.parse(JSON.stringify(data)); const digits = String(e.target.value).replace(/\D/g, ''); const rawVal = digits === '' ? 0 : Math.max(0, Number(digits) || 0); nd[item.section][item.key] = item.isException ? String(rawVal) : String(Math.min(rawVal, Number(item.total || 0))); setData(nd); }} />
                                                     ) : (
                                                         <div className="w-full bg-slate-900 rounded-full h-1.5">
                                                             <div className={`h-1.5 rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${Number(item.perc || 0)}%` }}></div>
@@ -13539,24 +13685,24 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                             const isGood = row.score >= 9 && row.comment && row.comment.length > 5;
                                                             return (
                                                                 <tr key={row.id || idx} className={`transition-colors group ${isBad ? 'bg-rose-900/10 hover:bg-rose-900/20' : (isGood ? 'bg-emerald-900/10 hover:bg-emerald-900/20' : 'hover:bg-slate-700/30')}`}>
-                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-400 border-b border-slate-700/50">{row.date}</td>
-                                                                    <td className="px-3 py-2 text-xs font-bold text-slate-200 border-b border-slate-700/50">{row.firstName} {row.lastName}</td>
-                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-400 border-b border-slate-700/50">{row.type}</td>
+                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-400 border-b border-slate-700/50">{isMetricRowEditing(idx) ? metricRowField(row, idx, 'date', 'date') : row.date}</td>
+                                                                    <td className="px-3 py-2 text-xs font-bold text-slate-200 border-b border-slate-700/50">{isMetricRowEditing(idx) ? <div className="flex flex-col gap-1">{metricRowField(row, idx, 'firstName', 'first name')}{metricRowField(row, idx, 'lastName', 'last name')}</div> : <>{row.firstName} {row.lastName}</>}</td>
+                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-400 border-b border-slate-700/50">{isMetricRowEditing(idx) ? metricRowField(row, idx, 'type', 'delivery type') : row.type}</td>
                                                                     <td className="px-3 py-2 text-sm font-black text-center border-b border-slate-700/50">
                                                                         <span className={`px-2 py-1 rounded-md ${isBad ? 'bg-rose-900/40 text-rose-400 border border-rose-500/30' : (isGood ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-300 border border-slate-600')}`}>
-                                                                            {row.score?.toFixed(2)}
+                                                                            {isMetricRowEditing(idx) ? metricRowField(row, idx, 'score', 'score', {numeric:true, max:10}) : row.score?.toFixed(2)}
                                                                         </span>
                                                                     </td>
-                                                                    <td className="px-3 py-2 text-xs font-medium text-indigo-300 border-b border-slate-700/50">{row.orderNum}</td>
+                                                                    <td className="px-3 py-2 text-xs font-medium text-indigo-300 border-b border-slate-700/50">{isMetricRowEditing(idx) ? metricRowField(row, idx, 'orderNum', 'order number') : row.orderNum}</td>
                                                                     <td className="px-3 py-2 text-xs font-medium text-slate-300 whitespace-pre-wrap max-w-md leading-relaxed border-b border-slate-700/50">
                                                                         {isBad && <AlertTriangle className="inline w-3 h-3 mr-1 text-rose-500" />}
-                                                                        {row.comment || <span className="text-slate-600 italic">No comments provided.</span>}
+                                                                        {isMetricRowEditing(idx) ? metricRowField(row, idx, 'comment', 'comment') : (row.comment || <span className="text-slate-600 italic">No comments provided.</span>)}
                                                                     </td>
                                                                     {isEditing && (
                                                                         <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center border-b border-slate-700/50">
-                                                                            <button aria-label="Delete feedback row" disabled={!isAdminUser&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { if(!isAdminUser){beginRecentDeletion('metrics','metricsTracker.feedback',data.metricsTracker.feedback.findIndex(item=>item.id===row.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.feedback = nd.metricsTracker.feedback.filter(r => r.id !== row.id); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
+                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} count={data.metricsTracker[metricsSubTab].length} editing={isMetricRowEditing(idx)} onMove={direction => moveMetricRow(idx, direction)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete feedback row" disabled={!isAdminUser&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { setEditingMetricsRow(null); if(!isAdminUser){beginRecentDeletion('metrics','metricsTracker.feedback',data.metricsTracker.feedback.findIndex(item=>item.id===row.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.feedback = nd.metricsTracker.feedback.filter(r => r.id !== row.id); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
-                                                                        </button>
+                                                                        </button></div>
                                                                         </td>
                                                                     )}
                                                                 </tr>
@@ -13595,18 +13741,18 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                         <>
                                                             {data.metricsTracker[metricsSubTab].map((row, idx) => (
                                                                 <tr key={row.id || idx} className="hover:bg-slate-700/30 transition-colors group">
-                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{row.firstName}</td>
-                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{row.lastName}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyCnt', row.surveyCnt, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{row.surveyCnt}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyAvg', row.surveyAvg, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{row.surveyAvg?.toFixed(2)}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('onTime', row.onTime, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{row.onTime?.toFixed(2)}%</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('completion', row.completion, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{row.completion?.toFixed(2)}%</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('exchange', row.exchange, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{row.exchange?.toFixed(2)}%</td>
+                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'firstName', 'first name') : row.firstName}</td>
+                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'lastName', 'last name') : row.lastName}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyCnt', row.surveyCnt, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyCnt', 'survey count', {numeric:true}) : row.surveyCnt}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyAvg', row.surveyAvg, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyAvg', 'survey average', {numeric:true, max:10}) : row.surveyAvg?.toFixed(2)}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('onTime', row.onTime, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'onTime', 'on-time delivery', {numeric:true, max:100}) : `${row.onTime?.toFixed(2)}%`}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('completion', row.completion, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'completion', 'completion', {numeric:true, max:100}) : `${row.completion?.toFixed(2)}%`}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('exchange', row.exchange, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'exchange', 'exchange', {numeric:true, max:100}) : `${row.exchange?.toFixed(2)}%`}</td>
                                                                     {isEditing && (
                                                                         <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>
-                                                                            <button aria-label="Delete metric row" disabled={!isAdminUser&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { if(!isAdminUser){beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,idx);return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker[metricsSubTab] = nd.metricsTracker[metricsSubTab].filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
+                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} count={data.metricsTracker[metricsSubTab].length} editing={isMetricRowEditing(idx)} onMove={direction => moveMetricRow(idx, direction)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete metric row" disabled={!isAdminUser&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { setEditingMetricsRow(null); if(!isAdminUser){beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,idx);return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker[metricsSubTab] = nd.metricsTracker[metricsSubTab].filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
-                                                                            </button>
+                                                                            </button></div>
                                                                         </td>
                                                                     )}
                                                                 </tr>
