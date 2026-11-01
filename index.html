@@ -2284,9 +2284,9 @@
             {id:'truck-breakdown',label:'Truck breakdown',reasons:[{id:'truck-disabled',label:'Truck not operational',cause:'pending'}]},
             {id:'general',label:'General',reasons:[{id:'not-home',label:'Not at home',cause:'routine'},{id:'no-answer',label:'Customer not answering',cause:'routine'},{id:'eta-update',label:'ETA update',cause:'routine'},{id:'instructions',label:'Delivery instructions',cause:'routine'},{id:'incorrect-address',label:'Incorrect address',cause:'routine'},{id:'skip-delivery',label:'Skip delivery',cause:'routine'},{id:'exchange-followup',label:'Exchange / return follow-up',cause:'pending'},{id:'wrong-item',label:'Incorrect item / configuration',cause:'pending'},{id:'general-other',label:'Other',cause:'pending'}]}
         ];
-        const DRIVER_CALL_ACTIONS = ['Pending decision','Exchange requested','Rescue requested','No exchange or rescue'];
+        const DRIVER_CALL_ACTIONS = ['Exchange requested','Rescue requested','No exchange or rescue'];
         const DRIVER_CALL_CAUSES = {driver:'Driver fault','non-driver':'Not a driver fault',product:'Product / hardware-pack issue — not driver fault',customer:'Customer preference — not driver fault',pending:'Responsibility not confirmed',routine:'Routine call'};
-        const defaultDriverCallIssue = () => ({segment:'',reason:'',damageStage:'',action:'Pending decision',guestSolution:'Not yet',needsManagerAttention:false,piecesScheduled:'',piecesDelivered:'',piecesAffected:'',routeStopsTotal:'',routeStopsCompleted:'',routeStopsLate:'',routeMinutesLate:'',routeIssueStatus:'active',routeBreakdownTracking:false,routeTruckStatus:'stopped',routeBreakdownNoticeSent:false,routeWindowTracking:false,routeWindowStop:'',routeNextWindowStart:'',routeNextWindowEnd:'',routeWindowStage:'pending',routeRevisedWindowStart:'',routeRevisedWindowEnd:'',classificationSource:'entered',classificationNeedsReview:false});
+        const defaultDriverCallIssue = () => ({segment:'',reason:'',damageStage:'',action:'',guestSolution:'Not yet',needsManagerAttention:false,piecesScheduled:'',piecesDelivered:'',piecesAffected:'',routeStopsTotal:'',routeStopsCompleted:'',routeStopsLate:'',routeMinutesLate:'',routeIssueStatus:'active',routeBreakdownTracking:false,routeTruckStatus:'stopped',routeBreakdownNoticeSent:false,routeWindowTracking:false,routeWindowStop:'',routeNextWindowStart:'',routeNextWindowEnd:'',routeWindowStage:'pending',routeRevisedWindowStart:'',routeRevisedWindowEnd:'',classificationSource:'entered',classificationNeedsReview:false});
         const driverCallSegmentInfo = call => {
             const segment=DRIVER_CALL_SEGMENTS.find(item=>item.id===call?.segment);
             // Each route issue has one fixed reason; its form has no reason selector.
@@ -2297,13 +2297,14 @@
             const next={...call,...patch};
             if(patch.segment!==undefined && patch.segment!==call.segment) {
                 next.reason=patch.segment==='mislabel'?'label-mismatch':patch.segment==='late-route'?'running-late':patch.segment==='truck-breakdown'?'truck-disabled':'';next.damageStage='';next.needsManagerAttention=false;
-                next.action=patch.segment==='rescue'?'Rescue requested':['refused','exchange'].includes(patch.segment)?'Exchange requested':patch.segment==='general'?'No exchange or rescue':'Pending decision';
+                next.action=patch.segment==='rescue'?'Rescue requested':['refused','exchange'].includes(patch.segment)?'Exchange requested':patch.segment==='general'?'No exchange or rescue':'';
                 if(isRouteStatusCall(next)){next.action='No exchange or rescue';next.routeIssueStatus='active';}
                 if(next.segment==='truck-breakdown'){next.routeBreakdownTracking=true;next.routeTruckStatus='stopped';next.routeBreakdownNoticeSent=false;next.routeWindowTracking=false;next.routeWindowStage='pending';}
                 else {next.routeBreakdownTracking=false;if(next.segment==='late-route'){next.routeWindowTracking=true;next.routeWindowStage='pending';}}
             }
             if(patch.reason!==undefined && next.reason!=='driver-damage')next.damageStage='';
             if(patch.reason==='exchange-followup')next.action='Exchange requested';
+            if(next.segment==='general' && ['incorrect-address','skip-delivery'].includes(patch.reason))next.action='No exchange or rescue';
             if(isRouteStatusCall(next))next.reason=next.segment==='late-route'?'running-late':'truck-disabled';
             next.classificationNeedsReview=false;
             return next;
@@ -2311,7 +2312,7 @@
         const driverCallPiecesRequired = call => ['damage','refused','exchange','rescue','no-fit','mislabel'].includes(call?.segment)
             || ['exchange-followup','wrong-item'].includes(call?.reason)
             || ['Exchange requested','Rescue requested'].includes(call?.action);
-        const validateDriverCallIssue = call => {
+        const validateDriverCallIssue = (call,previousCall=null) => {
             if(!driverCallSegmentInfo(call))return 'Choose a segment and its reason.';
             if(isRouteStatusCall(call)) {
                 if(!String(call.route || '').trim() || !String(call.driver || '').trim() || !String(call.note || '').trim())return 'Enter the route, driver, and call notes for this route issue.';
@@ -2321,6 +2322,8 @@
                 if(call.routeWindowTracking===true)return validateRouteWindowFollowup(call);
                 return '';
             }
+            const retainedLegacyAction=call.action==='Pending decision' && previousCall?.action==='Pending decision';
+            if(!DRIVER_CALL_ACTIONS.includes(call.action) && !retainedLegacyAction)return 'Choose the next action.';
             if(call.reason==='driver-damage' && !['During transportation','Moving into the customer’s home','Not confirmed yet'].includes(call.damageStage))return 'Choose where the damage happened.';
             const counts=['piecesScheduled','piecesDelivered','piecesAffected'].map(key=>String(call[key]??'').trim());
             if(driverCallPiecesRequired(call) && counts.some(value=>value===''))return 'Enter pieces scheduled, pieces delivered, and pieces affected for this issue. Enter 0 when none were delivered or affected.';
@@ -2340,7 +2343,7 @@
                 // a segment, or changing a classified call, still requires validation.
                 if(prior?.driverCall && !prior.driverCall.segment && !prior.driverCall.reason && !note.driverCall.segment && !note.driverCall.reason)continue;
                 if(!note.driverCall.segment && !note.driverCall.reason && note.driverCall.classificationSource!=='entered')continue;
-                const error=validateDriverCallIssue(note.driverCall);
+                const error=validateDriverCallIssue(note.driverCall,prior?.driverCall);
                 if(error){
                     onInvalid?.(note,error);
                     const label=[note.driverCall.route,note.driverCall.driver].map(value=>String(value || '').trim()).filter(Boolean).join(' · ').slice(0,160) || 'Entry '+(index+1);
@@ -2363,7 +2366,8 @@
         const inferHistoricalDriverCallIssue = note => {
             if(!note || note.system || note.preloadHistory || note.category==='Manager Note')return null;
             const existing=driverCallSegmentInfo(note.driverCall);
-            if(existing && !(note.driverCall.classificationSource==='history' && note.driverCall.classificationNeedsReview!==false && note.driverCall.classificationVersion!==3))return null;
+            const refreshHardwareSuggestion=existing && note.driverCall.classificationSource==='history' && note.driverCall.classificationNeedsReview!==false && existing.segment.id==='rescue' && ['missing-hardware','rescue-unknown'].includes(existing.reason.id);
+            if(existing && !refreshHardwareSuggestion && !(note.driverCall.classificationSource==='history' && note.driverCall.classificationNeedsReview!==false && note.driverCall.classificationVersion!==3))return null;
             const text=[note.driverCall?.note || note.text || '',...(note.replies || []).filter(reply=>!reply.system).map(reply=>reply.text || '')].join('\n').toLowerCase().replace(/[’]/g,"'");
             if(!text.trim())return null;
             const has=pattern=>pattern.test(text);
@@ -2379,7 +2383,7 @@
             const wrongHardware=positive(/\bwrong\s+hardware|\bhardware\b[^.!?\n]{0,20}\b(?:wrong|incorrect)\b/);
             if(packIssue){segment='rescue';reason='pack-pieces';}
             else if(wrongHardware){segment='rescue';reason='wrong-pack';}
-            else if(hardwareMissing){segment='rescue';reason=noDriverFault?'rescue-unknown':'missing-hardware';}
+            else if(hardwareMissing){segment='rescue';reason='missing-hardware';}
             else if(positive(/\brescue(?:d)?\b/)) {
                 segment='rescue';
                 reason=positive(/\bconcealed\s+damage|\bdamage\b[^.!?\n]{0,20}\bconcealed\b/)?'concealed'
@@ -2402,6 +2406,10 @@
             else if(positive(/\b(?:exchange|replacement)\b/)){segment='general';reason='exchange-followup';}
             else if(note.noteType==='driver-call' || note.driverCall){segment='general';reason='general-other';}
             else return null;
+            if(refreshHardwareSuggestion){
+                if(segment!=='rescue' || !['missing-hardware','rescue-unknown'].includes(reason) || reason===note.driverCall.reason)return null;
+                return {segment,reason,classificationSource:'history',classificationVersion:3,classificationNeedsReview:true};
+            }
             const action=positive(/\b(?:exchange|replacement)\b/)?'Exchange requested':segment==='rescue' || positive(/\brescue(?:d)?\b/)?'Rescue requested':segment==='general'?'No exchange or rescue':'Pending decision';
             const damageStage=reason==='driver-damage'?(has(/\btransport(?:ation)?\b|\bin\s+transit\b/)?'During transportation':has(/\b(?:moving|carrying)\b[^.!?\n]{0,50}\b(?:home|house|inside)\b/)?'Moving into the customer’s home':'Not confirmed yet'):'';
             return {segment,reason,action,damageStage,classificationSource:'history',classificationVersion:3,classificationNeedsReview:true,needsManagerAttention:false};
@@ -2444,7 +2452,7 @@
                 <div className={'grid grid-cols-1 '+(routeOnly?'md:grid-cols-2':'md:grid-cols-3')+' gap-4'}>
                     <label className="block min-w-0"><span className={labelClass}>{routeOnly?'Issue type':'Segment'}</span><select aria-label={routeOnly?'Route issue type':'Driver call segment'} value={call.segment} onChange={event=>change({segment:event.target.value})} className={fieldClass}><option value="">{routeOnly?'Choose an issue type':'Choose a segment'}</option>{DRIVER_CALL_SEGMENTS.filter(item=>routeOnly?isRouteStatusCall({segment:item.id}):!isRouteStatusCall({segment:item.id})).map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
                     {!routeOnly && <label className="block min-w-0"><span className={labelClass}>Reason</span><select aria-label="Driver call reason" disabled={!segment} value={call.reason} onChange={event=>change({reason:event.target.value})} className={fieldClass+' disabled:opacity-40'}><option value="">Choose a reason</option>{segment?.reasons.some(item=>item.id===call.reason && item.hidden) && <option value={call.reason} disabled>Older entry — choose a current reason to update</option>}{segment?.reasons.filter(item=>!item.hidden && (!item.legacy || item.id===call.reason)).map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
-                    {routeIssue?<label className="block min-w-0"><span className={labelClass}>Route issue status</span><select aria-label="Route issue status" value={call.routeIssueStatus || 'active'} onChange={event=>change({routeIssueStatus:event.target.value})} className={fieldClass}><option value="active">Active</option><option value="resolved">Resolved</option></select></label>:<label className="block min-w-0"><span className={labelClass}>Next action</span><select aria-label="Driver call next action" value={call.action} onChange={event=>change({action:event.target.value})} className={fieldClass}>{DRIVER_CALL_ACTIONS.map(action=><option key={action} value={action}>{action}</option>)}</select></label>}
+                    {routeIssue?<label className="block min-w-0"><span className={labelClass}>Route issue status</span><select aria-label="Route issue status" value={call.routeIssueStatus || 'active'} onChange={event=>change({routeIssueStatus:event.target.value})} className={fieldClass}><option value="active">Active</option><option value="resolved">Resolved</option></select></label>:<label className="block min-w-0"><span className={labelClass}>Next action</span><select aria-label="Driver call next action" required aria-required="true" value={call.action} onChange={event=>change({action:event.target.value})} className={fieldClass}><option value="" disabled>Choose action</option>{call.action==='Pending decision' && <option value="Pending decision" disabled>Pending decision</option>}{DRIVER_CALL_ACTIONS.map(action=><option key={action} value={action}>{action}</option>)}</select></label>}
                     {call.reason==='driver-damage' && <label className="block min-w-0"><span className={labelClass}>Where did damage happen?</span><select aria-label="Where damage happened" value={call.damageStage} onChange={event=>change({damageStage:event.target.value})} className={fieldClass}><option value="">Choose location</option>{call.damageStage==='Not confirmed yet' && <option value="Not confirmed yet" disabled>Older entry — choose a location to update</option>}{['During transportation','Moving into the customer’s home'].map(stage=><option key={stage} value={stage}>{stage}</option>)}</select></label>}
                     {!routeIssue && <label className="block min-w-0"><span className={labelClass}>Guest Solution contacted?</span><select aria-label="Guest Solution contacted" value={call.guestSolution} onChange={event=>change({guestSolution:event.target.value})} className={fieldClass}><option value="Not yet">Not yet</option><option value="Yes">Yes</option><option value="Unknown">Not recorded / unknown</option></select></label>}
                     {routeIssue?['routeStopsTotal','routeStopsCompleted','routeStopsLate','routeMinutesLate'].filter(key=>key!=='routeMinutesLate' || (call.segment==='truck-breakdown' && call.routeBreakdownTracking!==true)).map((key,index)=><label key={key} className="block min-w-0"><span className={labelClass}>{['Total stops','Stops completed','Stops running late','Minutes late to next stop'][index]} <span className="normal-case font-normal">(required)</span></span><input aria-label={['Total stops','Stops completed','Stops running late','Minutes late to next stop'][index]} required aria-required="true" inputMode="numeric" type="number" min={index===0?'1':'0'} max={index===3?'1440':'999'} step="1" value={call[key]} onChange={event=>change({[key]:event.target.value})} className={fieldClass}/></label>):['piecesScheduled','piecesDelivered','piecesAffected'].map((key,index)=><label key={key} className="block min-w-0"><span className={labelClass}>{['Pieces scheduled','Pieces delivered','Pieces affected'][index]} <span className="normal-case font-normal">({piecesRequired?'required':'optional'})</span></span><input aria-label={['Pieces scheduled','Pieces delivered','Pieces affected'][index]} required={piecesRequired} aria-required={piecesRequired} inputMode="numeric" type="number" min="0" max="999" step="1" value={call[key]} onChange={event=>change({[key]:event.target.value})} className={fieldClass}/></label>)}
@@ -2989,6 +2997,168 @@
         };
         const sameSavedValue = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+        const RecentDeletion = (()=>{
+            let policyEnabled=false;
+            const enabled=()=>policyEnabled,setEnabled=value=>{policyEnabled=value===true;};
+            const sections=['routes','metrics','shiftNotes'];
+            const fields={routes:['routeTable'],metrics:['metricsTracker.wtd','metricsTracker.mtd','metricsTracker.feedback'],shiftNotes:['shiftNotes']};
+            const normalize=value=>Object.fromEntries(sections.map(key=>[key,value?.[key]===true]));
+            const today=(now=new Date())=>now.toLocaleDateString('en-CA',{timeZone:'America/Chicago'});
+            const shift=(date,offset)=>{const value=new Date(date+'T12:00:00Z');value.setUTCDate(value.getUTCDate()+offset);return value.toISOString().slice(0,10);};
+            const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T12:00:00Z'))&&new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;
+            const recent=(date,now=new Date())=>validDate(date)&&date>=shift(today(now),-1)&&date<=shift(today(now),1);
+            const getRows=(data,field)=>field==='routeTable'||field==='shiftNotes'?(data?.[field]||[]):(data?.metricsTracker?.[field.split('.')[1]]||[]);
+            const putRows=(data,field,rows)=>{
+                if(field==='routeTable'||field==='shiftNotes')return {...data,[field]:rows};
+                const key=field.split('.')[1],tracker={...data.metricsTracker,[key]:rows};
+                if(key!=='feedback')delete tracker[key+'Totals'];
+                return {...data,metricsTracker:tracker};
+            };
+            const ordinaryOwnNote=(note,uid)=>Boolean(uid&&note?.authorUid===uid&&note.category!=='Manager Note'&&!note.system&&!note.preloadHistory&&!note.preloadReminder&&!note.preloadArrivalConfirmed&&!note.managerNoteAcknowledgement);
+            const canUse=(account,section,profile=accessProfilesCache.get(account?.uid))=>isOwnerAccount(account)||Boolean(account?.uid&&profile?.enabled&&normalize(profile.recentDeletion)[section]&&accountHasPermission(account,section,profile));
+            const approveRole=account=>isUserAdministrator(account);
+            const label=field=>field==='routeTable'?'Routes':field==='shiftNotes'?'Shift Notes':field.endsWith('.wtd')?'WTD Metrics':field.endsWith('.mtd')?'MTD Metrics':'Feedback';
+            const rowLabel=(row,index)=>row.serviceUnit||row.route||row.driverCall?.route||[row.firstName,row.lastName].filter(Boolean).join(' ')||String(row.text||row.note||'').slice(0,90)||'Row '+(index+1);
+            const holdReasons=({date,section,beforeRows,afterRows,usage={},now=new Date()})=>{
+                const reasons=[],dates=Array.from(new Set([...(usage.dates||[]),date]));
+                if(!recent(date,now))reasons.push('Outside yesterday, today, and tomorrow');
+                if(dates.length>2)reasons.push('Deletions across more than two report dates today');
+                if(beforeRows.length&&afterRows.length===0&&(usage.fullClears?.[section]||[]).some(day=>day!==date))reasons.push('Repeated whole-table clears across report dates');
+                return reasons;
+            };
+            const nextUsage=(previous,{uid,date,section,beforeRows,afterRows,operationId,now=new Date()})=>({
+                uid,day:today(now),revision:Number(previous?.revision||0)+1,
+                dates:Array.from(new Set([...(previous?.dates||[]),date])).sort(),
+                fullClears:Object.fromEntries(sections.map(key=>[key,Array.from(new Set([...(previous?.fullClears?.[key]||[]),...(key===section&&beforeRows.length&&afterRows.length===0?[date]:[])])).sort()])),
+                deletedRows:Number(previous?.deletedRows||0)+beforeRows.length-afterRows.length,lastDate:date,lastOperationId:operationId,updatedAt:serverTimestamp()
+            });
+            const select=(data,{section,field,index=null,all=false},uid)=>{
+                if(!sections.includes(section)||!fields[section].includes(field))throw new Error('This deletion section is not available.');
+                const beforeRows=getRows(data,field);
+                if(!Array.isArray(beforeRows)||!beforeRows.length)throw new Error('There are no saved rows to delete.');
+                if(!all&&(!Number.isInteger(index)||index<0||index>=beforeRows.length))throw new Error('That row is no longer available. Refresh first.');
+                const indexes=all?beforeRows.map((_,i)=>i):[index],removed=indexes.map(i=>beforeRows[i]);
+                if(section==='shiftNotes'&&removed.some(note=>!ordinaryOwnNote(note,uid)))throw new Error('You may delete only your own ordinary Shift Notes and Driver Calls.');
+                if(section==='routes'&&removed.some(row=>row.preloadArrival))throw new Error('Remove the linked preload assignment before deleting this route.');
+                const chosen=new Set(indexes),afterRows=beforeRows.filter((_,i)=>!chosen.has(i));
+                return {beforeRows,afterRows,indexes,removed};
+            };
+            const validatePlan=request=>{
+                if(!validDate(request.date)||!sections.includes(request.section)||!fields[request.section].includes(request.field)||!Array.isArray(request.beforeRows)||!Array.isArray(request.afterRows)||!Array.isArray(request.indexes)||!request.indexes.length)throw new Error('The deletion request has invalid targets.');
+                if(new Set(request.indexes).size!==request.indexes.length||request.indexes.some((index,position)=>!Number.isInteger(index)||index<0||index>=request.beforeRows.length||(position>0&&index<=request.indexes[position-1])))throw new Error('The deletion request has invalid row positions.');
+                const removed=new Set(request.indexes);
+                if(!sameSavedValue(request.afterRows,request.beforeRows.filter((_,index)=>!removed.has(index))))throw new Error('A deletion request must preserve every row that is not selected.');
+                if(request.section==='shiftNotes'&&(request.indexes.length!==1||request.indexes.some(index=>!ordinaryOwnNote(request.beforeRows[index],request.requesterUid))))throw new Error('Only one of the requester’s own ordinary notes can be deleted at a time.');
+            };
+            const ref=(kind,id)=>doc(db,'artifacts',appId,'public','data',kind,id);
+            const actor=()=>({uid:auth.currentUser?.uid,name:currentAuditName||getDefaultUserName(auth.currentUser)});
+            const readProfile=async(transaction,uid)=>{const snapshot=await transaction.get(ref('accessProfiles',uid));return snapshot.exists()?snapshot.data():defaultAccessProfile(uid);};
+            const checkEnabled=async transaction=>{const snapshot=await transaction.get(ref('config','recentDeletionPolicy'));if(!snapshot.exists()||snapshot.data().version!==1)throw new Error('Recent deletion controls need their matching database setup before they can be used.');};
+            const checkLock=async(transaction,date,section)=>{
+                if(!ownerControlPolicyEnabled||section==='shiftNotes')return;
+                const snapshot=await transaction.get(ref(section==='routes'?'weekLockDates':'weekLockReports',date));
+                if(snapshot.exists()&&['bonus','billing',...(section==='metrics'?['metrics']:[])].some(key=>snapshot.data()[key]===true))throw new Error('This billing week is locked. Master Admin must unlock it first.');
+            };
+            const planData=(data,request)=>{
+                validatePlan(request);
+                if(!sameSavedValue(getRows(data,request.field),request.beforeRows))throw new Error('The saved rows changed after this request was prepared. Refresh and submit a new request.');
+                if(request.field.startsWith('metricsTracker.')&&!sameSavedValue(data.metricsTracker?.[request.field.split('.')[1]+'Totals']??null,request.beforeTotals??null))throw new Error('The metrics totals changed after this request was prepared. Submit a new request.');
+                let after=putRows(data,request.field,request.afterRows);
+                if(request.section==='routes')after=withAutoRouteMetrics(after);
+                return after;
+            };
+            const writeDeletion=(transaction,{data,request,identity,operationId,requestId='',approved=false,usage=null,now=new Date()})=>{
+                const after=planData(data,request),timestamp=now.toISOString(),removed=request.beforeRows.filter((_,i)=>request.indexes.includes(i));
+                const metadata={operationId,actorUid:identity.uid,date:request.date,dateMillis:Date.parse(request.date+'T00:00:00Z'),section:request.section,field:request.field,requestId,approved,usageDay:today(now)};
+                const updated={...after,lastUpdatedBy:identity.name,lastUpdatedAt:timestamp,recentDeletion:metadata,_auditId:operationId};
+                const totalsKey=request.field.startsWith('metricsTracker.')?request.field.split('.')[1]+'Totals':'';
+                const recovery={recoveryType:'recent-row-deletion',sourceCollection:'dailyRecaps',sourceId:request.date,field:request.field,
+                    payload:{rows:removed,indexes:request.indexes,...(totalsKey&&data.metricsTracker?.[totalsKey]!==undefined?{totalsKey,totals:data.metricsTracker[totalsKey]}:{})},
+                    state:'trash',deletedAt:timestamp,deletedAtServer:serverTimestamp(),expiresAt:new Date(now.getTime()+30*86400000).toISOString(),deletedByUid:identity.uid,deletedBy:identity.name,
+                    requestedByUid:request.requesterUid||identity.uid,requestId,label:label(request.field)+' · '+request.date+' · '+removed.length+' row'+(removed.length===1?'':'s'),operationId};
+                transaction.set(ref('ownerRecovery',operationId),recovery);
+                transaction.set(ref('auditEvents',operationId),{actorUid:identity.uid,actorName:identity.name,timestamp,createdAt:serverTimestamp(),collection:'dailyRecaps',recordId:request.date,
+                    section:label(request.field),operation:approved?'approved-row-delete':'row-delete',summary:(approved?'Approved deletion of ':'Deleted ')+removed.length+' '+label(request.field)+' row'+(removed.length===1?'':'s')+' for '+request.date,
+                    changeCount:removed.length,changes:removed.slice(0,150).map((row,index)=>({field:request.field+'['+String(row.id??request.indexes[index])+']',before:JSON.stringify(row),after:'undefined'})),requestId,requestedByUid:request.requesterUid||identity.uid});
+                transaction.set(ref('dailyRecaps',request.date),updated);
+                if(usage)transaction.set(ref('recentDeletionUsage',identity.uid+'_'+today(now)),usage);
+                return updated;
+            };
+            const remove=async({date,section,field,index=null,all=false,expectedRows})=>{
+                requireTeamAccount();if(!validDate(date))throw new Error('Choose a valid dashboard date.');
+                const identity=actor(),operationId=crypto.randomUUID(),requestId=crypto.randomUUID(),now=new Date();
+                return firebaseRunTransaction(db,async transaction=>{
+                    if(auth.currentUser?.uid!==identity.uid)throw new Error('Your account changed. Reopen the dashboard.');
+                    await checkEnabled(transaction);
+                    const profile=await readProfile(transaction,identity.uid);
+                    if(!canUse(auth.currentUser,section,profile))throw new Error('You do not have recent-delete permission for this section.');
+                    await checkLock(transaction,date,section);
+                    const snapshot=await transaction.get(ref('dailyRecaps',date));if(!snapshot.exists())throw new Error('This day has no saved data.');
+                    const data=snapshot.data();
+                    if(expectedRows&&!sameSavedValue(getRows(data,field),expectedRows))throw new Error('The saved rows changed. Refresh before deleting.');
+                    const selection=select(data,{section,field,index,all},identity.uid);
+                    const usageSnapshot=await transaction.get(ref('recentDeletionUsage',identity.uid+'_'+today(now))),usage=usageSnapshot.exists()?usageSnapshot.data():{};
+                    const request={date,dateMillis:Date.parse(date+'T00:00:00Z'),section,field,beforeRows:selection.beforeRows,afterRows:selection.afterRows,indexes:selection.indexes,requesterUid:identity.uid,requesterName:identity.name,beforeTotals:field.startsWith('metricsTracker.')?data.metricsTracker?.[field.split('.')[1]+'Totals']??null:null};
+                    validatePlan(request);
+                    const reasons=isOwnerAccount(auth.currentUser)?[]:holdReasons({...request,usage,now});
+                    if(reasons.length){
+                        transaction.set(ref('deletionRequests',requestId),{...request,id:requestId,status:'pending',reasons,createdAt:serverTimestamp(),createdAtText:now.toISOString()});
+                        return {status:'pending',requestId,count:selection.removed.length,reasons};
+                    }
+                    const next=isOwnerAccount(auth.currentUser)?null:nextUsage(usage,{...request,uid:identity.uid,operationId,now});
+                    return {status:'deleted',count:selection.removed.length,data:writeDeletion(transaction,{data,request,identity,operationId,usage:next,now})};
+                });
+            };
+            const decide=async(id,decision)=>{
+                requireTeamAccount();if(!['approved','denied'].includes(decision))throw new Error('Choose Approve or Deny.');
+                const identity=actor(),operationId=crypto.randomUUID(),now=new Date();
+                return firebaseRunTransaction(db,async transaction=>{
+                    await checkEnabled(transaction);
+                    const profile=await readProfile(transaction,identity.uid),grant=await transaction.get(ref('userAdministrators',identity.uid)),master=await transaction.get(ref('config','masterLists'));
+                    if(!isOwnerAccount(auth.currentUser)&&!(profile.enabled&&grant.exists()&&grant.data().enabled===true&&master.exists()&&master.data().delegatedAdministrationVersion===1))throw new Error('Only Master Admin or an assigned Admin can decide this request.');
+                    const requestRef=ref('deletionRequests',id),snapshot=await transaction.get(requestRef);
+                    if(!snapshot.exists()||snapshot.data().status!=='pending')throw new Error('This request has already been decided or is unavailable.');
+                    const request=snapshot.data();
+                    validatePlan(request);
+                    if(request.requesterUid===identity.uid)throw new Error('You cannot approve or deny your own request.');
+                    if(decision==='approved'){
+                        await checkLock(transaction,request.date,request.section);
+                        const day=await transaction.get(ref('dailyRecaps',request.date));if(!day.exists())throw new Error('The original day record is unavailable.');
+                        const requesterProfile=await readProfile(transaction,request.requesterUid);
+                        if(!canUse({uid:request.requesterUid},request.section,requesterProfile))throw new Error('The requester no longer has deletion permission.');
+                        if(request.section==='shiftNotes'&&request.indexes.some(index=>!ordinaryOwnNote(request.beforeRows[index],request.requesterUid)))throw new Error('The request contains protected notes.');
+                        if(request.section==='routes'&&request.indexes.some(index=>request.beforeRows[index]?.preloadArrival))throw new Error('Remove the linked preload assignment first.');
+                        writeDeletion(transaction,{data:day.data(),request,identity,operationId,requestId:id,approved:true,now});
+                    }
+                    if(decision==='denied')transaction.set(ref('auditEvents',operationId),{actorUid:identity.uid,actorName:identity.name,timestamp:now.toISOString(),createdAt:serverTimestamp(),collection:'deletionRequests',recordId:id,section:'Deletion requests',operation:'deny-deletion',summary:'Denied deletion request for '+request.date,changeCount:1,changes:[],requestId:id,requestedByUid:request.requesterUid});
+                    transaction.set(requestRef,{...request,status:decision,decidedByUid:identity.uid,decidedBy:identity.name,decidedAt:serverTimestamp(),decidedAtText:now.toISOString(),operationId});
+                    return {status:decision};
+                });
+            };
+            const restore=async id=>{
+                if(!isOwnerAccount(auth.currentUser))throw new Error('Only Master Admin can restore deleted rows.');
+                const identity=actor(),operationId=crypto.randomUUID(),now=new Date();
+                return firebaseRunTransaction(db,async transaction=>{
+                    const recoveryRef=ref('ownerRecovery',id),snapshot=await transaction.get(recoveryRef);
+                    if(!snapshot.exists())throw new Error('This recovery copy is unavailable.');const item=snapshot.data();
+                    const deletedMs=item.deletedAtServer?.toMillis?.()??Date.parse(item.deletedAt);
+                    if(item.recoveryType!=='recent-row-deletion'||item.state!=='trash'||!Number.isFinite(deletedMs)||deletedMs+30*86400000<=now.getTime())throw new Error('This recovery copy is unavailable or its restore period has ended.');
+                    const dayRef=ref('dailyRecaps',item.sourceId),day=await transaction.get(dayRef);if(!day.exists())throw new Error('Restore the day record first.');
+                    const data=day.data(),rows=[...getRows(data,item.field)];
+                    for(const original of item.payload.rows)if(rows.some(row=>original.id!=null?String(row.id)===String(original.id):sameSavedValue(row,original)))throw new Error('A restored row would conflict with an existing row. Nothing was overwritten.');
+                    item.payload.rows.forEach((row,index)=>rows.splice(Math.min(item.payload.indexes[index],rows.length),0,row));
+                    let after=item.field.startsWith('metricsTracker.')?{...data,metricsTracker:{...data.metricsTracker,[item.field.split('.')[1]]:rows}}:{...data,[item.field]:rows};
+                    if(item.payload.totalsKey){if(data.metricsTracker?.[item.payload.totalsKey]!==undefined)throw new Error('Metrics totals changed after deletion. Nothing was overwritten.');after.metricsTracker[item.payload.totalsKey]=item.payload.totals;}
+                    if(item.field==='routeTable')after=withAutoRouteMetrics(after);
+                    transaction.set(dayRef,{...after,lastUpdatedBy:identity.name,lastUpdatedAt:now.toISOString(),_auditId:operationId});
+                    transaction.set(recoveryRef,{...item,state:'restored',restoredAt:now.toISOString(),restoredByUid:identity.uid});
+                    transaction.set(ref('auditEvents',operationId),{actorUid:identity.uid,actorName:identity.name,timestamp:now.toISOString(),createdAt:serverTimestamp(),collection:'dailyRecaps',recordId:item.sourceId,section:label(item.field),operation:'restore',summary:'Restored '+item.payload.rows.length+' deleted rows',changeCount:item.payload.rows.length,changes:[]});
+                });
+            };
+            const enable=async()=>{if(!isOwnerAccount(auth.currentUser))throw new Error('Only Master Admin can enable these controls.');await firebaseSetDoc(ref('config','recentDeletionPolicy'),{version:1,updatedByUid:auth.currentUser.uid,updatedAt:serverTimestamp()});};
+            return {enabled,setEnabled,sections,fields,normalize,today,recent,getRows,putRows,ordinaryOwnNote,canUse,approveRole,label,rowLabel,holdReasons,nextUsage,select,validatePlan,remove,decide,restore,enable,ref};
+        })();
+
         const PERMISSION_OPTIONS = [
             ['overview', 'Overview'], ['routes', 'Routes'], ['metrics', 'Metrics'],
             ['shiftNotes', 'Shift Notes'], ['bonus', 'Bonus'], ['office', 'Office schedules'], ['history', 'History'],
@@ -3004,7 +3174,7 @@
             '79ko6RLyjbhlUClcMcw66lKmNg22': 'Joshua', 'rlSdxiVJCIYO9fPTyzPyIFJJUEm2': 'Travis'
         };
         const defaultAccessProfile = uid => ({ uid, name: DEFAULT_ACCOUNT_NAMES[uid] || '', email: '',
-            enabled: TEAM_UIDS.has(uid), permissions: { ...DEFAULT_STAFF_PERMISSIONS } });
+            enabled: TEAM_UIDS.has(uid), permissions: { ...DEFAULT_STAFF_PERMISSIONS }, recentDeletion:RecentDeletion.normalize(null) });
         const accessProfilesCache = new Map([...TEAM_UIDS].map(uid => [uid, defaultAccessProfile(uid)]));
         let delegatedAdministrationEnabled=false;
         const userAdministratorGrants=new Map();
@@ -3015,7 +3185,7 @@
             if(!isOwnerAccount(account)&&(uid===account.uid||userAdministratorGrants.get(uid)?.enabled===true||accessProfilesCache.get(uid)?.isUserAdmin===true))throw new Error('Only Master Admin can manage Admin accounts.');
             return true;
         };
-        const userDirectoryRecord = (profile,administrator=false) => ({uid:profile.uid,name:String(profile.name||''),email:String(profile.email||''),enabled:profile.enabled===true,permissions:{...profile.permissions},sectionActions:profile.sectionActions||{},dashboardDeleted:profile.dashboardDeleted===true,isUserAdmin:administrator===true});
+        const userDirectoryRecord = (profile,administrator=false) => ({uid:profile.uid,name:String(profile.name||''),email:String(profile.email||''),enabled:profile.enabled===true,permissions:{...profile.permissions},sectionActions:profile.sectionActions||{},...(RecentDeletion.enabled()?{recentDeletion:RecentDeletion.normalize(profile.recentDeletion)}:{}),dashboardDeleted:profile.dashboardDeleted===true,isUserAdmin:administrator===true});
         const prepareUserManagementWrites = async (database,native,business,snapshots,queued) => {
             const profiles=business.filter(item=>item.kind==='accessProfiles'),grants=business.filter(item=>item.kind==='userAdministrators');
             if(!grants.length&&!profiles.length)return [];
@@ -3068,6 +3238,7 @@
             enabled: (auth.currentUser?.uid===uid && isOwnerAccount(auth.currentUser)) || (saved ? saved.enabled === true : TEAM_UIDS.has(uid)),
             email: auth.currentUser?.uid===uid && isOwnerAccount(auth.currentUser) ? auth.currentUser.email : String(saved?.email||MASTER_ADMIN_ACCOUNTS.get(uid)||''),
             name: String(saved?.name || (MASTER_ADMIN_ACCOUNTS.has(uid)?'Master Admin':DEFAULT_ACCOUNT_NAMES[uid]||'')),
+            recentDeletion:RecentDeletion.normalize(saved?.recentDeletion),
             permissions: saved ? Object.fromEntries(PERMISSION_OPTIONS.map(([key]) => [key, saved.sectionActions?.[key] ? saved.sectionActions[key].view===true && ['add','edit','delete'].some(action=>saved.sectionActions[key][action]===true) : saved.permissions?.[key]===true])) : { ...DEFAULT_STAFF_PERMISSIONS },
             sectionActions: normalizeSectionActions(saved?.sectionActions,saved?.permissions||DEFAULT_STAFF_PERMISSIONS) });
         const isRemovedDashboardUser = (account, removed = {}) => !isProtectedMasterAdminProfile(account) && !account.enabled && Boolean(removed?.[account.uid]||account.dashboardDeleted);
@@ -3166,7 +3337,7 @@
             });
         };
         const ownerRestoreRecovery = async record => {
-            ownerRequire();const recoveryRef=ownerRef('ownerRecovery',record.id);
+            ownerRequire();if(record.recoveryType==='recent-row-deletion')return RecentDeletion.restore(record.id);const recoveryRef=ownerRef('ownerRecovery',record.id);
             await runTransaction(db,async t=>{
                 const snap=await t.get(recoveryRef);if(!snap.exists())throw new Error('This recovery item is no longer available.');const item=snap.data();
                 if(!['trash','archive'].includes(item.state)||!ownerRecoveryCollections.includes(item.sourceCollection))throw new Error('This item cannot be restored.');
@@ -4261,6 +4432,7 @@
                 const updatedMaster = { ...master, deletedDashboardUsers:removed,
                     ...(master.chatDirectory?.[uid] ? {chatDirectory:{...master.chatDirectory, [uid]:{name:profile.name, enabled:profile.enabled}}} : {}) };
                 if(!ownerControlPolicyEnabled){delete profile.sectionActions;delete profile.permissions.history;}
+                if(RecentDeletion.enabled())profile.recentDeletion=RecentDeletion.normalize(source.recentDeletion);else delete profile.recentDeletion;
                 transaction.set(accountRef, profile);
                 transaction.set(masterRef, updatedMaster);
                 return { profile, master:updatedMaster };
@@ -8299,10 +8471,57 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             </>;
         };
 
+        const useRecentDeletionInbox=(account,canApprove,profile)=>{
+            const [policy,setPolicy]=useState({ready:false,enabled:false,error:''}),[items,setItems]=useState([]),[busy,setBusy]=useState(''),[error,setError]=useState('');
+            useEffect(()=>{
+                RecentDeletion.setEnabled(false);setPolicy({ready:false,enabled:false,error:''});setItems([]);setError('');if(!account?.uid||!profile?.enabled)return;
+                return onSnapshot(RecentDeletion.ref('config','recentDeletionPolicy'),snapshot=>{const active=snapshot.exists()&&snapshot.data().version===1;RecentDeletion.setEnabled(active);setPolicy({ready:true,enabled:active,error:''});},()=>{RecentDeletion.setEnabled(false);setPolicy({ready:true,enabled:false,error:'The recent-deletion database controls are not available yet.'});});
+            },[account?.uid,profile?.enabled]);
+            useEffect(()=>{
+                setItems([]);if(!account?.uid||!policy.enabled)return;
+                const sources=new Map(),receive=(key,snapshot)=>{const rows=[];snapshot.forEach(item=>rows.push({id:item.id,...item.data()}));sources.set(key,rows);setItems(Array.from(new Map(Array.from(sources.values()).flat().map(item=>[item.id,item])).values()).sort((a,b)=>String(b.createdAtText).localeCompare(String(a.createdAtText))));setError('');};
+                const failed=()=>{sources.clear();setItems([]);setError('Deletion requests could not load. Nothing has been deleted.');};
+                const own=onSnapshot(query(collection(db,'artifacts',appId,'public','data','deletionRequests'),where('requesterUid','==',account.uid),limit(100)),snapshot=>receive('own',snapshot),failed);
+                const pending=canApprove?onSnapshot(query(collection(db,'artifacts',appId,'public','data','deletionRequests'),where('status','==','pending'),limit(100)),snapshot=>receive('pending',snapshot),failed):()=>{};
+                return()=>{own();pending();};
+            },[account?.uid,canApprove,policy.enabled]);
+            const decide=async(item,decision)=>{if(busy)return;setBusy(item.id);setError('');try{await RecentDeletion.decide(item.id,decision);}catch(issue){setError(issue.message);}finally{setBusy('');}};
+            const enable=async()=>{setBusy('enable');setError('');try{await RecentDeletion.enable();}catch(issue){setError('The matching database rules must be installed before these controls can be enabled.');}finally{setBusy('');}};
+            const count=items.filter(item=>item.status==='pending'&&(!canApprove||item.requesterUid!==account?.uid)).length;
+            return {policy,items,busy,error,decide,enable,count};
+        };
+        const RecentDeletionPermissions=({draft,change,inbox,owner})=>{
+            const flags=RecentDeletion.normalize(draft.recentDeletion);
+            return <fieldset disabled={!draft.enabled} className="mt-4 rounded-xl border border-slate-700 p-4 disabled:opacity-50"><legend className="px-1 text-xs font-bold text-slate-200">Recent deletion permissions</legend>
+                <p className="mb-3 text-xs text-slate-400">Allow corrections for yesterday, today, or tomorrow. One day’s Routes or Metrics table may be cleared. Repeated clears across dates wait for Admin or Master Admin approval. Shift Notes are limited to the author’s own ordinary notes.</p>
+                {!inbox.policy.enabled&&<div className="mb-3 text-xs text-amber-200">Matching database controls must be installed and enabled first. {owner&&<button type="button" disabled={!!inbox.busy||!inbox.policy.ready} onClick={inbox.enable} className="ml-2 rounded-lg border border-amber-600/60 px-2 py-1 disabled:opacity-40">Enable recent deletion controls</button>}</div>}
+                <div className="grid gap-2 sm:grid-cols-3">{[['routes','Routes'],['metrics','Metrics'],['shiftNotes','Own Shift Notes']].map(([key,label])=><label key={key} className="flex items-center gap-2 text-xs text-slate-200"><input type="checkbox" aria-label={'Allow recent deletion: '+label} checked={flags[key]} disabled={!inbox.policy.enabled||!draft.enabled||!draft.permissions?.[key]} onChange={event=>change({...draft,recentDeletion:{...flags,[key]:event.target.checked}})} className="h-4 w-4 accent-indigo-400"/>{label}</label>)}</div>
+                <p className="mt-3 text-xs text-slate-400">This does not grant an Admin role, history deletion, or access to other sections.</p>{inbox.error&&<p role="alert" className="mt-2 text-xs text-rose-200">{inbox.error}</p>}
+            </fieldset>;
+        };
+        const RecentDeletionRequests=({inbox,account,canApprove})=><div data-popover-scroll="true" className="max-h-[65dvh] overflow-y-auto p-3 space-y-3">
+            {inbox.error&&<p role="alert" className="text-xs text-rose-200">{inbox.error}</p>}
+            {!inbox.policy.enabled?<p className="text-xs text-slate-400">Recent deletion controls have not been enabled.</p>:!inbox.items.length?<p className="text-xs text-slate-400">No deletion requests.</p>:inbox.items.map(item=><article key={item.id} className="rounded-xl border border-slate-700 p-3 text-xs">
+                <p className="font-bold text-slate-100">{RecentDeletion.label(item.field)} · {item.date}</p><p className="mt-1 text-slate-300">{item.beforeRows.length-item.afterRows.length} rows · Requested by {item.requesterName}</p>
+                <p className={'mt-1 font-semibold '+(item.status==='pending'?'text-amber-200':item.status==='approved'?'text-emerald-300':'text-rose-300')}>{item.status==='pending'?'Pending — nothing deleted':item.status==='approved'?'Approved and deleted':'Denied — nothing deleted'}</p>
+                {item.reasons?.length>0&&<p className="mt-2 text-slate-400">{item.reasons.join(' · ')}</p>}
+                <details className="mt-2"><summary className="cursor-pointer text-indigo-200">Review the exact rows</summary><ul className="mt-2 max-h-48 overflow-y-auto space-y-1 text-slate-300">{item.indexes.map(index=><li key={index}>{RecentDeletion.rowLabel(item.beforeRows[index],index)}</li>)}</ul></details>
+                {item.status==='pending'&&canApprove&&item.requesterUid!==account?.uid&&<div className="mt-3 flex gap-2"><button type="button" disabled={!!inbox.busy} onClick={()=>inbox.decide(item,'approved')} className="rounded-lg border border-emerald-700 px-3 py-2 font-bold text-emerald-200 disabled:opacity-40">Approve deletion</button><button type="button" disabled={!!inbox.busy} onClick={()=>inbox.decide(item,'denied')} className="rounded-lg border border-rose-700 px-3 py-2 font-bold text-rose-200 disabled:opacity-40">Deny</button></div>}
+                {item.status==='pending'&&canApprove&&item.requesterUid===account?.uid&&<p className="mt-2 text-slate-400">Another Admin or Master Admin must decide your request.</p>}
+                {item.decidedBy&&<p className="mt-2 text-slate-400">Decision by {item.decidedBy}</p>}
+            </article>)}
+        </div>;
+        const RecentDeletionConfirmation=({pending,busy,error,onConfirm,onClose})=>!pending?null:<div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/70 p-4" data-dashboard-edit-ignore="true"><section role="dialog" aria-modal="true" aria-label="Confirm recent deletion" className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white">Delete {pending.count} {RecentDeletion.label(pending.field)} {pending.count===1?'row':'rows'}?</h2>
+            <p className="mt-2 text-sm text-slate-300">Dashboard date: {pending.date}</p><p className="mt-2 text-sm text-slate-400">This confirms the exact saved rows. If approval is required, a request will be sent and nothing will be deleted yet. Completed deletions keep a recovery copy for Master Admin.</p>
+            {error&&<p role="alert" className="mt-3 text-sm text-rose-200">{error}</p>}
+            <div className="mt-5 flex justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200">Cancel</button><button type="button" disabled={busy} onClick={onConfirm} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">{busy?'Checking…':'Confirm deletion'}</button></div>
+        </section></div>;
+
         const OwnerPermissionsGrid = ({draft,change,disabled}) => {
             const actions=normalizeSectionActions(draft.sectionActions,draft.permissions);
             const update=(key,action,value)=>{const next={...actions,[key]:{...actions[key],[action]:value}};if(action==='view'&&!value)for(const permission of OWNER_ACTIONS)next[key][permission]=false;change({...draft,sectionActions:next,permissions:Object.fromEntries(PERMISSION_OPTIONS.map(([id])=>[id,next[id].view&&['add','edit','delete'].some(op=>next[id][op])]))});};
-            return <fieldset disabled={disabled} className="disabled:opacity-50"><legend className="mb-3 text-xs font-bold text-slate-300">Section permissions</legend><div className="overflow-x-auto rounded-xl border border-slate-700"><table className="w-full text-xs"><thead><tr className="bg-slate-950/60 text-slate-300"><th className="p-3 text-left">Section</th>{OWNER_ACTIONS.map(action=><th key={action} className="p-3 text-center capitalize">{action}</th>)}</tr></thead><tbody>{PERMISSION_OPTIONS.map(([key,label])=><tr key={key} className="border-t border-slate-700"><th className="p-3 text-left font-semibold text-slate-200">{label}</th>{OWNER_ACTIONS.map(action=><td key={action} className="p-3 text-center"><input aria-label={label+' '+action} type="checkbox" checked={actions[key][action]} title={key==='history'&&!['view','export'].includes(action)?'Activity-history management is owner-only':undefined} disabled={disabled||action==='delete'||(action!=='view'&&!actions[key].view)||(key==='history'&&!['view','export'].includes(action))} onChange={event=>update(key,action,event.target.checked)} className="h-4 w-4 accent-indigo-400"/></td>)}</tr>)}</tbody></table></div><p className="mt-2 text-xs text-slate-400">View controls visible sections. Add, Edit and Delete control saved changes; Export controls dashboard download buttons. Delete is reserved for Master Admin. A team member’s name or Admin label never grants owner controls.</p></fieldset>;
+            return <fieldset disabled={disabled} className="disabled:opacity-50"><legend className="mb-3 text-xs font-bold text-slate-300">Section permissions</legend><div className="overflow-x-auto rounded-xl border border-slate-700"><table className="w-full text-xs"><thead><tr className="bg-slate-950/60 text-slate-300"><th className="p-3 text-left">Section</th>{OWNER_ACTIONS.map(action=><th key={action} className="p-3 text-center capitalize">{action}</th>)}</tr></thead><tbody>{PERMISSION_OPTIONS.map(([key,label])=><tr key={key} className="border-t border-slate-700"><th className="p-3 text-left font-semibold text-slate-200">{label}</th>{OWNER_ACTIONS.map(action=><td key={action} className="p-3 text-center"><input aria-label={label+' '+action} type="checkbox" checked={actions[key][action]} title={key==='history'&&!['view','export'].includes(action)?'Activity-history management is owner-only':undefined} disabled={disabled||action==='delete'||(action!=='view'&&!actions[key].view)||(key==='history'&&!['view','export'].includes(action))} onChange={event=>update(key,action,event.target.checked)} className="h-4 w-4 accent-indigo-400"/></td>)}</tr>)}</tbody></table></div><p className="mt-2 text-xs text-slate-400">View controls visible sections. Add, Edit and Delete control saved changes; Export controls dashboard download buttons. Full-record deletion is reserved for Master Admin. Recent deletion permissions below do not grant history management or other owner controls.</p></fieldset>;
         };
         const OwnerDataManagement = ({account,activeDate,policyEnabled,unsaved=false}) => {
             const [mode,setMode]=useState('history'),[ready,setReady]=useState(false),[setupError,setSetupError]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
@@ -8332,7 +8551,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 <nav aria-label="Data management sections" className="flex flex-wrap gap-2">{[['history','History cleanup'],['recovery','Trash & Archives'],['locks','Week locks'],['cleanup','Bulk cleanup']].map(([key,label])=><button type="button" key={key} disabled={busy} className={button+(mode===key?' bg-indigo-900/40 border-indigo-400':'')} onClick={()=>{setMode(key);clear();}}>{label}</button>)}</nav>
                 {error&&<div role="alert" className="rounded-xl border border-rose-600/40 p-3 text-sm text-rose-200">{error}</div>}{message&&<div role="status" className="rounded-xl border border-emerald-600/40 p-3 text-sm text-emerald-200">{message}</div>}
                 {mode==='history'&&<><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><label className="text-xs text-slate-300">Search<input aria-label="History cleanup search" className={'mt-1 w-full '+input} value={filters.search} onChange={e=>changeFilter('search',e.target.value)}/></label><label className="text-xs text-slate-300">User<select aria-label="History cleanup user" className={'mt-1 w-full '+input} value={filters.user} onChange={e=>changeFilter('user',e.target.value)}><option value="">All users</option>{[...new Map(history.map(item=>[item.actorUid,item.actorName])).entries()].map(([uid,name])=><option key={uid} value={uid}>{name}</option>)}</select></label><label className="text-xs text-slate-300">Section<select aria-label="History cleanup section" className={'mt-1 w-full '+input} value={filters.section} onChange={e=>changeFilter('section',e.target.value)}><option value="">All sections</option>{[...new Set(history.map(item=>item.section))].filter(Boolean).sort().map(section=><option key={section}>{section}</option>)}</select></label><label className="text-xs text-slate-300">From<input aria-label="History cleanup from" type="date" className={'mt-1 w-full '+input} value={filters.from} onChange={e=>changeFilter('from',e.target.value)}/></label><label className="text-xs text-slate-300">To<input aria-label="History cleanup to" type="date" className={'mt-1 w-full '+input} value={filters.to} onChange={e=>changeFilter('to',e.target.value)}/></label></div><div className="flex flex-wrap items-center gap-2"><button className={button} disabled={busy||!ready} onClick={()=>work(loadHistory)}>Search saved history</button><button className={button} disabled={!matches.length||busy} onClick={exportHistory}>Export history</button><button className={button} disabled={!matches.length||busy} onClick={()=>{setSelected(matches.slice(0,100).map(item=>item.key));setPending(null);}}>Select up to 100 matches</button><button className={button} disabled={busy} onClick={()=>{setSelected([]);setPending(null);}}>Clear selection</button></div><p className="text-xs text-slate-400">{matches.length} matching entries · {requested.length} selected. Loads up to 1,000 entries from each activity source; narrow the date range to find older history.</p><div className="flex flex-wrap gap-2"><button className={button} disabled={!enabled||busy||!requested.length} onClick={()=>preview('archive')}>Preview archive</button><button className={button+' text-rose-200'} disabled={!enabled||busy||!requested.length} onClick={()=>preview('trash')}>Preview delete</button></div><div className="space-y-2">{matches.slice(0,showCount).map(item=><label key={item.key} className={'flex gap-3 '+panel}><input aria-label={'Select history '+item.id} type="checkbox" checked={selected.includes(item.key)} onChange={()=>toggle(item.key)} disabled={busy} className="mt-1 h-4 w-4 shrink-0 accent-indigo-400"/><span className="min-w-0 text-sm text-slate-200"><strong>{item.actorName||'Team member'}</strong> {item.readable.lines[0]||item.summary}<span className="mt-1 block text-xs text-slate-400">{item.readable.context} · {new Date(item.timestamp).toLocaleString('en-US',{timeZone:'America/Chicago'})} Central</span></span></label>)}</div>{matches.length>showCount&&<button className={button} onClick={()=>setShowCount(n=>n+100)}>Show more history</button>}</>}
-                {mode==='recovery'&&<><div className="flex flex-wrap items-center gap-3"><label className="text-xs text-slate-300">Show<select className={'ml-2 '+input} value={recoveryView} onChange={e=>setRecoveryView(e.target.value)}><option value="trash">Trash</option><option value="archive">Archives</option><option value="restored">Restored</option></select></label><button className={button} disabled={busy||!ready} onClick={()=>work(loadRecovery)}>Refresh recovery items</button></div><p className="text-xs text-slate-400">Trash can be restored for 30 days. Archives stay available until you restore them. A restore never overwrites an existing route, note or changed record.</p>{recovery.filter(item=>item.state===recoveryView).map(item=>{const expired=item.state==='trash'&&Date.parse(item.expiresAt)<=Date.now();return <div key={item.id} className={'flex flex-wrap items-center justify-between gap-3 '+panel}><div className="min-w-0"><p className="break-words text-sm text-slate-200">{item.label}</p><p className="mt-1 text-xs text-slate-400">{item.deletedBy} · {new Date(item.deletedAt).toLocaleString('en-US',{timeZone:'America/Chicago'})} Central{item.expiresAt?' · '+(expired?'Restore period ended':'Restore until '+new Date(item.expiresAt).toLocaleDateString('en-US',{timeZone:'America/Chicago'})):''}</p></div><div className="flex gap-2"><button className={button} disabled={busy} onClick={()=>downloadJsonFile({format:'geodis-recovery-copy',version:1,record:item},'Geodis-Recovery-'+item.id+'.json')}>Export item</button>{item.state!=='restored'&&<button className={button} disabled={!enabled||busy||expired||unsaved} onClick={()=>work(async()=>{await ownerRestoreRecovery(item);await loadRecovery();setMessage('Item restored.');})}>Restore item</button>}</div></div>;})}{!recovery.some(item=>item.state===recoveryView)&&<p className={panel+' text-sm text-slate-400'}>No items in this view.</p>}</>}
+                {mode==='recovery'&&<><div className="flex flex-wrap items-center gap-3"><label className="text-xs text-slate-300">Show<select className={'ml-2 '+input} value={recoveryView} onChange={e=>setRecoveryView(e.target.value)}><option value="trash">Trash</option><option value="archive">Archives</option><option value="restored">Restored</option></select></label><button className={button} disabled={busy||!ready} onClick={()=>work(loadRecovery)}>Refresh recovery items</button></div><p className="text-xs text-slate-400">Trash can be restored for 30 days. Archives stay available until you restore them. A restore never overwrites an existing route, note or changed record.</p>{recovery.filter(item=>item.state===recoveryView).map(item=>{const expired=item.state==='trash'&&Date.parse(item.expiresAt)<=Date.now();return <div key={item.id} className={'flex flex-wrap items-center justify-between gap-3 '+panel}><div className="min-w-0"><p className="break-words text-sm text-slate-200">{item.label}</p><p className="mt-1 text-xs text-slate-400">{item.deletedBy} · {new Date(item.deletedAt).toLocaleString('en-US',{timeZone:'America/Chicago'})} Central{item.expiresAt?' · '+(expired?'Restore period ended':'Restore until '+new Date(item.expiresAt).toLocaleDateString('en-US',{timeZone:'America/Chicago'})):''}</p></div><div className="flex gap-2"><button className={button} disabled={busy} onClick={()=>downloadJsonFile({format:'geodis-recovery-copy',version:1,record:item},'Geodis-Recovery-'+item.id+'.json')}>Export item</button>{item.state!=='restored'&&<button className={button} disabled={(!enabled&&item.recoveryType!=='recent-row-deletion')||busy||expired||unsaved} onClick={()=>work(async()=>{await ownerRestoreRecovery(item);await loadRecovery();setMessage('Item restored.');})}>Restore item</button>}</div></div>;})}{!recovery.some(item=>item.state===recoveryView)&&<p className={panel+' text-sm text-slate-400'}>No items in this view.</p>}</>}
                 {mode==='locks'&&<div className={panel+' space-y-4'}><label className="block text-xs text-slate-300">Choose a date in the week<input aria-label="Week lock date" className={'ml-3 '+input} type="date" value={weekDate} onChange={e=>{if(e.target.value)setWeekDate(e.target.value);}}/></label><p className="text-sm font-bold text-slate-200">Monday {week} – Sunday {ownerShiftDay(week,6)}</p><p className="text-xs text-slate-400">Locked bonus and billing weeks also protect the routes and score inputs used for those totals. Sunday’s scores entered Monday belong to the previous workweek. Only you can unlock a week.</p><div className="space-y-3">{[['bonus','Lock approved bonuses'],['billing','Lock billing preparation'],['metrics','Lock reported metrics']].map(([key,label])=><label key={key} className="flex gap-3 text-sm text-slate-200"><input type="checkbox" aria-label={label} checked={lock[key]} onChange={e=>setLock(old=>({...old,[key]:e.target.checked}))} disabled={!enabled||busy||!lockLoaded} className="h-4 w-4 accent-indigo-400"/>{label}</label>)}</div>{unsaved&&<p className="text-xs text-amber-200">Save or cancel open dashboard edits before changing locks.</p>}<button className={button} disabled={!enabled||busy||!lockLoaded||unsaved} onClick={()=>work(async()=>{await ownerSetWeekLock(week,lock,lockBaseline);const snap=await getDoc(ownerRef('weekLocks',week));setLockBaseline(snap.exists()?snap.data():null);setMessage('Week locks saved.');})}>Save week locks</button></div>}
                 {mode==='cleanup'&&<><div className={panel+' space-y-3'}><div className="flex flex-wrap gap-3"><label className="text-xs text-slate-300">Items<select aria-label="Cleanup items" className={'ml-2 '+input} value={cleanupKind} onChange={e=>{setCleanupKind(e.target.value);setCleanupRows([]);setSelected([]);setPending(null);}}><option value="resolved">Resolved route-issue notes</option><option value="notes">Old ordinary notes</option><option value="tasks">Completed tasks</option></select></label><label className="text-xs text-slate-300">Before<input aria-label="Cleanup cutoff" type="date" className={'ml-2 '+input} value={cutoff} onChange={e=>{setCutoff(e.target.value);setCleanupRows([]);setSelected([]);setPending(null);}}/></label></div><p className="text-xs text-slate-400">Ordinary-note cleanup excludes Manager Notes, urgent notes, reminders and active driver issues. Preview loads up to 1,500 saved day records or tasks. Nothing is archived until you confirm.</p><button className={button} disabled={!enabled||busy} onClick={()=>work(async()=>{setCleanupRows(await ownerCleanupPreview(cleanupKind,cutoff));setSelected([]);setPending(null);})}>Find cleanup items</button></div><div className="flex flex-wrap gap-2"><button className={button} disabled={!cleanupRows.length||busy} onClick={()=>{const sources=new Set();setSelected(cleanupRows.filter(item=>{const source=item.sourceCollection+'/'+(item.sourceId||item.id);if(!sources.has(source)&&sources.size>=8)return false;sources.add(source);return true;}).slice(0,100).map(item=>item.key));}}>Select up to 100 items from 8 records</button><button className={button} disabled={!requested.length||busy||!enabled} onClick={()=>preview('archive')}>Preview bulk archive</button></div>{cleanupRows.map(item=><label key={item.key} className={'flex gap-3 '+panel}><input type="checkbox" aria-label={'Select cleanup '+item.id} checked={selected.includes(item.key)} onChange={()=>toggle(item.key)} disabled={busy} className="h-4 w-4 accent-indigo-400"/><span className="break-words text-sm text-slate-200">{item.label}</span></label>)}</>}
                 {pending&&<div aria-label="Confirm data cleanup" className="space-y-3 rounded-xl border border-amber-600/50 bg-amber-950/10 p-4"><h4 className="font-bold text-white">Review {pending.action==='trash'?'deletion':'archive'} · {pending.rows.length} items</h4><ul className="max-h-36 list-disc space-y-1 overflow-y-auto pl-5 text-xs text-slate-300">{pending.rows.map(item=><li key={item.key}>{item.label||[item.actorName,item.readable?.lines?.[0],item.timestamp].filter(Boolean).join(' · ')}</li>)}</ul><p className="text-xs text-slate-400">{pending.action==='trash'?'These entries will move to Trash and can be restored for 30 days.':'These items will leave the active lists and remain in Archives for restoration.'}</p><label className="block text-xs text-slate-300">Type {pending.action==='trash'?'DELETE':'ARCHIVE'} to confirm<input aria-label="Cleanup confirmation" className={'mt-1 block '+input} value={confirmation} onChange={e=>setConfirmation(e.target.value)}/></label><div className="flex gap-2"><button className={button} disabled={busy||!enabled||unsaved||confirmation!==(pending.action==='trash'?'DELETE':'ARCHIVE')} onClick={commit}>Confirm {pending.action==='trash'?'delete':'archive'}</button><button className={button} disabled={busy} onClick={()=>{setPending(null);setConfirmation('');}}>Cancel cleanup</button></div></div>}
@@ -8347,6 +8566,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const [accessProfile, setAccessProfile] = useState(null);
             const [adminGrant,setAdminGrant]=useState(null),[administratorRoles,setAdministratorRoles]=useState({}),[adminRolesAvailable,setAdminRolesAvailable]=useState(false),[adminFeatureEnabled,setAdminFeatureEnabled]=useState(false);
             const canManageUserAccounts=isAdminUser||Boolean(user?.uid&&accessProfile?.enabled&&adminFeatureEnabled&&adminGrant?.enabled===true);
+            const recentInbox=useRecentDeletionInbox(user,canManageUserAccounts,accessProfile);
             const [settingsReady, setSettingsReady] = useState(false);
             const [isSettingsOpen, setIsSettingsOpen] = useState(false);
             const [settingsTab, setSettingsTab] = useState('users');
@@ -8560,6 +8780,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const [editingOnlineUserId, setEditingOnlineUserId] = useState(null);
             const [onlineNameDraft, setOnlineNameDraft] = useState('');
             const [recordToDelete, setRecordToDelete] = useState(null);
+            const [recentDeletionPending,setRecentDeletionPending]=useState(null),[recentDeletionBusy,setRecentDeletionBusy]=useState(false),[recentDeletionError,setRecentDeletionError]=useState(''),[recentDeletionNotice,setRecentDeletionNotice]=useState('');
+            useEffect(()=>{setRecentDeletionPending(null);setRecentDeletionError('');setRecentDeletionNotice('');},[user?.uid,activeDate]);
             const [isCreatingDriverCall, setIsCreatingDriverCall] = useState(false);
             const [driverCallEntryType,setDriverCallEntryType] = useState('driver-call');
             const [driverCallDraft, setDriverCallDraft] = useState({ route: '', stopNumber: '', driver: '', soRma: '', note: '', ...defaultDriverCallIssue() });
@@ -9652,6 +9874,29 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 setIsEditing(true);
             };
 
+            const beginRecentDeletion=(section,field,index=null,all=false)=>{
+                try{
+                    if(!RecentDeletion.canUse(user,section,accessProfile))throw new Error('You do not have recent-delete permission for this section.');
+                    if(!recentInbox.policy.enabled)throw new Error('Recent deletion controls need their matching database setup before use.');
+                    if(hasUnsavedDashboardChanges)throw new Error('Save or cancel your other dashboard edits before deleting saved rows.');
+                    const selected=RecentDeletion.select(data,{section,field,index,all},user.uid);
+                    setRecentDeletionError('');setRecentDeletionNotice('');setRecentDeletionPending({date:activeDate,section,field,index,all,count:selected.removed.length,expectedRows:JSON.parse(JSON.stringify(selected.beforeRows))});
+                }catch(error){setSaveError(error.message);}
+            };
+            const commitRecentDeletion=async()=>{
+                if(!recentDeletionPending||recentDeletionBusy)return;setRecentDeletionBusy(true);setRecentDeletionError('');
+                const finish=dashboardSaveTracker.begin('recent-deletion:'+recentDeletionPending.date);let failure=null;
+                try{
+                    const result=await RecentDeletion.remove(recentDeletionPending);
+                    if(result.status==='deleted'){
+                        const saved=normalizeMetricsNameData(result.data);dailySnapshotRef.current={...dailySnapshotRef.current,date:recentDeletionPending.date,data:saved};setData(saved);
+                        setRecentDeletionNotice(result.count+' '+(result.count===1?'row deleted.':'rows deleted.')+' A recovery copy was saved for Master Admin.');
+                    }else setRecentDeletionNotice('Deletion request submitted. Check the notification bell for the Admin or Master Admin decision.');
+                    setRecentDeletionPending(null);
+                }catch(error){failure=error;setRecentDeletionError(error.message);}
+                finally{finish(failure,true);setRecentDeletionBusy(false);}
+            };
+
             const handleSave = async () => {
                 if (dashboardSaveInFlightRef.current) return;
                 if (!db) { setSaveError('The database is unavailable. Your edits have not been saved.'); setDashboardConnection('lost'); return; }
@@ -10715,15 +10960,16 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         const login = await createDashboardLogin(accountDraft);
                         uid = login.uid; loginCreated = true;
                         setAccountDraft({uid, name:login.name, email:login.email, enabled:accountDraft.enabled,
-                            permissions:{...accountDraft.permissions}, administrator:accountDraft.administrator===true, sectionActions:normalizeSectionActions(accountDraft.sectionActions,accountDraft.permissions), isNew:true, mode:'existing', createdLogin:true});
+                            permissions:{...accountDraft.permissions}, recentDeletion:RecentDeletion.normalize(accountDraft.recentDeletion), administrator:accountDraft.administrator===true, sectionActions:normalizeSectionActions(accountDraft.sectionActions,accountDraft.permissions), isNew:true, mode:'existing', createdLogin:true});
                     }
                     const accountRef = doc(db, 'artifacts', appId, 'public', 'data', 'accessProfiles', uid);
                     if (accountDraft.isNew && (TEAM_UIDS.has(uid) || (await getDoc(accountRef)).exists())) throw new Error('This account already exists. Use its Manage button.');
                     const profile = normalizeAccessProfile(uid, { enabled: accountDraft.enabled === true,
-                        name: accountDraft.name.trim(), email: accountDraft.email.trim(),
+                        name: accountDraft.name.trim(), email: accountDraft.email.trim(), recentDeletion:RecentDeletion.normalize(accountDraft.recentDeletion),
                         permissions:Object.fromEntries(PERMISSION_OPTIONS.map(([key]) => [key, accountDraft.permissions?.[key] === true])), sectionActions:normalizeSectionActions(accountDraft.sectionActions,accountDraft.permissions),
                         lastUpdatedBy: getSavedDisplayName(user), lastUpdatedAt: new Date().toISOString() });
                     if(!ownerControlPolicyEnabled){delete profile.sectionActions;delete profile.permissions.history;}
+                    if(!RecentDeletion.enabled())delete profile.recentDeletion;
                     const roleChanged=isAdminUser&&!accountDraft.restoringDashboardAccess&&Boolean(accountDraft.administrator)!==Boolean(administratorRoles[uid]?.enabled);
                     if(roleChanged&&accountDraft.administrator){if(!adminRolesAvailable)throw new Error('Admin role setup needs matching database rules.');await prepareUserAdministrationDirectory([...managedAccounts.filter(account=>account.uid!==uid),profile]);}
                     if (accountDraft.restoringDashboardAccess) {
@@ -12053,7 +12299,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const managerAlerts=useMemo(()=>managerAlertsLoaded ? getManagerAlerts({account:user,settings:savedManagerAlerts,records:historyData,schedules:allPreloadSchedules,tasks:teamTasks,recipients:managerAlertRecipients,resolutions:managerIssueResolutions,dismissals:managerAlertDismissals,now:managerAlertNow,tasksLoaded:teamTasksLoaded,recipientsLoaded:managerRecipientsLoaded,managerNoteAcknowledgementUids:masterLists.managerNoteAcknowledgementUids}) : [],
                 [managerAlertsLoaded,user?.uid,savedManagerAlerts,historyData,allPreloadSchedules,teamTasks,taskAssignees,masterLists.deletedDashboardUsers,managerIssueResolutions,managerAlertDismissals,managerAlertNow,teamTasksLoaded,managerRecipientsLoaded,masterLists.managerNoteAcknowledgementUids]);
             const shiftNoteNotificationCount = shiftNoteNotificationItems.length;
-            const bellNotificationCount=shiftNoteNotificationCount+(isAdminUser?managerAlerts.length:0);
+            const bellNotificationCount=shiftNoteNotificationCount+(isAdminUser?managerAlerts.length:0)+recentInbox.count;
             useEffect(()=>{
                 managerSoundRef.current=null;managerSourceBaselineRef.current={tasks:false,recipients:false};setManagerIssueResolutions({});setManagerAlertDismissals({});setManagerAlertError('');setManagerAlertBusy(false);setNotificationView('activity');
                 managerAlertWriteRef.current=false;managerAlertDirtyRef.current=false;managerAlertBaselineRef.current=null;setManagerAlertDirty(false);
@@ -12432,26 +12678,26 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             </div>
                             <div className="dashboard-header-actions flex items-center justify-end gap-2 shrink-0">
                                 <div className="relative">
-                                    <button aria-label={bellNotificationCount ? `Notifications, ${bellNotificationCount} items` : 'Notifications'} onClick={() => { setIsShiftNotificationOpen(prev => !prev); setIsTeamChatOpen(false); setNotificationView(isAdminUser && managerAlerts.length ? 'manager' : 'activity'); }} className={`relative p-1 bg-transparent border-0 transition-all active:scale-95 cursor-pointer ${bellNotificationCount > 0 ? 'text-rose-300 hover:text-rose-200' : 'text-slate-300 hover:text-white'}`} title="Notifications">
+                                    <button aria-label={bellNotificationCount ? `Notifications, ${bellNotificationCount} items` : 'Notifications'} onClick={() => { setIsShiftNotificationOpen(prev => !prev); setIsTeamChatOpen(false); setNotificationView(recentInbox.count?'deletions':isAdminUser && managerAlerts.length ? 'manager' : 'activity'); }} className={`relative p-1 bg-transparent border-0 transition-all active:scale-95 cursor-pointer ${bellNotificationCount > 0 ? 'text-rose-300 hover:text-rose-200' : 'text-slate-300 hover:text-white'}`} title="Notifications">
                                         <Bell className="w-4 h-4" />
                                         {bellNotificationCount > 0 && (
                                             <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-4 text-center shadow-lg shadow-rose-950/40">{bellNotificationCount > 9 ? '9+' : bellNotificationCount}</span>
                                         )}
                                     </button>
                                     {isShiftNotificationOpen && (
-                                        <div role="dialog" aria-label="Notifications" data-dashboard-edit-ignore="true" className={`dashboard-header-popover absolute right-0 top-8 z-[120] ${isAdminUser && notificationView==='manager'?'w-[32rem]':'w-80'} max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl shadow-slate-950/70`}>
+                                        <div role="dialog" aria-label="Notifications" data-dashboard-edit-ignore="true" className={`dashboard-header-popover absolute right-0 top-8 z-[120] ${notificationView==='deletions'||(isAdminUser && notificationView==='manager')?'w-[32rem]':'w-80'} max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl shadow-slate-950/70`}>
                                             <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
                                                 <div>
                                                     <div className="text-xs font-black uppercase tracking-widest text-white">Notifications</div>
-                                                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{isAdminUser && notificationView==='manager' ? 'Manager only' : 'Shift Notes & Mentions'}</div>
+                                                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{notificationView==='deletions'?'Deletion requests':isAdminUser && notificationView==='manager' ? 'Manager only' : 'Shift Notes & Mentions'}</div>
                                                 </div>
                                                 {shiftNoteNotificationCount > 0 && notificationView==='activity' && (
                                                     <button type="button" onClick={markShiftNotesSeen} className="rounded-lg border border-slate-700 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">Mark Read</button>
                                                 )}
                                                 <button type="button" onClick={() => setIsShiftNotificationOpen(false)} aria-label="Close notifications" className="p-2 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
                                             </div>
-                                            {isAdminUser && <div className="flex flex-wrap gap-1 border-b border-slate-800 p-2" aria-label="Notification sections"><button type="button" aria-pressed={notificationView==='activity'} onClick={()=>setNotificationView('activity')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='activity'?'bg-slate-800 text-white':'text-slate-400')}>Activity ({shiftNoteNotificationCount})</button><button type="button" aria-pressed={notificationView==='manager'} onClick={()=>setNotificationView('manager')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='manager'?'bg-slate-800 text-white':'text-slate-400')}>Manager Alerts ({managerAlerts.length})</button></div>}
-                                            {isAdminUser && notificationView==='manager' ? <div data-popover-scroll="true" className="max-h-[65dvh] overflow-y-auto"><ManagerAlertsList owner={isAdminUser} alerts={managerAlerts} loaded={managerAlertsLoaded} enabled={savedManagerAlerts.enabled} open={openManagerAlert} resolve={resolveManagerIssue} dismiss={dismissManagerAlert} dismissAll={()=>dismissManagerAlerts(managerAlerts)} busy={managerAlertBusy} error={managerAlertError || (dashboardConnection==='lost' ? 'Connection lost. Warnings use the last synced records.' : '')} /></div> : <div data-popover-scroll="true" className="max-h-80 overflow-y-auto">
+                                            {(isAdminUser||recentInbox.policy.enabled||canManageUserAccounts)&&<div className="flex flex-wrap gap-1 border-b border-slate-800 p-2" aria-label="Notification sections"><button type="button" aria-pressed={notificationView==='activity'} onClick={()=>setNotificationView('activity')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='activity'?'bg-slate-800 text-white':'text-slate-400')}>Activity ({shiftNoteNotificationCount})</button>{isAdminUser&&<button type="button" aria-pressed={notificationView==='manager'} onClick={()=>setNotificationView('manager')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='manager'?'bg-slate-800 text-white':'text-slate-400')}>Manager Alerts ({managerAlerts.length})</button>}<button type="button" aria-pressed={notificationView==='deletions'} onClick={()=>setNotificationView('deletions')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='deletions'?'bg-slate-800 text-white':'text-slate-400')}>Deletion requests ({recentInbox.count})</button></div>}
+                                            {notificationView==='deletions'?<RecentDeletionRequests inbox={recentInbox} account={user} canApprove={canManageUserAccounts}/>:isAdminUser && notificationView==='manager' ? <div data-popover-scroll="true" className="max-h-[65dvh] overflow-y-auto"><ManagerAlertsList owner={isAdminUser} alerts={managerAlerts} loaded={managerAlertsLoaded} enabled={savedManagerAlerts.enabled} open={openManagerAlert} resolve={resolveManagerIssue} dismiss={dismissManagerAlert} dismissAll={()=>dismissManagerAlerts(managerAlerts)} busy={managerAlertBusy} error={managerAlertError || (dashboardConnection==='lost' ? 'Connection lost. Warnings use the last synced records.' : '')} /></div> : <div data-popover-scroll="true" className="max-h-80 overflow-y-auto">
                                                 {shiftNoteNotificationItems.length === 0 ? (
                                                     <div className="px-4 py-8 text-center text-xs font-bold text-slate-500">
                                                         <div>No new notifications.</div>
@@ -12606,6 +12852,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     </header>
 
                     <main data-task-unread-count={taskNotifications.length} className="dashboard-main-content max-w-7xl mx-auto px-4 py-8">
+                        {recentDeletionNotice&&<div role="status" data-dashboard-edit-ignore="true" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-indigo-700/50 bg-indigo-950/20 p-4 text-sm text-indigo-100"><span>{recentDeletionNotice}</span><button type="button" aria-label="Dismiss deletion message" onClick={()=>setRecentDeletionNotice('')}><X className="h-4 w-4"/></button></div>}
                         <RouteWindowReminderBar items={routeWindowItems} onOpen={openShiftNoteFromNotification} onHide={item=>saveShiftNoteReadState(Array.from(new Set([...shiftReadIdsRef.current,item.id])))}/>
                         {taskNotifications.length > 0 && !isTeamTasksOpen && <section data-team-task-alert data-html2canvas-ignore="true" data-dashboard-edit-ignore="true" role="status" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/35 bg-rose-950/20 p-4">
                             <div className="min-w-0"><p className="text-sm font-bold text-rose-200">Team Tasks · {taskNotifications[0].type === 'update-request' ? 'Update requested' : taskNotifications[0].type === 'assigned' ? 'New assignment' : 'New task update'}</p><p className="text-sm text-slate-200 mt-1 break-words">{taskNotifications[0].title}</p><p className="text-xs text-slate-400 mt-1 break-words">{taskNotifications[0].author}: {taskNotifications[0].text}</p></div>
@@ -13043,6 +13290,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     <TeamAssignmentReport data={data} activeDate={activeDate} displayDateString={displayDateString} preloadSchedule={preloadScheduleForDay(activeDate)} setData={setData} isEditing={isEditing} isCapturing={isCapturing} reportRef={teamAssignmentScreenshotRef} onCapture={handleDownloadTeamAssignmentScreenshot} />
                                 ) : (<>
                                 <DriverAssignmentAlert />
+                                {isEditing&&recentInbox.policy.enabled&&RecentDeletion.canUse(user,'routes',accessProfile)&&(data.routeTable||[]).length>0&&<div className="mb-3 flex justify-end"><button type="button" onClick={()=>beginRecentDeletion('routes','routeTable',null,true)} className="rounded-lg border border-rose-700/50 px-3 py-2 text-xs font-bold text-rose-200">Delete this day’s routes</button></div>}
                                 {isEditing && canEditSection('preload') && canEditSection('preloadAssignments') && <p className="mb-3 text-xs text-slate-400">Use the three dots beside a route to assign the preload team for this date. Enter its ETA in Routes, then Save.</p>}
                                 {isEditing && preloadRouteMenuId != null && (() => {
                                     const row = (data.routeTable || []).find(item => item.id === preloadRouteMenuId);
@@ -13161,7 +13409,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                             {isEditing && (
                                                                 <td data-panel-screenshot-ignore="true" className="px-2 py-1 text-center sticky right-0 bg-slate-800 border-l border-slate-700">
                                                                     {canEditSection('preload') && canEditSection('preloadAssignments') && <button type="button" onClick={() => setPreloadRouteMenuId(row.id)} aria-label={`Preload options for ${row.serviceUnit || row.route || 'route'}`} title="Preload team options" className="p-1 text-slate-400 hover:text-emerald-300"><MoreHorizontal className="w-4 h-4" /></button>}
-                                                                    <button disabled={!isAdminUser || (Boolean(row.preloadArrival) && !canEditSection('preloadAssignments'))} title={isAdminUser?'Delete route':'Only Master Admin can delete routes'} onClick={() => { if(!isAdminUser)return; const nd = JSON.parse(JSON.stringify(data)); nd.routeTable = nd.routeTable.filter(r => r.id !== row.id); applyLocalRouteTableChange(nd.routeTable); }} className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                                                                    <button disabled={isAdminUser?(Boolean(row.preloadArrival)&&!canEditSection('preloadAssignments')):!RecentDeletion.canUse(user,'routes',accessProfile)} title={isAdminUser?'Delete route':RecentDeletion.canUse(user,'routes',accessProfile)?'Delete saved route':'Recent-delete permission required'} onClick={() => { if(!isAdminUser){beginRecentDeletion('routes','routeTable',data.routeTable.findIndex(item=>item.id===row.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.routeTable = nd.routeTable.filter(r => r.id !== row.id); applyLocalRouteTableChange(nd.routeTable); }} className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                                                                 </td>
                                                             )}
                                                         </tr>
@@ -13219,6 +13467,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                         </div>
                                     </div>
                                      <div className="flex items-center gap-2">
+                                        {isEditing&&recentInbox.policy.enabled&&RecentDeletion.canUse(user,'metrics',accessProfile)&&RecentDeletion.getRows(data,'metricsTracker.'+metricsSubTab).length>0&&<button type="button" onClick={()=>beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,null,true)} className="rounded-lg border border-rose-700/50 px-3 py-2 text-xs font-bold text-rose-200">Delete this metrics table</button>}
                                         <button onClick={handleDownloadMetricsScreenshot} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white border border-slate-600 transition-colors cursor-pointer" title="Download Metrics Screenshot">
                                             <Camera className="w-4 h-4" />
                                         </button>
@@ -13305,7 +13554,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                     </td>
                                                                     {isEditing && (
                                                                         <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center border-b border-slate-700/50">
-                                                                            <button onClick={() => { const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.feedback = nd.metricsTracker.feedback.filter(r => r.id !== row.id); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
+                                                                            <button aria-label="Delete feedback row" disabled={!isAdminUser&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { if(!isAdminUser){beginRecentDeletion('metrics','metricsTracker.feedback',data.metricsTracker.feedback.findIndex(item=>item.id===row.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.feedback = nd.metricsTracker.feedback.filter(r => r.id !== row.id); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
                                                                         </button>
                                                                         </td>
@@ -13355,7 +13604,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                     <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('exchange', row.exchange, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{row.exchange?.toFixed(2)}%</td>
                                                                     {isEditing && (
                                                                         <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>
-                                                                            <button onClick={() => { const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker[metricsSubTab] = nd.metricsTracker[metricsSubTab].filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
+                                                                            <button aria-label="Delete metric row" disabled={!isAdminUser&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { if(!isAdminUser){beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,idx);return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker[metricsSubTab] = nd.metricsTracker[metricsSubTab].filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
                                                                             </button>
                                                                         </td>
@@ -13678,10 +13927,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {isEditing && accountCanAction(user,'shiftNotes','delete',accessProfile) && (isAdminUser||!isManagerNote(note)) && <button aria-label={'Delete note '+note.id} onClick={() => { const nd = JSON.parse(JSON.stringify(data)); nd.shiftNotes = nd.shiftNotes.filter(n => n.id !== note.id); setData(nd); }} className="text-slate-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"><X className="w-5 h-5" /></button>}
+                                                    {isEditing && (isAdminUser||(RecentDeletion.canUse(user,'shiftNotes',accessProfile)&&RecentDeletion.ordinaryOwnNote(note,user.uid))) && (isAdminUser||!isManagerNote(note)) && <button aria-label={'Delete note '+note.id} onClick={() => { if(!isAdminUser){beginRecentDeletion('shiftNotes','shiftNotes',(data.shiftNotes||[]).findIndex(item=>item.id===note.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.shiftNotes = nd.shiftNotes.filter(n => n.id !== note.id); setData(nd); }} className="text-slate-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"><X className="w-5 h-5" /></button>}
                                                 </div>
                                                 {isEditing && isAdminUser && isManagerNote(note) && <ManagerNoteTeamOverride note={note} defaults={masterLists.managerNoteAcknowledgementUids} people={taskAssignees.filter(person=>!isProtectedMasterAdminProfile({uid:person.uid,...accessProfilesCache.get(person.uid)}) && !masterLists.deletedDashboardUsers?.[person.uid])} onChange={selected=>setData(previous=>({...previous,shiftNotes:(previous.shiftNotes || []).map(item=>{if(item.id!==note.id)return item;const updated={...item};if(selected===null)delete updated.managerNoteAcknowledgementUids;else updated.managerNoteAcknowledgementUids=normalizeManagerNoteAcknowledgementUids(selected);return updated;})}))}/>}
-                                                {isEditing && saveErrorNoteId!=null && String(note.id)===String(saveErrorNoteId) && validateDriverCallIssue(note.driverCall) && <p role="alert" className="mb-3 text-sm text-rose-200">{validateDriverCallIssue(note.driverCall)}</p>}
+                                                {isEditing && saveErrorNoteId!=null && String(note.id)===String(saveErrorNoteId) && (()=>{const prior=dailySnapshotRef.current.date===activeDate?(dailySnapshotRef.current.data?.shiftNotes || []).find(item=>String(item.id)===String(note.id))?.driverCall:null;const message=validateDriverCallIssue(note.driverCall,prior);return message?<p role="alert" className="mb-3 text-sm text-rose-200">{message}</p>:null;})()}
                                                 {isEditing && (isAdminUser || !isManagerNote(note)) ? (
                                                     note.noteType === 'driver-call' && note.driverCall ? (
                                                         <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 space-y-3">
@@ -13924,7 +14173,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                                 ) : (
                                                                                     <button onClick={() => setEditingWtdIdx(idx)} className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-900/30 rounded transition-colors cursor-pointer"><Edit3 className="w-3 h-3" /></button>
                                                                                 )}
-                                                                                <button onClick={() => { const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.wtd = nd.metricsTracker.wtd.filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"><Trash2 className="w-3 h-3" /></button>
+                                                                                <button disabled={!isAdminUser&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { if(!isAdminUser){beginRecentDeletion('metrics','metricsTracker.wtd',idx);return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.wtd = nd.metricsTracker.wtd.filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"><Trash2 className="w-3 h-3" /></button>
                                                                             </div>
                                                                         </td>
                                                                     )}
@@ -14427,9 +14676,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                     <p className="text-xs text-slate-400">At least 6 characters; your Firebase password policy also applies. Your admin login stays signed in. The password is sent only to Firebase Authentication, never saved in dashboard records.</p>
                                                 </>}
                                                 {!accountDraft.isNew && <p className="text-xs text-slate-400">The email label is for reference. Changing it does not change this person’s login email or password.</p>}
-                                                {isAdminUser&&<div className="rounded-lg border border-slate-600 p-3 text-xs text-slate-300"><label className="flex items-center gap-3 font-bold"><input aria-label="Admin user-management access" type="checkbox" checked={accountDraft.administrator===true} disabled={settingsBusy||!adminRolesAvailable||accountDraft.restoringDashboardAccess} onChange={event=>setAccountDraft({...accountDraft,administrator:event.target.checked})} className="h-4 w-4 accent-indigo-400"/>Admin · manage ordinary users and permissions</label><p className="mt-2 text-slate-400">Admin cannot manage Master Admin accounts, promote other Admins, delete business records, or change protected app settings.</p>{!adminRolesAvailable&&<p className="mt-2 text-amber-200">Admin role setup needs its matching database rules. Nobody is assigned automatically.</p>}</div>}
+                                                {isAdminUser&&<div className="rounded-lg border border-slate-600 p-3 text-xs text-slate-300"><label className="flex items-center gap-3 font-bold"><input aria-label="Admin user-management access" type="checkbox" checked={accountDraft.administrator===true} disabled={settingsBusy||!adminRolesAvailable||accountDraft.restoringDashboardAccess} onChange={event=>setAccountDraft({...accountDraft,administrator:event.target.checked})} className="h-4 w-4 accent-indigo-400"/>Admin · manage ordinary users and permissions</label><p className="mt-2 text-slate-400">Admin cannot manage Master Admin accounts, promote other Admins, delete history, or change protected app settings. An assigned Admin may approve another user’s held deletion request.</p>{!adminRolesAvailable&&<p className="mt-2 text-amber-200">Admin role setup needs its matching database rules. Nobody is assigned automatically.</p>}</div>}
                                                 <label className="flex gap-3 items-center text-sm font-bold text-slate-200"><input type="checkbox" checked={accountDraft.enabled} disabled={settingsBusy} onChange={event => setAccountDraft({ ...accountDraft, enabled: event.target.checked })} className="h-4 w-4 accent-emerald-500" />Dashboard access enabled</label>
                                                 {ownerPolicyEnabled?<OwnerPermissionsGrid draft={accountDraft} change={setAccountDraft} disabled={!accountDraft.enabled||settingsBusy}/>:<><p className="text-xs text-amber-200">Detailed action permissions are available after activating Data Management. Your existing editing controls remain available below.</p><fieldset disabled={!accountDraft.enabled || settingsBusy} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 disabled:opacity-50"><legend className="text-xs font-bold text-slate-300 mb-3">Allow editing</legend>{PERMISSION_OPTIONS.filter(([key])=>key!=='history').map(([key, label]) => <label key={key} className="flex gap-3 items-center rounded-lg border border-slate-700 p-3 text-xs text-slate-200"><input type="checkbox" checked={accountDraft.permissions[key] === true} onChange={event => setAccountDraft({ ...accountDraft, permissions: { ...accountDraft.permissions, [key]: event.target.checked } })} className="h-4 w-4 accent-indigo-400" />{label}</label>)}</fieldset></>}
+                                                <RecentDeletionPermissions draft={accountDraft} change={setAccountDraft} inbox={recentInbox} owner={isAdminUser}/>
                                                 <div className="flex flex-wrap gap-3"><button type="button" onClick={saveAccountPermissions} disabled={settingsBusy || !settingsReady} className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">{settingsBusy ? accountDraft.mode === 'create' ? 'Creating user…' : 'Saving…' : accountDraft.createdLogin ? 'Retry permissions' : accountDraft.isNew && accountDraft.mode === 'create' ? 'Create user' : 'Save permissions'}</button><button type="button" onClick={() => setAccountDraft(null)} disabled={settingsBusy} className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-bold text-slate-300">{accountDraft.createdLogin ? 'Close' : 'Cancel'}</button></div>
                                             </div>}
                                         </div>
@@ -14991,6 +15241,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     )}
 
                     {}
+                    <RecentDeletionConfirmation pending={recentDeletionPending} busy={recentDeletionBusy} error={recentDeletionError} onConfirm={commitRecentDeletion} onClose={()=>{if(!recentDeletionBusy)setRecentDeletionPending(null);}}/>
                     {isAdminUser && recordToDelete && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
                             <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
