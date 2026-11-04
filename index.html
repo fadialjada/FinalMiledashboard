@@ -1164,12 +1164,12 @@
             .metric-ring-spark { animation: none !important; }
         }
         /* Export copies only: override theme shadows, including rounded panel edges. */
-        .balanced-picture-theme [data-screenshot-surface="true"],
-        .balanced-picture-theme [data-screenshot-surface="true"] *,
-        .balanced-picture-theme [data-screenshot-surface="true"]::before,
-        .balanced-picture-theme [data-screenshot-surface="true"]::after,
-        .balanced-picture-theme [data-screenshot-surface="true"] *::before,
-        .balanced-picture-theme [data-screenshot-surface="true"] *::after {
+        [data-screenshot-surface="true"],
+        [data-screenshot-surface="true"] *,
+        [data-screenshot-surface="true"]::before,
+        [data-screenshot-surface="true"]::after,
+        [data-screenshot-surface="true"] *::before,
+        [data-screenshot-surface="true"] *::after {
             box-shadow: none !important;
             text-shadow: none !important;
             filter: none !important;
@@ -1411,6 +1411,14 @@
         .overview-route-scheduled { background:linear-gradient(90deg,transparent,#7e91ba 20%,#7e91ba 80%,transparent); }
         .overview-route-credit { color:#7f8ba0; font-size:10px; line-height:15px; display:flex; align-items:center; gap:4px; white-space:nowrap; }
         .overview-route-credit svg { width:12px; height:12px; flex:none; }
+        .overview-route-open { position:absolute; inset:0; z-index:2; width:100%; border:0; border-radius:inherit; background:transparent; cursor:pointer; }
+        .overview-route-open:focus-visible { outline:2px solid #a5b4fc; outline-offset:-2px; }
+        .overview-route-card .overview-route-bottom { z-index:3; pointer-events:none; }
+        .overview-route-progress-edit { position:relative; display:inline-flex; align-items:center; justify-content:center; flex:none; width:16px; height:15px; padding:0; border:0; background:transparent; color:#a5b4fc; cursor:pointer; pointer-events:auto; }
+        .overview-route-progress-edit:hover { color:#fff; }
+        .overview-route-progress-edit:focus-visible { outline:2px solid #a5b4fc; outline-offset:2px; border-radius:3px; }
+        .overview-route-progress-edit svg { width:12px; height:12px; }
+
         @media(max-width:760px) { .overview-route-issues .overview-route-card { padding:17px 15px; } .overview-route-counts { gap:10px; } }
         @media(max-width:600px) { .overview-route-issues { grid-template-columns:1fr; } .overview-route-kind { white-space:normal; } }
         @media(max-width:380px) { .overview-route-head { flex-direction:column; gap:5px; } .overview-route-body { flex-wrap:wrap; gap:9px; } .overview-route-counts { width:100%; justify-content:space-between; } .overview-route-bottom { padding-top:9px; } .overview-route-lines { top:0; width:70%; } }
@@ -2245,14 +2253,15 @@
             return [...latest.values()].sort((a,b)=>b.time-a.time || a.index-b.index).map(({note})=>({note,progress:getRouteIssueProgress(note.driverCall)}))
                 .filter(({note,progress})=>progress && note.driverCall.routeIssueStatus!=='resolved' && progress.completed<progress.total);
         };
-        const OverviewRouteIssues = ({notes,onOpen}) => {
+        const OverviewRouteIssues = ({notes,onOpen,onUpdate}) => {
             const issues=getOverviewRouteIssues(notes);
             if(!issues.length)return null;
             return <section className="overview-route-issues" data-single={issues.length===1?'true':undefined} aria-label="Late routes and truck breakdowns" aria-live="polite">
                 {issues.map(({note,progress})=>{
                     const call=note.driverCall,broken=call.segment==='truck-breakdown',kind=broken?'Truck breakdown':'Late route',emailSent=['requested','received'].includes(call.routeWindowStage);
                     const stamp=Date.parse(call.routeStatusUpdatedAt || note.timestamp || ''),time=Number.isFinite(stamp)?new Date(stamp).toLocaleTimeString('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit'}):'';
-                    return <button type="button" key={note.id} className={'overview-route-card'+(broken?' overview-route-broken':'')} onClick={()=>onOpen(note)} aria-label={'Open '+kind.toLowerCase()+' note for route '+call.route}>
+                    return <div key={note.id} className={'overview-route-card'+(broken?' overview-route-broken':'')}>
+                        <button type="button" className="overview-route-open" onClick={()=>onOpen(note)} aria-label={'Open '+kind.toLowerCase()+' note for route '+call.route}/>
                         {broken?<svg className="overview-route-watermark" viewBox="0 0 48 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
                             <g transform="rotate(-7 7 18)">
                                 <Truck width={24} height={24} aria-hidden="true"/>
@@ -2267,8 +2276,8 @@
                         <div className="overview-route-body">{broken?(call.routeBreakdownTracking===true?<BreakdownOverviewStatus call={call}/>:<div className="overview-route-delay"><b>{progress.minutes}</b>min late<span>to next stop</span></div>):<RouteIssueEmailCountdown call={call}/>}<div className="overview-route-counts"><div><strong>{progress.total}</strong><span>Total stops</span></div><div><strong className="overview-route-green">{progress.completed}</strong><span>Completed</span></div><div><strong className="overview-route-red">{progress.late}</strong><span>Late</span></div></div></div>
                         <div className="overview-route-bottom"><div className="overview-route-lines" style={{gap:Math.min(3,120/progress.total)}} role="img" aria-label={broken?progress.total+' stops: '+progress.completed+' completed, '+progress.late+' late'+(progress.pending?', '+progress.pending+' pending':''):progress.total+' stops: '+progress.completed+' completed, 1 in transit, '+Math.max(0,progress.total-progress.completed-1)+(emailSent?' scheduled':' late')}>
                             {Array.from({length:progress.total},(_,index)=><span key={index} aria-hidden="true" className={'overview-route-line '+(index<progress.completed?'overview-route-done':!broken?(index===progress.completed?'overview-route-transit':emailSent?'overview-route-scheduled':'overview-route-late'):index<progress.completed+progress.late?'overview-route-late':'overview-route-pending')} title={'Stop '+(index+1)+': '+(index<progress.completed?'Completed':!broken?(index===progress.completed?'In transit':emailSent?'Scheduled':'Late'):index<progress.completed+progress.late?'Late':'Pending')}/>)}
-                        </div><span className="overview-route-credit"><FileText aria-hidden="true"/>{note.author || 'Team member'}{time?' · '+time:''}</span></div>
-                    </button>;
+                        </div><span className="overview-route-credit"><FileText aria-hidden="true"/>{call.routeStatusUpdatedBy || note.author || 'Team member'}{time?' · '+time:''}{!broken && onUpdate && <button type="button" className="overview-route-progress-edit" data-dashboard-edit-ignore="true" data-html2canvas-ignore="true" onClick={()=>onUpdate(note)} aria-label={'Update progress for route '+call.route}><Edit3 aria-hidden="true"/></button>}</span></div>
+                    </div>;
                 })}
             </section>;
         };
@@ -3827,7 +3836,7 @@
                 await document.fonts.ready;
                 const card=host.querySelector('.overview-route-card');
                 if(!card)throw new Error('No active route header is available.');
-                card.style.setProperty('border','0','important');card.style.setProperty('outline','0','important');card.style.setProperty('box-shadow','none','important');card.style.borderRadius='0';
+                prepareScreenshotSurface(card, '#1f2937', 0);
                 // Rasterize inline icons first so html2canvas retains the faint truck watermark.
                 for(const svg of card.querySelectorAll('svg')){
                     const computed=getComputedStyle(svg),clone=svg.cloneNode(true),image=new Image();
@@ -3918,6 +3927,105 @@
             <RouteEmailDraftControls call={call} dateKey={dateKey} compact={compact} kind="initial-notice"/>
             <RouteEmailDraftControls call={call} dateKey={dateKey} compact={compact} kind="window-update"/>
         </div>;
+
+        const routeQuickBaseline = call => JSON.stringify([
+            'segment','route','driver','routeStopsTotal','routeStopsCompleted','routeStopsLate','routeIssueStatus',
+            'routeStatusUpdatedAt','routeWindowTracking','routeWindowStop','routeNextWindowStart','routeNextWindowEnd',
+            'routeWindowStage','routeRevisedWindowStart','routeRevisedWindowEnd','routeEmailRequestedAt','routeWindowReceivedAt'
+        ].map(key => [key, call?.[key] ?? '']));
+        const routeQuickForm = call => ({
+            completed: String(call.routeStopsCompleted || '0'), late: String(call.routeStopsLate || '0'),
+            nextStop: String(call.routeWindowStop || Number(call.routeStopsCompleted || 0) + 1),
+            windowStart: call.routeNextWindowStart || '', windowEnd: call.routeNextWindowEnd || '', outcome: 'late'
+        });
+        const routeQuickSavedNote = (saved, draft) => {
+            const note = (saved.shiftNotes || []).find(item => String(item.id) === String(draft.noteId));
+            if (!note || !getOverviewRouteIssues(saved.shiftNotes).some(item => String(item.note.id) === String(draft.noteId))) throw new Error('This route issue was closed or replaced. Reopen its latest card.');
+            if (routeQuickBaseline(note.driverCall) !== routeQuickBaseline(draft.call)) throw new Error('Someone updated this route while the panel was open. Cancel and reopen it to use the latest progress.');
+            return note;
+        };
+        const changeRouteQuickForm = (form, field, value, total) => {
+            const next = { ...form, [field]: value };
+            if (field === 'completed' && /^\d+$/.test(String(value)) && Number(value) <= total) {
+                const completed = Number(value), nextStop = String(completed + 1);
+                next.late = String(Math.min(Number(form.late) || 0, Math.max(0, total - completed)));
+                if (nextStop !== form.nextStop) Object.assign(next, { nextStop, windowStart:'', windowEnd:'' });
+                if (completed === total) next.outcome = 'complete';
+                else if (form.outcome === 'complete') next.outcome = 'late';
+            }
+            if (field === 'nextStop' && String(value) !== form.nextStop) Object.assign(next, { windowStart:'', windowEnd:'' });
+            if (field === 'outcome' && value === 'complete') Object.assign(next, { completed:String(total), late:'0' });
+            if (field === 'outcome' && value === 'caught-up') next.late = '0';
+            return next;
+        };
+        const buildRouteQuickUpdate = (note, form, actor, now = Date.now()) => {
+            const prior = note.driverCall;
+            if (prior?.segment !== 'late-route') throw new Error('This entry is no longer a Late Route. Open the latest route card.');
+            const total = Number(prior.routeStopsTotal);
+            if (!/^\d+$/.test(form.completed) || Number(form.completed) > total) throw new Error('Completed stops must be a whole number from 0 to ' + total + '.');
+            if (!['late','caught-up','complete'].includes(form.outcome)) throw new Error('Choose the route status.');
+            const completed = form.outcome === 'complete' ? total : Number(form.completed);
+            const resolved = form.outcome !== 'late' || completed === total;
+            if (!resolved && (!/^\d+$/.test(form.late) || Number(form.late) + completed > total)) throw new Error('Late stops cannot exceed the remaining stops.');
+            if (!resolved && (!/^\d+$/.test(form.nextStop) || Number(form.nextStop) <= completed || Number(form.nextStop) > total)) throw new Error('Choose an undelivered next stop after the completed stops, within this route.');
+            const next = { ...prior, routeStopsCompleted:String(completed), routeStopsLate:resolved ? '0' : form.late,
+                routeIssueStatus:resolved ? 'resolved' : 'active',
+                routeProgressOutcome:completed === total ? 'complete' : resolved ? 'caught-up' : 'late' };
+            if (!resolved) Object.assign(next, { routeWindowTracking:true, routeWindowStop:form.nextStop,
+                routeNextWindowStart:form.windowStart, routeNextWindowEnd:form.windowEnd });
+            const updated = stampRouteWindowFollowup(next, prior, actor, now);
+            const error = validateDriverCallIssue(updated, prior);
+            if (error) throw new Error(error);
+            Object.assign(updated, { routeStatusUpdatedAt:new Date(now).toISOString(),
+                routeStatusUpdatedBy:actor.name, routeStatusUpdatedByUid:actor.uid });
+            return { ...note, driverCall:updated,
+                ...(note.noteType === 'driver-call' && updated.classificationSource !== 'history' ? { text:formatDriverCallText(updated) } : {}) };
+        };
+
+
+        const RouteQuickProgressDialog = ({ draft, change, busy, error, onSave, onClose }) => {
+            const dialogRef = useRef(null);
+            useEffect(() => {
+                if (!draft) return;
+                const previous = document.activeElement;
+                dialogRef.current?.querySelector('input')?.focus();
+                return () => { if (previous?.isConnected) previous.focus(); };
+            }, [draft?.id]);
+            if (!draft) return null;
+            const total = Number(draft.call.routeStopsTotal), form = draft.form;
+            const resolved = form.outcome !== 'late' || Number(form.completed) === total;
+            const nextChanged = form.nextStop !== String(draft.call.routeWindowStop || Number(draft.call.routeStopsCompleted || 0) + 1);
+            const update = (field, value) => change(previous => ({ ...previous, form:changeRouteQuickForm(previous.form, field, value, total) }));
+            const inputClass = 'mt-1.5 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-400 [color-scheme:dark]';
+            const labelClass = 'block text-xs font-semibold text-slate-300';
+            const keys = event => {
+                if (event.key === 'Escape' && !busy) { event.preventDefault(); onClose(); }
+                if (event.key !== 'Tab') return;
+                const controls = [...dialogRef.current.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')];
+                const first = controls[0], last = controls.at(-1);
+                if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+                else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+            };
+            return createPortal(<div className="fixed inset-0 z-[700] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" data-dashboard-edit-ignore="true" onClick={event => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+                <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="route-progress-title" onKeyDown={keys} className="max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-600 bg-slate-900 p-5 shadow-2xl sm:p-6">
+                    <div className="flex items-start justify-between gap-4"><div><h2 id="route-progress-title" className="text-lg font-bold text-white">Update route progress</h2><p className="mt-1 text-sm text-slate-300">{draft.call.route} · {draft.call.driver}</p></div><button type="button" aria-label="Close route progress" disabled={busy} onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:text-white disabled:opacity-40"><X className="h-5 w-5" /></button></div>
+                    <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm"><span className="text-slate-400">Total stops <strong className="ml-2 text-white">{total}</strong></span><span className="text-slate-400">Remaining <strong className="ml-2 text-white">{Math.max(0, total - (Number(form.completed) || 0))}</strong></span></div>
+                    <fieldset disabled={busy} className="mt-4 space-y-4 disabled:opacity-60">
+                        <div className="grid grid-cols-2 gap-3"><label className={labelClass}>Completed stops<input aria-label="Quick completed stops" inputMode="numeric" type="number" min="0" max={total} step="1" value={form.completed} onChange={event => update('completed',event.target.value)} className={inputClass}/></label><label className={labelClass}>Stops still late<input aria-label="Quick late stops" inputMode="numeric" type="number" min="0" max={Math.max(0,total-(Number(form.completed)||0))} step="1" value={form.late} disabled={resolved} onChange={event => update('late',event.target.value)} className={inputClass+' disabled:opacity-40'}/></label></div>
+                        <label className={labelClass}>Route status<select aria-label="Quick route status" value={form.outcome} onChange={event => update('outcome',event.target.value)} className={inputClass}><option value="late">Still late</option><option value="caught-up">Back on track</option><option value="complete">Route complete</option></select></label>
+                        {!resolved && <div className="rounded-xl border border-slate-700 p-4 space-y-3"><label className={labelClass}>Next delivery stop<input aria-label="Quick next stop" inputMode="numeric" type="number" min={Number(form.completed)+1} max={total} step="1" value={form.nextStop} onChange={event => update('nextStop',event.target.value)} className={inputClass}/></label>
+                            <p className="text-xs leading-relaxed text-slate-400">{nextChanged ? 'The old stop’s reminder will clear when you save. Enter this stop’s original window for the new countdown.' : 'Use the original delivery window for the next undelivered stop.'}</p>
+                            <div className="grid gap-3 sm:grid-cols-2"><label className={labelClass}>Original window starts · Central<input aria-label="Quick original window start" type="datetime-local" value={form.windowStart} onInput={event => update('windowStart',event.currentTarget.value)} className={inputClass}/></label><label className={labelClass}>Original window ends · Central<input aria-label="Quick original window end" type="datetime-local" value={form.windowEnd} onInput={event => update('windowEnd',event.currentTarget.value)} className={inputClass}/></label></div>
+                            <p className="text-xs text-slate-400">The email reminder uses one hour after that window ends.</p>
+                        </div>}
+                        {resolved && <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">{form.outcome === 'complete' || Number(form.completed) === total ? 'Save to mark the route complete and close this alert.' : 'Save to mark the route back on track and close this alert.'} The original note stays in Shift Notes.</p>}
+                    </fieldset>
+                    {error && <p role="alert" className="mt-4 rounded-lg border border-rose-500/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</p>}
+                    <div className="mt-5 flex justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className="rounded-lg border border-slate-600 px-4 py-2.5 text-sm text-slate-300 disabled:opacity-40">Cancel</button><button type="button" disabled={busy} onClick={onSave} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-40">{busy ? 'Saving…' : 'Save progress'}</button></div>
+                </section>
+            </div>, document.body);
+        };
+
 
         const RouteWindowFollowupFields = ({value,onChange,now=Date.now()}) => {
             const call=value;
@@ -5070,10 +5178,16 @@
         const PRESENCE_AWAY_AFTER_MS = 10 * 60 * 1000;
         const PRESENCE_HEARTBEAT_MS = 5 * 60 * 1000;
         const SCREENSHOT_BACKGROUND = '#1b1f25';
-        const prepareScreenshotSurface = (surface) => {
+        const prepareScreenshotSurface = (surface, background = SCREENSHOT_BACKGROUND, cornerRadius = 16) => {
             surface.setAttribute('data-screenshot-surface', 'true');
-            // The theme uses !important backgrounds; the copy must override those too.
-            surface.style.setProperty('background', SCREENSHOT_BACKGROUND, 'important');
+            // Export copies keep rounded edges without theme shadows.
+            surface.style.setProperty('background', background, 'important');
+            for (const [property, value] of Object.entries({ 'border-radius':cornerRadius + 'px', border:'0', outline:'none', 'box-shadow':'none', 'text-shadow':'none', filter:'none', 'backdrop-filter':'none' })) {
+                surface.style.setProperty(property, value, 'important');
+            }
+            for (const node of surface.querySelectorAll('*')) {
+                for (const property of ['box-shadow','text-shadow','filter','backdrop-filter','outline']) node.style.setProperty(property, 'none', 'important');
+            }
         };
 
         const getScreenshotScale = (width, height) => {
@@ -5097,6 +5211,26 @@
                 try {
                     canvas = await window.html2canvas(element, { ...options, scale: scale * factor });
                     if (!canvas.width || !canvas.height) throw new Error('Unable to allocate screenshot canvas.');
+                    // Flatten any remaining transparency before copying or downloading the PNG.
+                    const context = canvas.getContext('2d');
+                    if (!context) throw new Error('Unable to finish screenshot background.');
+                    context.save();
+                    context.setTransform(1, 0, 0, 1, 0, 0);
+                    context.globalAlpha = 1;
+                    context.globalCompositeOperation = 'destination-over';
+                    context.fillStyle = options.backgroundColor || SCREENSHOT_BACKGROUND;
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    // Only the rounded outer corners are transparent; the report stays opaque.
+                    const radius = Math.min(16 * scale * factor, canvas.width / 2, canvas.height / 2);
+                    context.globalCompositeOperation = 'destination-in';
+                    context.beginPath();
+                    context.moveTo(radius, 0);
+                    context.arcTo(canvas.width, 0, canvas.width, canvas.height, radius);
+                    context.arcTo(canvas.width, canvas.height, 0, canvas.height, radius);
+                    context.arcTo(0, canvas.height, 0, 0, radius);
+                    context.arcTo(0, 0, canvas.width, 0, radius);
+                    context.closePath(); context.fill();
+                    context.restore();
                     blob = await new Promise((resolve, reject) => {
                         canvas.toBlob(result => result ? resolve(result) : reject(new Error('Unable to encode screenshot.')), 'image/png');
                     });
@@ -6647,14 +6781,46 @@ const MorningReportTime = ({value, onChange, label}) => {
         <select aria-label={label + ' AM or PM'} value={period} disabled={!value} onChange={event => setHour(hourNumber % 12 || 12, event.target.value)} className="report-input min-w-0 flex-1"><option>AM</option><option>PM</option></select>
     </div>;
 };
-// Pass the pending PNG to the clipboard immediately after the click. This
-// preserves the user gesture while the full-resolution screenshot is rendered.
+// Email display size is independent of the PNG's full export resolution.
+const MORNING_REPORT_EMAIL_WIDTH = 900;
+const prepareMorningReportEmailCopy = async source => {
+    const image = await createImageBitmap(source);
+    const width = Math.min(MORNING_REPORT_EMAIL_WIDTH, image.width);
+    const height = Math.max(1, Math.round(image.height * width / image.width));
+    const pixelWidth = image.width, pixelHeight = image.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelWidth; canvas.height = pixelHeight;
+    try {
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('The report image could not be prepared.');
+        // Preserve every source pixel. Let Outlook apply the rounded display edge once,
+        // rather than letting its image importer put a white matte behind PNG transparency.
+        context.fillStyle = SCREENSHOT_BACKGROUND;
+        context.fillRect(0, 0, pixelWidth, pixelHeight);
+        context.imageSmoothingEnabled = false;
+        context.drawImage(image, 0, 0);
+        const dataUrl = canvas.toDataURL('image/png');
+        const png = await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The report image could not be prepared.')), 'image/png'));
+        const html = new Blob(['<div align="center" style="width:100%;margin:0;padding:0;text-align:center;border:0;outline:none;box-shadow:none;background-color:transparent;"><img src="' + dataUrl + '" width="' + width + '" height="' + height + '" alt="Morning report" style="display:inline-block;width:' + width + 'px;max-width:100%;height:auto;margin:0;border:0;border-radius:14px;background-color:transparent;outline:none;box-shadow:none;"></div>'], {type:'text/html'});
+        return {png, html, width, height, pixelWidth, pixelHeight};
+    } finally { image.close(); canvas.width = 0; canvas.height = 0; }
+};
+// Prefer rich HTML so Outlook keeps alignment; plain PNG is the compatibility fallback.
 const copyMorningReportImage = async createImage => {
     if (!navigator.clipboard?.write || !window.ClipboardItem || (ClipboardItem.supports && !ClipboardItem.supports('image/png'))) throw new Error('Image copying is unavailable.');
-    const image = createImage();
-    image.catch(() => {});
-    await navigator.clipboard.write([new ClipboardItem({'image/png':image})]);
+    const prepared = Promise.resolve(createImage()).then(prepareMorningReportEmailCopy);
+    prepared.catch(() => {});
+    const png = prepared.then(result => result.png);
+    png.catch(() => {});
+    if (!ClipboardItem.supports || ClipboardItem.supports('text/html')) {
+        const html = prepared.then(result => result.html);
+        html.catch(() => {});
+        try { await navigator.clipboard.write([new ClipboardItem({'text/html':html})]); return; }
+        catch (error) { if (!['DataError','NotSupportedError'].includes(error?.name)) throw error; }
+    }
+    await navigator.clipboard.write([new ClipboardItem({'image/png':png})]);
 };
+
 const MorningReport = ({data, activeDate, setData, metricsTotals, displayDateString, isEditing, reportRef, onCapture, onCopyImage, isCapturing, contractors}) => {
     const report = getMorningReport(data, activeDate);
     const [subjectCopyStatus, setSubjectCopyStatus] = useState('');
@@ -6706,7 +6872,7 @@ const MorningReport = ({data, activeDate, setData, metricsTotals, displayDateStr
         try {
             await copyMorningReportImage(onCopyImage);
             
-            setSubjectCopyStatus('Report image copied. Paste it into the Outlook message body.');
+            setSubjectCopyStatus('Email-size report copied. Paste it into the Outlook message body.');
             setCopiedEmailSubject(subject);
             const link = document.createElement('a');
             link.href = 'mailto:?subject=' + encodeURIComponent(subject);
@@ -9200,7 +9366,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const updateDriverCallIssue = (noteId,call) => {
                 if(!canEditSection('notes'))return;
                 const prior=(data.shiftNotes || []).find(note=>note.id===noteId)?.driverCall || {};
-                const updatedCall={...(call.routeBreakdownTracking===true?stampBreakdownFollowup(call,prior,getCurrentShiftUser()):call.routeWindowTracking===true?stampRouteWindowFollowup(call,prior,getCurrentShiftUser()):call),...(isRouteStatusCall(call)?{routeStatusUpdatedAt:new Date().toISOString()}:{})};
+                const updatedCall={...(call.routeBreakdownTracking===true?stampBreakdownFollowup(call,prior,getCurrentShiftUser()):call.routeWindowTracking===true?stampRouteWindowFollowup(call,prior,getCurrentShiftUser()):call),...(isRouteStatusCall(call)?{routeStatusUpdatedAt:new Date().toISOString(),routeStatusUpdatedBy:getCurrentShiftUser().name,routeStatusUpdatedByUid:user.uid}:{})};
                 setData(previous=>({...previous,shiftNotes:(previous.shiftNotes || []).map(note=>note.id!==noteId?note:{...note,driverCall:updatedCall,...(note.noteType==='driver-call' && call.classificationSource!=='history'?{text:formatDriverCallText(updatedCall)}:{})})}));
             };
 
@@ -9247,7 +9413,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 if (noteIndex < 0) return;
                 if (!nd.shiftNotes[noteIndex].driverCall) nd.shiftNotes[noteIndex].driverCall = { route: '', stopNumber: '', driver: '', note: '' };
                 nd.shiftNotes[noteIndex].driverCall[field] = field === 'route' ? String(value).toUpperCase() : String(value);
-                if(isRouteStatusCall(nd.shiftNotes[noteIndex].driverCall))nd.shiftNotes[noteIndex].driverCall.routeStatusUpdatedAt=new Date().toISOString();
+                if(isRouteStatusCall(nd.shiftNotes[noteIndex].driverCall))Object.assign(nd.shiftNotes[noteIndex].driverCall,{routeStatusUpdatedAt:new Date().toISOString(),routeStatusUpdatedBy:getCurrentShiftUser().name,routeStatusUpdatedByUid:user.uid});
                 nd.shiftNotes[noteIndex].text = formatDriverCallText(nd.shiftNotes[noteIndex].driverCall);
                 setData(nd);
             };
@@ -10681,7 +10847,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             ? Math.ceil(captureRect.height)
                             : Math.ceil(Math.max(screenshotClone.scrollHeight, captureRect.height)) + 6;
                         const image = await downloadScreenshotPng(screenshotClone, fileName, {
-                            backgroundColor: isPreloadTable || isReportPanel ? null : SCREENSHOT_BACKGROUND,
+                            backgroundColor: SCREENSHOT_BACKGROUND,
                             useCORS: true,
                             logging: false,
                             allowTaint: true,
@@ -12093,6 +12259,47 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 });
             };
 
+            const [routeQuickDraft, setRouteQuickDraft] = useState(null), [routeQuickBusy, setRouteQuickBusy] = useState(false);
+            const [routeQuickError, setRouteQuickError] = useState(''), [routeQuickNotice, setRouteQuickNotice] = useState('');
+            const routeQuickPendingRef = useRef(false), routeQuickContextRef = useRef(null);
+            routeQuickContextRef.current = { uid:user?.uid, date:activeDate };
+            useEffect(() => { setRouteQuickDraft(null); setRouteQuickError(''); setRouteQuickNotice(''); }, [user?.uid, activeDate]);
+            const openRouteQuickUpdate = note => {
+                if (!canEditSection('notes') || note.driverCall?.segment !== 'late-route') return;
+                if (isEditMode || hasUnsavedDashboardChanges || dashboardPendingWrites || saveActivity.pending) {
+                    setRouteQuickNotice('Save your dashboard edits before using Update progress.'); return;
+                }
+                setRouteQuickError(''); setRouteQuickNotice('');
+                setRouteQuickDraft({ id:crypto.randomUUID(), date:activeDate, noteId:note.id,
+                    call:JSON.parse(JSON.stringify(note.driverCall)), form:routeQuickForm(note.driverCall) });
+            };
+            const saveRouteQuickUpdate = async () => {
+                const draft = routeQuickDraft;
+                if (!draft || routeQuickPendingRef.current || !canEditSection('notes')) return;
+                const actor = getCurrentShiftUser();
+                try { buildRouteQuickUpdate({ driverCall:draft.call }, draft.form, actor); }
+                catch (error) { setRouteQuickError(error.message); return; }
+                routeQuickPendingRef.current = true; setRouteQuickBusy(true); setRouteQuickError('');
+                try {
+                    if (isEditMode || hasUnsavedDashboardChanges || dashboardPendingWrites || saveActivity.pending) throw new Error('Save your dashboard edits before using Update progress.');
+                    const ref = doc(db,'artifacts',appId,'public','data','dailyRecaps',draft.date);
+                    await runTransaction(db, async transaction => {
+                        if (auth.currentUser?.uid !== actor.uid || routeQuickContextRef.current?.date !== draft.date) throw new Error('Your account or report date changed. Reopen the route card.');
+                        requirePermission('shiftNotes');
+                        const snapshot = await transaction.get(ref);
+                        if (!snapshot.exists()) throw new Error('This route note is no longer available.');
+                        const saved = snapshot.data(), note = routeQuickSavedNote(saved, draft);
+                        const now = Date.now(), updated = buildRouteQuickUpdate(note,draft.form,actor,now);
+                        transaction.set(ref,{ shiftNotes:saved.shiftNotes.map(item => String(item.id) === String(note.id) ? updated : item), lastUpdatedBy:actor.name, lastUpdatedAt:new Date(now).toISOString() },{merge:true});
+                    });
+                    if (routeQuickContextRef.current?.uid === actor.uid && routeQuickContextRef.current?.date === draft.date) {
+                        setRouteQuickDraft(null); setRouteQuickNotice('Progress saved for ' + draft.call.route + '.');
+                    }
+                } catch (error) { setRouteQuickError(error?.code === 'permission-denied' ? 'Your account cannot update this route note. Check your Shift Notes editing permission.' : error.message || 'Progress could not be saved. Your entries are ready to retry.'); }
+                finally { routeQuickPendingRef.current = false; setRouteQuickBusy(false); }
+            };
+
+
             const toggleShiftNoteLike = async (noteId) => {
                 const actionKey = 'like-' + noteId;
                 if (pendingShiftActionsRef.current.has(actionKey)) return;
@@ -13119,7 +13326,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                         </button>
 
                                         <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md relative overflow-hidden group transition-all">
-                                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none text-slate-100"><Package className="w-24 h-24" /></div>
+                                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none text-slate-100"><Package className="w-20 h-20" /></div>
                                             <div className="relative z-10">
                                                 <span className="text-slate-400 text-[11px] font-bold uppercase tracking-widest block mb-1">Number of Same Day Routes</span>
                                                 <div className="flex items-baseline gap-3 relative z-10">
@@ -13250,7 +13457,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                         </div>
                                     </div>
 
-                                    <OverviewRouteIssues notes={data.shiftNotes} onOpen={note=>{setActiveTab('notes');setShiftNotesView('notes');openShiftNoteSearchResult({note,dateKey:activeDate});}}/>
+                                    {routeQuickNotice && <div role="status" className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-slate-600 bg-slate-800 px-4 py-3 text-sm text-slate-200" data-dashboard-edit-ignore="true"><span>{routeQuickNotice}</span><button type="button" aria-label="Dismiss route progress message" onClick={()=>setRouteQuickNotice('')}><X className="h-4 w-4"/></button></div>}
+                                    <OverviewRouteIssues notes={data.shiftNotes} onOpen={note=>{setActiveTab('notes');setShiftNotesView('notes');openShiftNoteSearchResult({note,dateKey:activeDate});}} onUpdate={canEditSection('notes') ? openRouteQuickUpdate : undefined}/>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div role="region" aria-label="Completed Routes" className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md flex justify-between items-center relative overflow-hidden group">
                                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none"><CheckCircle2 className="w-24 h-24 text-slate-100" /></div>
@@ -15387,6 +15595,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     )}
 
                     {}
+                    <RouteQuickProgressDialog draft={routeQuickDraft} change={setRouteQuickDraft} busy={routeQuickBusy} error={routeQuickError} onSave={saveRouteQuickUpdate} onClose={()=>{if(!routeQuickBusy)setRouteQuickDraft(null);}}/>
                     <RecentDeletionConfirmation pending={recentDeletionPending} busy={recentDeletionBusy} error={recentDeletionError} onConfirm={commitRecentDeletion} onClose={()=>{if(!recentDeletionBusy)setRecentDeletionPending(null);}}/>
                     {isAdminUser && recordToDelete && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
