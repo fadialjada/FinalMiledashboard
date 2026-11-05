@@ -1644,7 +1644,50 @@
 @media(max-width:480px) { .chat-image-only { width:260px; } }
 
 </style>
-<style>.dashboard-footer .footer-user-badge,.dashboard-footer .footer-user-badge:hover,.dashboard-footer .footer-user-badge:focus-within{background:transparent!important;border-color:transparent!important;box-shadow:none!important}</style></head>
+<style>.dashboard-footer .footer-user-badge,.dashboard-footer .footer-user-badge:hover,.dashboard-footer .footer-user-badge:focus-within{background:transparent!important;border-color:transparent!important;box-shadow:none!important}</style><style>
+.dc-overlay{position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.88);display:flex;align-items:center;justify-content:center;padding:20px;color:#e2e8f0;outline:none}
+.dc-dialog{width:min(900px,100%);max-height:94dvh;display:flex;flex-direction:column;overflow:hidden;background:#101722;border:1px solid #475569;border-radius:18px}
+.dc-titlebar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:19px 22px;border-bottom:1px solid #334155;background:#182231;flex-shrink:0}
+.dc-titlebar h2{margin:0;color:#f8fafc;font-size:18px;font-weight:800}
+.dc-titlebar p{margin:5px 0 0;color:#94a3b8;font-size:12px}
+.dc-titlebar>button{background:transparent!important;color:#94a3b8!important;border:0!important;padding:5px;border-radius:6px}
+.dc-scroll{padding:20px;overflow-y:auto;min-height:0;overscroll-behavior:contain}
+.dc-toolbar{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:17px;flex-wrap:wrap}
+.dc-actions,.dc-editor-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.dc-actions{margin-left:auto}
+.dc-overlay .dc-actions button,.dc-overlay .dc-editor-actions button,.dc-image-footer a{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;border-radius:8px;border:1px solid #52617b;background:#253249!important;color:#e2e8f0!important;font-size:12px;font-weight:650;text-decoration:none;cursor:pointer}
+.dc-overlay .dc-actions .dc-primary,.dc-overlay .dc-editor-actions .dc-primary,.dc-image-footer a{background:#6366f1!important;border-color:#818cf8;color:white!important}
+.dc-overlay button:disabled{opacity:.45;cursor:not-allowed}
+.dc-record-picker{font-size:11px;color:#a6b5cb;display:flex;align-items:center;gap:8px;max-width:100%;flex-wrap:wrap}
+.dc-record-picker select{background:#182231;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:8px;font-size:11px;max-width:100%}
+.dc-editor{padding:17px;border:1px solid #43516b;background:#192536;border-radius:12px;margin-bottom:18px}
+.dc-editor label{display:block;color:#d5dfef;font-size:12px;font-weight:650;margin-bottom:9px}
+.dc-editor textarea{width:100%;padding:12px;border:1px solid #52627d;background:#0f1929;color:#eef2fa;border-radius:8px;resize:vertical;font-size:13px;line-height:1.7;outline:none}
+.dc-editor textarea:focus{border-color:#a5b4fc}
+.dc-editor-actions{margin-top:11px}
+.dc-notice,.dc-error{font-size:12px;line-height:1.6;margin:0 0 15px;color:#6ee7b7}
+.dc-error{color:#fda4af}
+.dc-image-overlay{position:fixed;inset:0;z-index:10001;background:rgba(2,6,23,.94);display:flex;align-items:center;justify-content:center;padding:18px}
+.dc-image-dialog{max-width:850px;width:100%;max-height:94dvh;display:flex;flex-direction:column;border:1px solid #475569;background:#101722;border-radius:16px;overflow:hidden}
+.dc-image-scroll{overflow:auto;padding:16px;min-height:0}
+.dc-image-scroll img{width:100%;height:auto;display:block}
+.dc-image-footer{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 20px;border-top:1px solid #334155;color:#94a3b8;font-size:11px;flex-shrink:0}
+.dc-overlay.driver-coaching-dialog .brief-fault{white-space:normal;max-width:55%;line-height:1.4}
+@media(max-width:640px){.dc-overlay{padding:8px}.dc-dialog{max-height:96dvh;border-radius:14px}.dc-titlebar{padding:16px}.dc-scroll{padding:14px}.dc-titlebar h2{font-size:16px}.dc-titlebar p{font-size:11px}.dc-actions button{font-size:11px}.dc-image-overlay{padding:8px}.dc-image-footer{flex-wrap:wrap;padding:12px 15px}}
+
+
+ .driver-coaching-dialog .preview-style-tabs{display:flex;align-items:center;gap:7px;padding:5px;border:1px solid #334155;background:#131d2c;border-radius:10px;width:max-content;margin:0 0 18px;max-width:100%;flex-wrap:wrap} .driver-coaching-dialog .preview-style-tabs button{border:0;border-radius:7px;padding:9px 13px;font-size:12px;font-weight:650;color:#95a6bf;background:transparent} .driver-coaching-dialog .preview-style-tabs button[aria-selected="true"]{background:#2b3850;color:#f1f5f9} .driver-coaching-dialog .preview-style-tabs button:hover{color:#f1f5f9} .driver-coaching-dialog .brief-card{max-width:760px;margin:0 auto;border:1px solid #475569;border-radius:16px;background:#18212e;color:#e2e8f0;overflow:hidden} .driver-coaching-dialog .brief-head{padding:20px 22px 17px} .driver-coaching-dialog .brief-author{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:10px;color:#91a2b9} .driver-coaching-dialog .brief-author-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap} .driver-coaching-dialog .brief-author-left svg{width:12px;height:12px;color:#97a6d7} .driver-coaching-dialog .brief-author-left strong{font-weight:700;color:#b6c0ff} .driver-coaching-dialog .brief-fault{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;background:rgba(120,53,15,.25);border:1px solid rgba(180,83,9,.5);border-radius:6px;color:#fcd34d;font-size:10px;font-weight:700;white-space:nowrap} .driver-coaching-dialog .brief-fault svg{width:12px;height:12px} .driver-coaching-dialog .brief-heading{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:13px} .driver-coaching-dialog .brief-heading h3{margin:0;font-size:21px;font-weight:800;letter-spacing:-.45px;line-height:1.3;color:#f1f5f9} .driver-coaching-dialog .brief-category{border:1px solid rgba(129,140,248,.3);background:rgba(99,102,241,.1);color:#b9c0ff;border-radius:99px;padding:4px 8px;font-size:9px;font-weight:750;text-transform:uppercase;letter-spacing:.65px} .driver-coaching-dialog .brief-meta{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;padding:12px 22px;border-top:1px solid #334155;border-bottom:1px solid #334155;background:rgba(15,23,42,.4)} .driver-coaching-dialog .brief-meta>span{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#b7c4d7;min-width:0;overflow-wrap:anywhere} .driver-coaching-dialog .brief-meta svg{width:13px;height:13px;color:#8193af} .driver-coaching-dialog .brief-meta strong{font-size:11px;color:#dce5f3;font-weight:700;letter-spacing:.15px} .driver-coaching-dialog .brief-meta .brief-order{margin-left:auto;color:#a8b8d0;font-variant-numeric:tabular-nums} .driver-coaching-dialog .brief-body{padding:20px 22px 22px} .driver-coaching-dialog .brief-section-label{display:flex;align-items:center;gap:7px;color:#93a5be;font-size:9px;font-weight:750;text-transform:uppercase;letter-spacing:.9px} .driver-coaching-dialog .brief-section-label svg{width:13px;height:13px} .driver-coaching-dialog .brief-original-text{padding-left:12px;border-left:2px solid rgba(129,140,248,.5);font-size:14px;line-height:1.7;margin:12px 0 14px;color:#e2e8f0;white-space:pre-wrap;overflow-wrap:anywhere} .driver-coaching-dialog .brief-call-codes{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:11px;line-height:1.65} .driver-coaching-dialog .brief-call-codes dt{color:#8598b3} .driver-coaching-dialog .brief-call-codes dd{color:#c3cee0;margin:0} .driver-coaching-dialog .brief-coaching{margin-top:20px;border:1px solid #394a60;border-left:3px solid rgba(52,211,153,.6);border-radius:10px;background:rgba(15,23,42,.4);padding:15px 16px} .driver-coaching-dialog .brief-coach-label{display:flex;align-items:center;justify-content:space-between;gap:12px} .driver-coaching-dialog .brief-coach-label .brief-section-label{color:#60d9b4} .driver-coaching-dialog .brief-coach-label strong{color:#b8c7dc;font-size:10px;font-weight:650} .driver-coaching-dialog .brief-message{font-size:14px;color:#d9e2ef;line-height:1.75;margin:12px 0 0;white-space:pre-wrap;overflow-wrap:anywhere} .driver-coaching-dialog .brief-card.split .brief-body{display:grid;grid-template-columns:1fr 1fr;gap:22px;padding-top:22px} .driver-coaching-dialog .brief-card.split .brief-source{min-width:0;padding-right:18px;border-right:1px solid #334155} .driver-coaching-dialog .brief-card.split .brief-coaching{margin-top:0;align-self:stretch;min-width:0;padding:15px} .driver-coaching-dialog .brief-card.split .brief-heading h3{font-size:20px} .driver-coaching-dialog .brief-card.split .brief-original-text{margin-bottom:16px}
+@media(max-width:640px){ .driver-coaching-dialog .brief-head{padding:18px} .driver-coaching-dialog .brief-meta{padding:12px 18px;gap:9px 16px} .driver-coaching-dialog .brief-meta .brief-order{margin-left:0;width:100%} .driver-coaching-dialog .brief-body{padding:18px} .driver-coaching-dialog .brief-heading h3{font-size:20px} .driver-coaching-dialog .brief-author{align-items:flex-start} .driver-coaching-dialog .brief-card.split .brief-body{display:block;padding:18px} .driver-coaching-dialog .brief-card.split .brief-source{padding-right:0;border-right:0} .driver-coaching-dialog .brief-card.split .brief-coaching{margin-top:18px} .driver-coaching-dialog .brief-coaching{padding:14px} .driver-coaching-dialog .preview-style-tabs button{padding:9px 10px;font-size:11px}} .driver-coaching-dialog .brief-card.compact{border-color:#4b5a71;border-radius:16px} .driver-coaching-dialog .brief-card.compact .brief-head{position:relative;padding:20px 22px 19px;background:linear-gradient(115deg,#1e293b 0%,#18212e 65%);isolation:isolate} .driver-coaching-dialog .brief-card.compact .brief-head:before{content:"";position:absolute;left:18px;right:18px;top:0;height:1px;background:rgba(165,180,252,.24)} .driver-coaching-dialog .brief-card.compact .brief-author{font-size:10px;color:#9cacc3;position:relative;z-index:1} .driver-coaching-dialog .brief-card.compact .brief-author-left strong{font-size:10px;font-weight:750;color:#bdc7ff} .driver-coaching-dialog .brief-card.compact .brief-fault{background:rgba(120,53,15,.28);border-color:rgba(180,83,9,.55);padding:5px 8px;border-radius:6px;font-size:10px} .driver-coaching-dialog .brief-card.compact .brief-heading{gap:11px;margin-top:14px;position:relative;z-index:1} .driver-coaching-dialog .brief-card.compact .brief-heading h3{font-size:24px;font-weight:800;letter-spacing:-.6px;color:#f8fafc} .driver-coaching-dialog .brief-card.compact .brief-category{font-size:9px;padding:4px 8px;color:#c0c8ff;letter-spacing:.7px} .driver-coaching-dialog .brief-card.compact .brief-hardware-mark{position:absolute;right:23px;bottom:10px;width:50px;height:50px;stroke-width:1.2;color:#b7c5e6;opacity:.045;pointer-events:none;z-index:0} .driver-coaching-dialog .brief-card.compact .brief-meta{padding:13px 22px;gap:10px 19px;border-top-color:#334155;border-bottom-color:#334155;background:rgba(15,23,42,.5)} .driver-coaching-dialog .brief-card.compact .brief-meta strong{font-weight:750;color:#c9d1ff;font-size:11px} .driver-coaching-dialog .brief-card.compact .brief-meta>span{font-size:11px;color:#c0cbdc} .driver-coaching-dialog .brief-card.compact .brief-meta .brief-order{color:#d0daeb;font-weight:650;letter-spacing:.2px} .driver-coaching-dialog .brief-card.compact .brief-body{padding:21px 22px 22px} .driver-coaching-dialog .brief-card.compact .brief-section-label{font-size:10px;letter-spacing:.85px;color:#a4b3ca} .driver-coaching-dialog .brief-card.compact .brief-original-text{margin:12px 0 14px;padding:1px 0 1px 13px;line-height:1.75;font-size:14px;border-left-color:rgba(129,140,248,.65);color:#e2e8f0} .driver-coaching-dialog .brief-card.compact .brief-call-codes{gap:5px 11px;font-size:11px} .driver-coaching-dialog .brief-card.compact .brief-call-codes dt{color:#8ea1bc} .driver-coaching-dialog .brief-card.compact .brief-call-codes dd{color:#c9d5e6} .driver-coaching-dialog .brief-card.compact .brief-coaching{margin-top:19px;border:1px solid #41516b;border-left:3px solid rgba(52,211,153,.75);border-radius:10px;background:#121c2b;padding:16px 17px 18px} .driver-coaching-dialog .brief-card.compact .brief-coach-label .brief-section-label{color:#63dfb9;font-size:10px;font-weight:750;letter-spacing:.9px} .driver-coaching-dialog .brief-card.compact .brief-coach-label .brief-section-label svg{width:14px;height:14px} .driver-coaching-dialog .brief-card.compact .brief-coach-label>strong{color:#b8ccdf;font-size:11px;font-weight:750} .driver-coaching-dialog .brief-card.compact .brief-message{font-size:15px;line-height:1.75;font-weight:450;color:#e3ebf6;margin-top:12px}
+@media(max-width:640px){ .driver-coaching-dialog .brief-card.compact .brief-head{padding:18px} .driver-coaching-dialog .brief-card.compact .brief-heading h3{font-size:22px} .driver-coaching-dialog .brief-card.compact .brief-meta{padding:12px 18px;gap:9px 15px} .driver-coaching-dialog .brief-card.compact .brief-body{padding:18px} .driver-coaching-dialog .brief-card.compact .brief-coaching{padding:15px} .driver-coaching-dialog .brief-card.compact .brief-message{font-size:14px} .driver-coaching-dialog .brief-card.compact .brief-hardware-mark{width:40px;height:40px;right:18px;bottom:12px}}
+
+</style>
+<style id="driver-coaching-export-alignment">.dc-overlay.driver-coaching-dialog .brief-card .brief-fault,
+.dc-overlay.driver-coaching-dialog .brief-card .brief-category{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+.dc-overlay.driver-coaching-dialog .brief-card .brief-fault svg{display:block;flex-shrink:0}
+.dc-overlay.driver-coaching-dialog .brief-card .brief-fault span,
+.dc-overlay.driver-coaching-dialog .brief-card .brief-category span{display:block;text-align:center;line-height:1.2}
+.driver-coaching-dialog .brief-card.compact .brief-head::before{display:none!important;content:none!important}
+</style></head>
 <body class="balanced-picture-theme bg-slate-900 text-slate-100 font-sans antialiased overflow-x-hidden">
     <div id="root"></div>
 
@@ -1662,7 +1705,7 @@
             Table as TableIcon, Trash2, Route, Settings, ClipboardPaste, Award, DollarSign,
             PlusCircle, X, Loader2, ActivitySquare, MessageSquare, User, Share2,
             FileText, History, Maximize, Minimize, Bell, ThumbsUp, Smile, Search, ClipboardList,
-            Heart, Coffee, PartyPopper, Hand, Moon, Sparkles, Pizza, Cookie, Mic, Paperclip, MoreHorizontal, Phone, Building2, Wrench
+            Heart, Coffee, PartyPopper, Hand, Moon, Sparkles, Pizza, Cookie, Mic, Paperclip, MoreHorizontal, Phone, Building2, Wrench, GraduationCap, MapPin
         } from 'lucide-react';
 
         let firebaseConfig = {
@@ -4278,6 +4321,7 @@
                     } else add(`${removed ? 'removed' : 'wrote'} a ${label}${current.driverCall?.driver ? ' for '+activityPlainValue(current.driverCall.driver) : ''}: “${activityPlainValue(current.driverCall?.note || current.text,'text',700)}”.`);
                     consume(prefix); continue;
                 }
+                if(changes.some(change=>change.field===prefix+'.driverCoaching'||change.field.startsWith(prefix+'.driverCoaching.'))){add('saved driver coaching'+(note.driverCall?.route?' for route '+activityPlainValue(note.driverCall.route):'')+'.');consume(prefix+'.driverCoaching');}
                 const replies = [...new Set(changes.map(change=>change.field.startsWith(prefix+'.') && change.field.match(/^shiftNotes\[[^\]]+\]\.replies\[[^\]]+\]/)?.[0]).filter(Boolean))];
                 for (const replyPrefix of replies) {
                     const reply = itemAt(afterRecord,replyPrefix,'after'), prior = itemAt(beforeRecord,replyPrefix,'before');
@@ -4788,6 +4832,8 @@
             let merged = mergeConcurrentEdits(baseline || {}, local, remote);
             // A later form save or copied report must not erase today's shared button receipt.
             if (hasMorningReportOutlookRequest(remote, dateKey)) merged = applyMorningReportOutlookRequest(merged, remote.loadout.morningReport.outlookEmailRequest);
+            // Coaching is saved transactionally outside the day editor. Keep the saved map authoritative.
+            merged={...merged,shiftNotes:(merged.shiftNotes || []).map(note=>{const saved=(remote?.shiftNotes || []).find(item=>String(item.id)===String(note.id));return saved && (saved.driverCoaching || note.driverCoaching)?{...note,driverCoaching:saved.driverCoaching || {}}:note;})};
             const before = getLinkedPreloadTeam(baseline?.routeTable, dateKey);
             const mine = getLinkedPreloadTeam(local?.routeTable, dateKey);
             const selectionChanged = (before?.preloadArrival.assignmentId || '') !== (mine?.preloadArrival.assignmentId || '');
@@ -6840,6 +6886,170 @@ const copyScreenshotImageForEmail = async (createImage, options = {}) => {
     await navigator.clipboard.write([new ClipboardItem({'image/png':png})]);
     return {formatted:false};
 };
+
+        const driverCoachingSource = (note, dateKey) => {
+            const keys = ['route','driver','stopNumber','soRma','note','segment','reason','damageStage','action','guestSolution','piecesScheduled','piecesDelivered','piecesAffected'];
+            return { dateKey, noteId:String(note?.id || ''), author:String(note?.author || 'Team member'), timestamp:String(note?.timestamp || ''),
+                call:Object.fromEntries(keys.map(key => [key,key==='note'?String(note?.driverCall?.note || note?.text || ''):String(note?.driverCall?.[key] ?? '')])) };
+        };
+        const driverCoachingSourceKey = (note, dateKey) => JSON.stringify(driverCoachingSource(note,dateKey));
+        const driverCoachingRecords = (note, dateKey) => Object.values(note?.driverCoaching || {}).filter(record => record && typeof record.text === 'string' && record.authorUid && record.author && record.source?.dateKey === dateKey && record.source?.noteId === String(note?.id))
+            .sort((a,b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt)));
+        const buildDriverCoachingNote = ({note,dateKey,actor,text,expectedSource,expectedVersion,revision,now}) => {
+            if (!actor?.uid || !actor?.name) throw new Error('Sign in before saving coaching.');
+            if (!note?.driverCall || !driverCallSegmentInfo(note.driverCall) || isRouteStatusCall(note.driverCall) || isManagerNote(note)) throw new Error('This Driver Call is no longer available.');
+            const clean = String(text || '').trim();
+            if (!clean || clean.length > 3000) throw new Error('Enter a coaching note of 1–3,000 characters.');
+            if (driverCoachingSourceKey(note,dateKey) !== expectedSource) throw new Error('The call details changed. Close and reopen coaching to review the latest call. Your text is still here.');
+            const prior = (note.driverCoaching || {})[actor.uid];
+            const existing = prior?.source?.dateKey === dateKey && prior?.source?.noteId === String(note.id) ? prior : null;
+            if ((existing?.revision || existing?.updatedAt || null) !== (expectedVersion || null)) throw new Error('Your coaching was updated in another window. Close and reopen it before saving again. Your text is still here.');
+            const record = { id:existing?.id || revision, text:clean, author:existing?.author || actor.name, authorUid:actor.uid,
+                createdAt:existing?.createdAt || now, updatedAt:now, revision, source:driverCoachingSource(note,dateKey) };
+            return { ...note, driverCoaching:{...(note.driverCoaching || {}),[actor.uid]:record} };
+        };
+        const persistDriverCoaching = async ({dateKey,noteId,actor,text,expectedSource,expectedVersion,revision,checkContext}) => {
+            requireTeamAccount(); requirePermission('shiftNotes');
+            if (!db || !actor?.uid || auth.currentUser?.uid !== actor.uid) throw new Error('Sign in before saving coaching.');
+            const ref = doc(db,'artifacts',appId,'public','data','dailyRecaps',dateKey);
+            const now = new Date().toISOString(); let record;
+            await runTransaction(db,async transaction => {
+                checkContext(); requirePermission('shiftNotes');
+                const snapshot = await transaction.get(ref);
+                checkContext(); requirePermission('shiftNotes');
+                if (auth.currentUser?.uid !== actor.uid) throw new Error('Your account changed. Reopen coaching.');
+                if (!snapshot.exists()) throw new Error('This day is no longer available.');
+                const saved = snapshot.data(), note = (saved.shiftNotes || []).find(item => String(item.id) === String(noteId));
+                if (!note) throw new Error('This Driver Call is no longer available.');
+                // Transaction retries reuse the same revision; never replace another writer's coaching.
+                if (note.driverCoaching?.[actor.uid]?.revision === revision) { record=note.driverCoaching[actor.uid]; return; }
+                const updated = buildDriverCoachingNote({note,dateKey,actor,text,expectedSource,expectedVersion,revision,now});
+                record = updated.driverCoaching[actor.uid];
+                transaction.set(ref,{shiftNotes:saved.shiftNotes.map(item=>String(item.id)===String(noteId)?updated:item),lastUpdatedBy:actor.name,lastUpdatedAt:now},{merge:true});
+            });
+            return record;
+        };
+        const driverCoachingTitle = call => {
+            const info=driverCallSegmentInfo(call); if(!info)return 'Driver Call';
+            return /^(Driver fault|Not a driver fault|Cause not confirmed)$/i.test(info.reason.label) ? info.segment.label : info.reason.label.split('—')[0].trim();
+        };
+        const driverCoachingDate = dateKey => /^\d{4}-\d{2}-\d{2}$/.test(dateKey || '') ? new Date(dateKey+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+        const driverCoachingTime = value => Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+        // Render these small labels separately so PNG text uses the same visual center as its icon.
+        const driverCoachingScreenshotClone = async element => {
+            if (document.fonts?.ready) await document.fonts.ready;
+            const cardRect=element.getBoundingClientRect(),scale=getScreenshotScale(cardRect.width,cardRect.height);
+            const badges=await Promise.all([...element.querySelectorAll('.brief-fault,.brief-category')].map(async badge=>{
+                const style=getComputedStyle(badge),rect=badge.getBoundingClientRect(),svg=badge.querySelector('svg');
+                const width=rect.width-parseFloat(style.borderLeftWidth)-parseFloat(style.borderRightWidth);
+                const height=rect.height-parseFloat(style.borderTopWidth)-parseFloat(style.borderBottomWidth);
+                const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*scale);canvas.height=Math.ceil(height*scale);
+                const context=canvas.getContext('2d');context.scale(scale,scale);
+                context.font=style.fontWeight+' '+style.fontSize+' '+style.fontFamily;
+                context.fillStyle=style.color;context.textAlign='center';
+                if ('letterSpacing' in context) context.letterSpacing=style.letterSpacing;
+                const text=style.textTransform==='uppercase'?badge.textContent.trim().toUpperCase():badge.textContent.trim();
+                const iconRect=svg?.getBoundingClientRect(),iconWidth=iconRect?.width || 0,iconHeight=iconRect?.height || 0;
+                const gap=svg?parseFloat(style.columnGap) || 5:0;
+                const available=width-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-iconWidth-gap;
+                const lines=[];let line='';
+                for (const word of text.split(/\s+/)) {
+                    if (line&&context.measureText(line+' '+word).width>available) {lines.push(line);line=word;}
+                    else line=line?line+' '+word:word;
+                }
+                if (line) lines.push(line);
+                const glyphs=lines.map(value=>context.measureText(value));
+                const textWidth=Math.max(0,...glyphs.map(value=>value.actualBoundingBoxLeft+value.actualBoundingBoxRight));
+                const groupWidth=iconWidth+gap+textWidth,start=(width-groupWidth)/2;
+                const lineHeight=parseFloat(style.lineHeight) || parseFloat(style.fontSize)*1.2;
+                const ascent=Math.max(0,...glyphs.map(value=>value.actualBoundingBoxAscent));
+                const descent=Math.max(0,...glyphs.map(value=>value.actualBoundingBoxDescent));
+                const blockHeight=(lines.length-1)*lineHeight+ascent+descent;
+                const baseline=(height-blockHeight)/2+ascent;
+                lines.forEach((value,index)=>context.fillText(value,start+iconWidth+gap+textWidth/2+(glyphs[index].actualBoundingBoxLeft-glyphs[index].actualBoundingBoxRight)/2,baseline+index*lineHeight));
+                if (svg) {
+                    const icon=svg.cloneNode(true);icon.setAttribute('xmlns','http://www.w3.org/2000/svg');
+                    icon.setAttribute('width',String(iconWidth));icon.setAttribute('height',String(iconHeight));
+                    icon.setAttribute('stroke',getComputedStyle(svg).color);
+                    const image=new Image();image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(icon));
+                    await image.decode();context.drawImage(image,start,(height-iconHeight)/2,iconWidth,iconHeight);
+                }
+                return {selector:badge.classList.contains('brief-fault')?'.brief-fault':'.brief-category',width:rect.width,height:rect.height,url:canvas.toDataURL('image/png')};
+            }));
+            return clone=>{
+                const surface=clone.getElementById('driver-coaching-export');prepareScreenshotSurface(surface,'#18212e',16);
+                for (const badge of badges) {
+                    const target=surface.querySelector(badge.selector),image=clone.createElement('img');
+                    image.src=badge.url;image.alt=target.textContent.trim();
+                    Object.assign(image.style,{position:'absolute',inset:'0',width:'100%',height:'100%',display:'block',maxWidth:'none'});
+                    target.replaceChildren(image);
+                    Object.assign(target.style,{position:'relative',width:badge.width+'px',height:badge.height+'px',boxSizing:'border-box',padding:'0',flexShrink:'0'});
+                }
+            };
+        };
+
+        const DriverCoachingCard = ({source,record}) => {
+            const call=source.call,info=driverCallSegmentInfo(call);
+            return <article id="driver-coaching-export" className="brief-card compact" aria-label="Driver coaching card">
+                <header className="brief-head">
+                    <div className="brief-author"><span className="brief-author-left"><User aria-hidden="true"/><strong>{source.author}</strong><span>· {driverCoachingTime(source.timestamp) || driverCoachingDate(source.dateKey)}</span></span>{info&&<span className="brief-fault"><AlertTriangle aria-hidden="true"/><span>{info.cause}</span></span>}</div>
+                    <div className="brief-heading"><h3>{driverCoachingTitle(call)}</h3>{info&&<span className="brief-category"><span>{info.segment.label}</span></span>}</div>
+                    <Wrench className="brief-hardware-mark" aria-hidden="true"/>
+                </header>
+                <div className="brief-meta">
+                    {call.route&&<span><Truck aria-hidden="true"/><strong>{call.route}</strong></span>}
+                    {call.driver&&<span><User aria-hidden="true"/>{call.driver}</span>}
+                    {call.stopNumber&&<span><MapPin aria-hidden="true"/>Stop {call.stopNumber}</span>}
+                    <span><Calendar aria-hidden="true"/>{driverCoachingDate(source.dateKey)}</span>
+                    {call.soRma&&<span className="brief-order">{call.soRma}</span>}
+                </div>
+                <div className="brief-body">
+                    <section className="brief-source"><div className="brief-section-label"><FileText aria-hidden="true"/><span>{source.author}’s call notes</span></div><p className="brief-original-text">{call.note}</p><dl className="brief-call-codes">{info&&<><dt>Reason</dt><dd>{info.reason.label}</dd></>}{call.action&&<><dt>Action</dt><dd>{call.action}</dd></>}</dl></section>
+                    <section className="brief-coaching"><div className="brief-coach-label"><div className="brief-section-label"><MessageSquare aria-hidden="true"/>For drivers</div><strong>{record?.author || ''}</strong></div><p className="brief-message">{record?.text || 'Add your coaching note above.'}</p></section>
+                </div>
+            </article>;
+        };
+        const DriverCoachingDialog = ({note,dateKey,actor,canWrite,onSave,onClose}) => {
+            const records=driverCoachingRecords(note,dateKey),own=records.find(record=>record.authorUid===actor.uid);
+            const [selectedUid,setSelectedUid]=useState(own?.authorUid || records[0]?.authorUid || actor.uid);
+            const [editing,setEditing]=useState(records.length===0),[draft,setDraft]=useState('');
+            const [busy,setBusy]=useState(false),[capturing,setCapturing]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+            const [image,setImage]=useState(null),imageRef=useRef(null),editBaseline=useRef(null),dialogRef=useRef(null);
+            const selected=records.find(record=>record.authorUid===selectedUid),source=selected?.source || driverCoachingSource(note,dateKey);
+            const edit = () => { const mine=driverCoachingRecords(note,dateKey).find(record=>record.authorUid===actor.uid); editBaseline.current={source:driverCoachingSourceKey(note,dateKey),version:mine?.revision || mine?.updatedAt || null};setSelectedUid(actor.uid);setDraft(mine?.text || '');setEditing(true);setError('');setNotice(''); };
+            useEffect(()=>{ if(records.length===0)edit(); },[]);
+            useEffect(()=>{ const focus=document.activeElement;dialogRef.current?.focus();return()=>{imageRef.current&&URL.revokeObjectURL(imageRef.current);if(focus?.isConnected)focus.focus();}; },[]);
+            useEffect(()=>{if(image)dialogRef.current?.querySelector('.dc-image-dialog button')?.focus();},[image?.url]);
+            const close = () => { if(busy||capturing)return;if(editing&&draft.trim()&&draft!==(own?.text || '')&&!window.confirm('Discard your unsaved coaching note?'))return;onClose(); };
+            const save = async event => {
+                event.preventDefault();if(busy||!canWrite)return;setBusy(true);setError('');setNotice('');
+                try{await onSave({text:draft,expectedSource:editBaseline.current?.source,expectedVersion:editBaseline.current?.version});setEditing(false);setSelectedUid(actor.uid);setNotice('Coaching saved. No reply or notification was sent.');}
+                catch(error){setError(error?.code==='permission-denied'?'Coaching could not save. Check your Shift Notes editing permission.':error.message || 'Coaching could not save. Your text is still here.');}
+                finally{setBusy(false);}
+            };
+            const screenshot = async () => {
+                if(editing||!selected||capturing)return;setCapturing(true);setError('');
+                try{
+                    const element=document.getElementById('driver-coaching-export'),rect=element.getBoundingClientRect();
+                    const blob=await downloadScreenshotPng(element,'Driver-Coaching.png',{width:rect.width,height:rect.height,backgroundColor:'#18212e',useCORS:true,logging:false,scrollX:0,scrollY:0,onclone:await driverCoachingScreenshotClone(element)},true);
+                    if(imageRef.current)URL.revokeObjectURL(imageRef.current);const url=URL.createObjectURL(blob);imageRef.current=url;
+                    const img=new Image();img.src=url;await img.decode();setImage({url,width:img.naturalWidth,height:img.naturalHeight});
+                }catch(error){setError(error.message || 'The coaching screenshot could not be prepared.');}finally{setCapturing(false);}
+            };
+            const onKeyDown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(image){setImage(null);dialogRef.current?.focus();}else close();}if(event.key==='Tab'){const scope=image?event.currentTarget.querySelector('.dc-image-dialog'):event.currentTarget;const items=[...(scope?.querySelectorAll('button:not([disabled]),a[href],textarea,select')||[])].filter(el=>el.getClientRects().length);if(!items.length)return;const first=items[0],last=items.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===event.currentTarget)){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}};
+            return createPortal(<div className="driver-coaching-dialog dc-overlay" role="dialog" aria-modal="true" aria-label="Driver coaching" tabIndex={-1} ref={dialogRef} onKeyDown={onKeyDown}>
+                <div className="dc-dialog">
+                    <header className="dc-titlebar"><div><h2>Driver coaching</h2><p>Your message for drivers, separate from call replies.</p></div><button type="button" onClick={close} disabled={busy||capturing} aria-label="Close driver coaching"><X className="w-5 h-5"/></button></header>
+                    <div className="dc-scroll">
+                        <div className="dc-toolbar">{records.length>1?<label className="dc-record-picker">Saved coaching<select aria-label="Saved coaching notes" value={selectedUid} disabled={editing||busy} onChange={event=>{setSelectedUid(event.target.value);setNotice('');}}>{records.map(record=><option key={record.authorUid} value={record.authorUid}>{record.author} · {driverCoachingTime(record.updatedAt)}</option>)}</select></label>:<span/>}<div className="dc-actions">{canWrite&&<button type="button" onClick={edit} disabled={busy||capturing||editing}><Edit3 className="w-4 h-4"/>{own?'Edit my coaching':'Add coaching'}</button>}<button type="button" className="dc-primary" onClick={screenshot} disabled={busy||capturing||editing||!selected}><Camera className="w-4 h-4"/>{capturing?'Preparing…':'Screenshot card'}</button></div></div>
+                        {editing&&<form className="dc-editor" onSubmit={save}><label htmlFor="driver-coaching-text">Your coaching note for the drivers</label><textarea id="driver-coaching-text" aria-label="Your coaching note for the drivers" value={draft} onChange={event=>setDraft(event.target.value)} maxLength={3000} rows={4} required disabled={busy}/><div className="dc-editor-actions"><button type="button" disabled={busy} onClick={()=>{setEditing(false);setError('');}}>Cancel</button><button type="submit" className="dc-primary" disabled={busy||!draft.trim()}>{busy?'Saving…':'Save coaching'}</button></div></form>}
+                        {error&&<p role="alert" className="dc-error">{error}</p>}{notice&&<p role="status" className="dc-notice">{notice}</p>}
+                        <DriverCoachingCard source={source} record={selected}/>
+                    </div>
+                </div>
+                {image&&<div className="dc-image-overlay" role="dialog" aria-modal="true" aria-label="Coaching screenshot"><div className="dc-image-dialog"><header className="dc-titlebar"><h2>Driver coaching card</h2><button type="button" onClick={()=>setImage(null)} aria-label="Close screenshot preview"><X className="w-5 h-5"/></button></header><div className="dc-image-scroll"><img src={image.url} alt={'Driver coaching card with '+source.author+'’s call and '+selected?.author+'’s coaching note'}/></div><footer className="dc-image-footer"><span>{image.width.toLocaleString()} × {image.height.toLocaleString()} pixels</span><a href={image.url} download={'Driver-Coaching-'+String(source.call.route || 'Call').replace(/[^a-z0-9_-]/gi,'')+'.png'}><Download className="w-4 h-4"/>Download PNG</a></footer></div></div>}
+            </div>,document.body);
+        };
 
 const MORNING_REPORT_REMINDER_MINUTES = 11 * 60 + 30;
 const MORNING_REPORT_DEADLINE_MINUTES = 11 * 60 + 45;
@@ -12332,6 +12542,34 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 });
             };
 
+            const [driverCoachingTarget,setDriverCoachingTarget]=useState(null);
+            const driverCoachingContextRef=useRef(null),driverCoachingWriteRef=useRef(false);
+            driverCoachingContextRef.current={uid:user?.uid,date:activeDate,target:driverCoachingTarget?.token,blocked:()=>Boolean(isEditMode||hasUnsavedDashboardChanges||(!driverCoachingWriteRef.current&&(dashboardPendingWrites||saveActivity.pending)))};
+            useEffect(()=>{setDriverCoachingTarget(null);},[user?.uid,activeDate]);
+            const openDriverCoaching = note => {
+                if(!canEditSection('notes')||!driverCallSegmentInfo(note?.driverCall)||isRouteStatusCall(note.driverCall)||isManagerNote(note))return;
+                if(isLoading||isEditMode||hasUnsavedDashboardChanges||dashboardPendingWrites||saveActivity.pending){window.alert('Save your dashboard edits before opening driver coaching.');return;}
+                setDriverCoachingTarget({noteId:String(note.id),date:activeDate,token:crypto.randomUUID()});
+            };
+            const saveDriverCoaching = async ({text,expectedSource,expectedVersion}) => {
+                const target=driverCoachingTarget,actor=getCurrentShiftUser();
+                if(!target||driverCoachingWriteRef.current)throw new Error('Coaching is already saving. Please wait.');
+                const checkContext=()=>{
+                    const current=driverCoachingContextRef.current;
+                    if(current?.uid!==actor.uid||auth.currentUser?.uid!==actor.uid||current?.date!==target.date||current?.target!==target.token)throw new Error('Your account or report date changed. Reopen driver coaching.');
+                    if(current.blocked())throw new Error('Save your dashboard edits before saving driver coaching. Your text is still here.');
+                    if(!canEditSection('notes'))throw new Error('Your account cannot save coaching. Check your Shift Notes editing permission.');
+                };
+                checkContext();driverCoachingWriteRef.current=true;
+                try{
+                    const record=await persistDriverCoaching({dateKey:target.date,noteId:target.noteId,actor,text,expectedSource,expectedVersion,revision:crypto.randomUUID(),checkContext});
+                    const current=driverCoachingContextRef.current;
+                    if(current?.uid===actor.uid&&current?.date===target.date&&current?.target===target.token)setData(local=>({...local,shiftNotes:(local.shiftNotes||[]).map(note=>String(note.id)!==target.noteId?note:{...note,driverCoaching:{...(note.driverCoaching||{}),[actor.uid]:record}})}));
+                    return record;
+                }finally{driverCoachingWriteRef.current=false;}
+            };
+            const driverCoachingNote=driverCoachingTarget?.date===activeDate?(data.shiftNotes||[]).find(note=>String(note.id)===driverCoachingTarget.noteId):null;
+
             const [routeQuickDraft, setRouteQuickDraft] = useState(null), [routeQuickBusy, setRouteQuickBusy] = useState(false);
             const [routeQuickError, setRouteQuickError] = useState(''), [routeQuickNotice, setRouteQuickNotice] = useState('');
             const routeQuickPendingRef = useRef(false), routeQuickContextRef = useRef(null);
@@ -14456,7 +14694,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                         </div>
                                                     )}
                                                     {canEditSection('notes') && !( !isEditing && Object.prototype.hasOwnProperty.call(shiftReplyDrafts, note.id) ) && (
-                                                        <div className="flex justify-end">
+                                                        <div className="flex justify-end items-center gap-2">
+                                                            {!isEditing && driverCallSegmentInfo(note.driverCall) && !isRouteStatusCall(note.driverCall) && !isManagerNote(note) && <button type="button" onClick={()=>openDriverCoaching(note)} aria-label="Open driver coaching" title="Driver coaching" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:text-indigo-300 hover:bg-indigo-500/10 transition-colors"><GraduationCap className="w-4 h-4" aria-hidden="true"/></button>}
                                                             <button onClick={() => {
                                                                 if (isEditing) {
                                                                     const nd = JSON.parse(JSON.stringify(data));
@@ -15671,6 +15910,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     )}
 
                     {}
+                    {driverCoachingNote && <DriverCoachingDialog key={driverCoachingTarget.token} note={driverCoachingNote} dateKey={driverCoachingTarget.date} actor={getCurrentShiftUser()} canWrite={canEditSection('notes')} onSave={saveDriverCoaching} onClose={()=>{if(!driverCoachingWriteRef.current)setDriverCoachingTarget(null);}}/>}
                     <RouteQuickProgressDialog draft={routeQuickDraft} change={setRouteQuickDraft} busy={routeQuickBusy} error={routeQuickError} onSave={saveRouteQuickUpdate} onClose={()=>{if(!routeQuickBusy)setRouteQuickDraft(null);}}/>
                     <RecentDeletionConfirmation pending={recentDeletionPending} busy={recentDeletionBusy} error={recentDeletionError} onConfirm={commitRecentDeletion} onClose={()=>{if(!recentDeletionBusy)setRecentDeletionPending(null);}}/>
                     {isAdminUser && recordToDelete && (
