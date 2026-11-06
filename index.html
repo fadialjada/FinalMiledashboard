@@ -6883,6 +6883,7 @@ const copyScreenshotImageForEmail = async (createImage, options = {}) => {
         try { await navigator.clipboard.write([new ClipboardItem({'text/html':html})]); return {formatted:true}; }
         catch (error) { if (!['DataError','NotSupportedError'].includes(error?.name)) throw error; }
     }
+    if (options.requireFormatting) throw new Error('Formatted image copying is unavailable.');
     await navigator.clipboard.write([new ClipboardItem({'image/png':png})]);
     return {formatted:false};
 };
@@ -9212,7 +9213,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
 
         const createInsuranceScreenshot = async (contractorName, policy) => {
             const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
+            const context = canvas.getContext('2d', { alpha: true });
             if (!context) throw new Error('The screenshot canvas is unavailable.');
             const width = 740;
             const padding = 24;
@@ -9238,16 +9239,25 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             canvas.height = Math.round(height * scale);
             try {
                 context.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
-                const radius = 16;
-                context.beginPath();
-                context.moveTo(radius, 0);
-                context.arcTo(width, 0, width, height, radius);
-                context.arcTo(width, height, 0, height, radius);
-                context.arcTo(0, height, 0, 0, radius);
-                context.arcTo(0, 0, width, 0, radius);
-                context.closePath();
                 context.fillStyle = '#18212e';
-                context.fill();
+                context.fillRect(0, 0, width, height);
+                // Cut the curve at export resolution so there are no shaded pixels in the corners.
+                const radiusX = 16 * canvas.width / width;
+                const radiusY = 16 * canvas.height / height;
+                context.save();
+                context.setTransform(1, 0, 0, 1, 0, 0);
+                for (let row = 0; row + 0.5 < radiusY; row++) {
+                    const offset = 1 - (row + 0.5) / radiusY;
+                    const cut = Math.round(radiusX * (1 - Math.sqrt(1 - offset * offset)));
+                    if (!cut) break;
+                    const right = canvas.width - cut;
+                    const bottom = canvas.height - 1 - row;
+                    context.clearRect(0, row, cut, 1);
+                    context.clearRect(right, row, cut, 1);
+                    context.clearRect(0, bottom, cut, 1);
+                    context.clearRect(right, bottom, cut, 1);
+                }
+                context.restore();
 
                 const text = (value, x, y, size, color, bold = false, align = 'left', maxWidth = titleWidth) => {
                     context.font = (bold ? '700 ' : '400 ') + size + 'px "Segoe UI", sans-serif';
@@ -9310,18 +9320,30 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const exportBusy = useRef(false);
             const [exporting, setExporting] = useState(false);
             const [exportError, setExportError] = useState('');
+            const [exportNotice, setExportNotice] = useState('');
             const takeScreenshot = async () => {
                 if (exportBusy.current || !canExport || draft) return;
                 exportBusy.current = true;
                 setExporting(true);
                 setExportError('');
+                setExportNotice('');
                 try {
                     requireSectionAction('masterLists', 'export');
                     const uid = auth.currentUser.uid;
-                    const png = await createInsuranceScreenshot(contractor.name, group.policy);
-                    requireSectionAction('masterLists', 'export');
-                    if (auth.currentUser.uid !== uid || !dialogRef.current?.open) return;
-                    saveInsuranceScreenshotFile(png, contractor.name);
+                    const png = createInsuranceScreenshot(contractor.name, group.policy).then(blob => {
+                        requireSectionAction('masterLists', 'export');
+                        if (auth.currentUser.uid !== uid || !dialogRef.current?.open) throw new Error('Reopen the insurance policy before exporting.');
+                        saveInsuranceScreenshotFile(blob, contractor.name);
+                        return blob;
+                    });
+                    const emailCopy = copyScreenshotImageForEmail(() => png, {
+                        background:'#18212e', maxWidth:740, label:contractor.name + ' insurance policy', requireFormatting:true
+                    }).catch(() => null);
+                    await png;
+                    const copied = await emailCopy;
+                    setExportNotice(copied?.formatted
+                        ? 'Screenshot downloaded and ready to paste.'
+                        : 'Screenshot downloaded. Insert the PNG directly into your email.');
                 } catch (failure) {
                     setExportError(failure.message || 'The insurance screenshot could not be downloaded.');
                 } finally {
@@ -9381,13 +9403,14 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     <div className="flex shrink-0 items-center gap-2">
                         {!draft && <button ref={editButtonRef} type="button" onClick={beginEdit} disabled={exporting} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold hover:bg-slate-700">Edit policy</button>}
                         {!draft && canExport && <button type="button" onClick={takeScreenshot} disabled={exporting}
-                            aria-label="Download insurance screenshot" title="Download insurance screenshot"
+                            aria-label="Download insurance screenshot" title="Download insurance screenshot and prepare it for pasting"
                             className="rounded-lg border border-slate-600 p-2 text-slate-200 hover:bg-slate-700 disabled:opacity-50">
                             {exporting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true"/> : <Camera className="h-4 w-4" aria-hidden="true"/>}
                         </button>}
                         <button type="button" aria-label="Close insurance policy" disabled={saving || exporting} onClick={onClose} className="rounded-lg p-2 text-slate-300 hover:bg-slate-700 disabled:opacity-50"><X className="h-4 w-4"/></button>
                     </div>
                 </header>
+                {exportNotice && !draft && <p role="status" className="px-4 pt-3 text-sm text-slate-300">{exportNotice}</p>}
                 {exportError && !draft && <p role="alert" className="px-4 pt-3 text-sm text-rose-300">{exportError}</p>}
                 {draft ? <form onSubmit={submit} className="space-y-4 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
