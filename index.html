@@ -2986,7 +2986,7 @@
         };
         const validatePasswordResetEmail = value => {
             const email = String(value || '').trim();
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter the email this person uses to sign in.');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid dashboard sign-in email.');
             return email;
         };
         const passwordResetError = error => ({
@@ -2996,8 +2996,7 @@
             'auth/operation-not-allowed':'Password reset is not available for this login. Check Firebase Authentication.',
             'auth/unauthorized-domain':'This website address is not authorized in Firebase Authentication.'
         })[error?.code] || 'The reset link could not be requested. Please try again.';
-        const requestDashboardPasswordReset = async value => {
-            if (!isOwnerAccount(auth.currentUser)) throw new Error('Only Master Admin can manage password resets here.');
+        const sendDashboardResetLink = async value => {
             const email = validatePasswordResetEmail(value);
             try { await sendPasswordResetEmail(auth, email); }
             catch (error) {
@@ -3006,15 +3005,23 @@
             }
             return email;
         };
-        const validateDirectPasswordChange = draft => {
-            const uid = String(draft.uid || '').trim(), email = validatePasswordResetEmail(draft.email);
+        const requestDashboardPasswordReset = async value => {
+            if (!isOwnerAccount(auth.currentUser)) throw new Error('Only Master Admin can manage password resets here.');
+            return sendDashboardResetLink(value);
+        };
+        const validateDashboardPasswordChange = (draft, currentPasswordRequired) => {
             const currentPassword = String(draft.currentPassword || ''), password = String(draft.password || '');
-            if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) throw new Error('Choose a dashboard user first.');
-            if (!currentPassword) throw new Error('Enter this user’s current password, or choose Send reset link.');
+            if (!currentPassword) throw new Error(currentPasswordRequired);
             if (password.length < 6) throw new Error('Enter a new password with at least 6 characters.');
             if (password !== draft.confirmPassword) throw new Error('The two new passwords do not match.');
             if (password === currentPassword) throw new Error('Choose a different new password.');
-            return {uid, email, currentPassword, password};
+            return {currentPassword, password};
+        };
+        const validateDirectPasswordChange = draft => {
+            const uid = String(draft.uid || '').trim(), email = validatePasswordResetEmail(draft.email);
+            if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) throw new Error('Choose a dashboard user first.');
+            const passwords = validateDashboardPasswordChange(draft, 'Enter this user’s current password, or choose Send reset link.');
+            return {uid, email, ...passwords};
         };
         const directPasswordChangeError = error => ({
             'auth/invalid-credential':'The login email or current password is incorrect. Check them or use Send reset link.',
@@ -3065,6 +3072,63 @@
                 if (temporaryAuth) await signOut(temporaryAuth).catch(() => {});
                 if (temporaryApp) await deleteApp(temporaryApp).catch(() => {});
             }
+        };
+        const changeOwnDashboardPassword = async (uid, draft) => {
+            const account = auth.currentUser;
+            if (!account?.email || account.uid !== uid) throw new Error('Sign in again to change your password.');
+            const {currentPassword, password} = validateDashboardPasswordChange(draft, 'Enter your current password.');
+            try {
+                const policy = await validatePassword(auth, password);
+                if (!policy.isValid) throw Object.assign(new Error(passwordPolicyMessage(policy)), {code:'dashboard/password-policy'});
+                if (auth.currentUser !== account) throw Object.assign(new Error('Your session changed. Sign in again.'), {code:'dashboard/password-session'});
+                await reauthenticateWithCredential(account, EmailAuthProvider.credential(account.email, currentPassword));
+                if (auth.currentUser !== account) throw Object.assign(new Error('Your session changed. Sign in again.'), {code:'dashboard/password-session'});
+                await updatePassword(account, password);
+            } catch (error) {
+                if (['auth/invalid-credential','auth/wrong-password','auth/user-not-found'].includes(error?.code))
+                    throw new Error('Your current password is incorrect.');
+                throw new Error(directPasswordChangeError(error));
+            }
+        };
+        const DashboardPasswordReset = ({initialEmail, onBack}) => {
+            const [email,setEmail] = useState(initialEmail);
+            const [busy,setBusy] = useState(false);
+            const [sent,setSent] = useState(false);
+            const [error,setError] = useState('');
+            const pending = useRef(false);
+            const submit = async event => {
+                event.preventDefault();
+                if (pending.current) return;
+                pending.current = true;
+                setBusy(true);
+                setError('');
+                try {
+                    await sendDashboardResetLink(email);
+                    setSent(true);
+                } catch (problem) { setError(problem.message); }
+                finally { pending.current = false; setBusy(false); }
+            };
+            return <div className="space-y-4">
+                {sent ? <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-4 text-sm text-emerald-100">
+                    <h2 className="font-bold">Check your inbox</h2>
+                    <p className="mt-1">If your email is registered, you’ll receive a link to reset your password. Check your spam folder if you don’t see it.</p>
+                </div> : <form onSubmit={submit} className="space-y-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-white">Reset your password</h2>
+                        <p className="mt-1 text-sm text-slate-400">Enter the work email you use to sign in.</p>
+                    </div>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-400">
+                        Work email
+                        <input type="email" autoComplete="email" autoFocus required disabled={busy} value={email} onChange={event=>setEmail(event.target.value)}
+                            className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-base font-normal normal-case tracking-normal text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30" placeholder="name@company.com"/>
+                    </label>
+                    {error && <p role="alert" className="rounded-xl border border-rose-500/40 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">{error}</p>}
+                    <button type="submit" disabled={busy} className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-bold text-white hover:bg-indigo-500 disabled:opacity-60">
+                        {busy ? 'Requesting…' : 'Send reset link'}
+                    </button>
+                </form>}
+                <button type="button" disabled={busy} onClick={onBack} className="w-full rounded-lg px-2 py-2 text-sm font-semibold text-indigo-300 hover:text-indigo-100 disabled:opacity-50">Back to sign in</button>
+            </div>;
         };
         const isManagerNote = note => note?.category === 'Manager Note';
         const hasManagerNoteAcknowledgement = (note, uid) => !!uid && (note?.replies || []).some(reply =>
@@ -6409,6 +6473,35 @@
         const ProfilePhotoEditor = ({user,name,photos,titles,onClose,onSaved,onView}) => {
             const [draft,setDraft]=useState(()=>photos[user.uid]||''),[jobTitle,setJobTitle]=useState(()=>titles[user.uid]||''),[busy,setBusy]=useState(false),[preparing,setPreparing]=useState(false),[error,setError]=useState('');
             const [cropSource,setCropSource]=useState(null),[crop,setCrop]=useState({zoom:1,x:0,y:0});
+            const [changingPassword,setChangingPassword]=useState(false),[passwordError,setPasswordError]=useState(''),[passwordUpdated,setPasswordUpdated]=useState(false);
+            const passwordPending=useRef(false),passwordButton=useRef(null);
+            const returnToProfile=()=>{
+                setChangingPassword(false);
+                setPasswordError('');
+                requestAnimationFrame(()=>passwordButton.current?.focus());
+            };
+            const closeView=()=>changingPassword ? returnToProfile() : onClose();
+            const submitPassword=async event=>{
+                event.preventDefault();
+                if(busy||passwordPending.current)return;
+                const form=event.currentTarget;
+                const draft=Object.fromEntries(new FormData(form));
+                passwordPending.current=true;
+                setBusy(true);setPasswordError('');
+                try {
+                    await changeOwnDashboardPassword(user.uid,draft);
+                    if(alive.current){
+                        form.reset();
+                        setPasswordUpdated(true);
+                        returnToProfile();
+                    }
+                } catch(problem) {
+                    if(alive.current)setPasswordError(problem.message);
+                } finally {
+                    passwordPending.current=false;
+                    if(alive.current)setBusy(false);
+                }
+            };
             const fileRef=useRef(null),dialogRef=useRef(null),alive=useRef(true),pickVersion=useRef(0),dragRef=useRef(null);
             useEffect(()=>{alive.current=true;const before=document.activeElement;dialogRef.current?.focus();return()=>{alive.current=false;pickVersion.current++;before?.focus?.();};},[]);
             const beginCrop=async loader=>{const version=++pickVersion.current;setPreparing(true);setError('');try{const source=await loader();if(alive.current&&version===pickVersion.current){setCropSource(source);setCrop({zoom:1,x:0,y:0});}}catch(failure){if(alive.current&&version===pickVersion.current)setError(failure.message);}finally{if(alive.current&&version===pickVersion.current)setPreparing(false);}};
@@ -6421,8 +6514,28 @@
             const cropKeys=event=>{const move={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];if(!move||busy)return;event.preventDefault();const step=event.shiftKey?12:3;updateCrop({...crop,x:geometry.x+move[0]*step,y:geometry.y+move[1]*step});};
             const applyCrop=()=>{try{setDraft(renderProfileCrop(cropSource,crop));setCropSource(null);setError('');}catch(failure){setError(failure.message);}};
             const save=async()=>{if(busy||preparing)return;setBusy(true);setError('');try{const photo=cropSource?renderProfileCrop(cropSource,crop):draft;await saveProfilePhoto(db,user.uid,photo,jobTitle);if(alive.current&&auth.currentUser?.uid===user.uid){onSaved(user.uid,photo,jobTitle.trim());onClose();}}catch(failure){if(alive.current)setError(failure.code==='permission-denied'?'Your profile could not be saved. Check your account access.':failure.message||'Your profile could not be saved. Try again.');}finally{if(alive.current)setBusy(false);}};
-            const trap=event=>{if(event.key==='Escape'&&!busy){onClose();return;}if(event.key!=='Tab')return;const controls=[...dialogRef.current.querySelectorAll('button:not(:disabled),input:not([type=hidden]):not(:disabled),[tabindex="0"]')].filter(node=>node.getClientRects().length);if(!controls.length){event.preventDefault();return;}const first=controls[0],last=controls.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===dialogRef.current)){event.preventDefault();last.focus();}else if(!event.shiftKey&&(document.activeElement===last||document.activeElement===dialogRef.current)){event.preventDefault();first.focus();}};
-            return createPortal(<div className="profile-photo-overlay" data-dashboard-edit-ignore="true" onClick={event=>{if(event.target===event.currentTarget&&!busy)onClose();}}><section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="My profile" onKeyDown={trap} className="profile-photo-editor">
+            const trap=event=>{if(event.key==='Escape'&&!busy){event.preventDefault();closeView();return;}if(event.key!=='Tab')return;const controls=[...dialogRef.current.querySelectorAll('button:not(:disabled),input:not([type=hidden]):not(:disabled),[tabindex="0"]')].filter(node=>node.getClientRects().length);if(!controls.length){event.preventDefault();return;}const first=controls[0],last=controls.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===dialogRef.current)){event.preventDefault();last.focus();}else if(!event.shiftKey&&(document.activeElement===last||document.activeElement===dialogRef.current)){event.preventDefault();first.focus();}};
+            return createPortal(<div className="profile-photo-overlay" data-dashboard-edit-ignore="true" onClick={event=>{if(event.target===event.currentTarget&&!busy)closeView();}}><section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={changingPassword ? 'Change password' : 'My profile'} onKeyDown={trap} className="profile-photo-editor">
+                {changingPassword ? <form onSubmit={submitPassword} className="space-y-4">
+                    <div>
+                        <h2 className="text-lg font-semibold text-white">Change password</h2>
+                        <p className="mt-1 break-all text-sm text-slate-400">{user.email}</p>
+                    </div>
+                    {[
+                        ['currentPassword','Current password','current-password'],
+                        ['password','New password','new-password'],
+                        ['confirmPassword','Confirm new password','new-password']
+                    ].map(([field,label,autoComplete])=><label key={field} className="block text-sm text-slate-300">
+                        {label}
+                        <input name={field} type="password" autoComplete={autoComplete} autoFocus={field==='currentPassword'} required disabled={busy}
+                            className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100"/>
+                    </label>)}
+                    {passwordError && <p role="alert" className="text-sm text-rose-300">{passwordError}</p>}
+                    <div className="flex flex-wrap justify-end gap-2 border-t border-slate-700 pt-4">
+                        <button type="button" disabled={busy} onClick={returnToProfile} className="rounded-lg px-4 py-2 text-sm text-slate-300">Cancel</button>
+                        <button type="submit" disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">{busy?'Saving…':'Save new password'}</button>
+                    </div>
+                </form> : <>
                 <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">My profile</h2><button type="button" aria-label="Close my profile" disabled={busy} onClick={onClose} className="p-2 text-slate-400 hover:text-white"><X className="h-5 w-5"/></button></div>
                 <div className="my-5 flex flex-col items-center gap-3">
                     {cropSource?<><div className="profile-crop-stage" tabIndex={0} role="group" aria-label="Photo crop preview. Drag the photo or use arrow keys to move it." onPointerDown={dragStart} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd} onLostPointerCapture={dragEnd} onKeyDown={cropKeys}>
@@ -6434,8 +6547,15 @@
                 <div className="flex flex-wrap justify-center gap-3"><button type="button" disabled={busy||preparing} onClick={()=>fileRef.current?.click()} className="rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm text-slate-100">{preparing?'Preparing…':'Choose photo'}</button>{draft&&!cropSource&&<><button type="button" disabled={busy||preparing} onClick={()=>beginCrop(()=>loadProfileImage(draft))} className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200">Adjust photo</button><button type="button" disabled={busy||preparing} onClick={()=>setDraft('')} className="px-2 py-2 text-sm text-slate-400">Remove photo</button></>}</div>
                 <p className="mt-3 text-center text-xs font-normal text-slate-500">Choose the original photo again to recover areas outside an older crop.</p>
                 <label className="mt-5 block text-sm text-slate-300">Job title<input aria-label="Job title" maxLength={80} value={jobTitle} disabled={busy} onChange={event=>setJobTitle(event.target.value)} placeholder="e.g. Operations Manager" className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-normal text-slate-100"/></label>
+                {user.email && <div className="mt-5 border-t border-slate-700 pt-4">
+                    <h3 className="text-sm font-semibold text-slate-200">Account security</h3>
+                    {passwordUpdated && <p role="status" className="mt-2 text-sm text-emerald-300">Password updated. Use your new password the next time you sign in.</p>}
+                    <button ref={passwordButton} type="button" disabled={busy||preparing} onClick={()=>{setPasswordUpdated(false);setChangingPassword(true);}}
+                        className="mt-2 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700">Change password</button>
+                </div>}
                 {error&&<p role="alert" className="mt-4 text-sm text-rose-300">{error}</p>}
                 <div className="mt-6 flex justify-end gap-2 border-t border-slate-700 pt-4"><button type="button" disabled={busy} onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-300">Cancel</button><button type="button" disabled={busy||preparing} onClick={save} className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-40">{busy?'Saving…':'Save profile'}</button></div>
+                </>}
             </section></div>,document.body);
         };
         const UserProfileViewer = ({person,title,own,onClose,onEdit}) => {
@@ -9441,6 +9561,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const [authReady, setAuthReady] = useState(false);
             const [loginEmail, setLoginEmail] = useState('');
             const [loginPassword, setLoginPassword] = useState('');
+            const [showPasswordReset, setShowPasswordReset] = useState(false);
             const [authError, setAuthError] = useState('');
             const [isSigningIn, setIsSigningIn] = useState(false);
             const [userName, setUserName] = useState('');
@@ -10304,6 +10425,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         dashboardLoggedSessionUid='';
                         setUserName(''); setIsEditingName(false); setIsEditing(false);
                     }
+                    if (firebaseUser) setShowPasswordReset(false);
                     setUser(firebaseUser); setAuthReady(true);
                     window.geodisNativeNotifications?.bind(firebaseUser ? {user:firebaseUser,auth,db,appId} : null).catch(()=>{});
                     if (!firebaseUser) setIsLoading(false);
@@ -13565,6 +13687,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                 </div>
                             </div>
 
+                            {showPasswordReset ? <DashboardPasswordReset initialEmail={loginEmail} onBack={()=>setShowPasswordReset(false)}/> : <>
                             <form onSubmit={handleLogin} className="space-y-5">
                                 <div>
                                     <label htmlFor="login-email" className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Work email</label>
@@ -13609,9 +13732,9 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                 </button>
                             </form>
 
-                            <p className="mt-6 text-center text-xs text-slate-500">
-                                Use the dashboard password provided by the admin.
-                            </p>
+                            <button type="button" disabled={isSigningIn} onClick={()=>{setAuthError('');setLoginPassword('');setShowPasswordReset(true);}}
+                                className="mt-3 w-full rounded-lg px-2 py-2 text-sm font-semibold text-indigo-300 hover:text-indigo-100 disabled:opacity-50">Forgot password?</button>
+                            </>}
                         </div>
                     </div>
                 );
