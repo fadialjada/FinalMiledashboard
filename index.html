@@ -112,6 +112,103 @@
         body { overflow-x: clip !important; overflow-y: visible !important; }
         .dashboard-page-shell { overflow-x: clip; overflow-y: visible; }
 
+        .dashboard-location-switcher {
+            position: relative;
+            display: inline-flex;
+            flex: none;
+            align-items: center;
+            gap: 4px;
+            max-width: min(10rem, 46vw);
+            padding-inline-start: 10px;
+            border-inline-start: 1px solid #40516a;
+            color: #b2c2d9;
+            font-size: 0.75rem;
+        }
+        .dashboard-location-switcher .location-switch-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dashboard-location-switcher .location-switch-trigger {
+            display: grid;
+            flex: none;
+            place-items: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            color: #c9d9ef;
+            cursor: pointer;
+        }
+        .dashboard-location-switcher .location-switch-trigger:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .dashboard-location-switcher .location-switch-trigger:hover:not(:disabled),
+        .dashboard-location-switcher .location-switch-trigger[aria-expanded="true"] {
+            background: #263653;
+            color: #f5f8ff;
+        }
+        .dashboard-location-switcher .location-switch-trigger:focus-visible,
+        .dashboard-location-switcher .location-switch-option:focus-visible {
+            outline: 2px solid #a5b4fc;
+            outline-offset: -2px;
+        }
+        .dashboard-header-brand .dashboard-location-switcher svg {
+            width: 0.875rem !important;
+            height: 0.875rem !important;
+            flex: none;
+        }
+        .dashboard-location-switcher .location-switch-menu {
+            position: absolute;
+            inset-block-start: calc(100% + 6px);
+            inset-inline-end: 0;
+            z-index: 40;
+            width: max-content;
+            min-width: 10rem;
+            max-width: min(14rem, calc(100vw - 24px));
+            max-height: min(16rem, 60vh);
+            overflow-y: auto;
+            padding: 4px;
+            border: 1px solid #40516a;
+            border-radius: 10px;
+            background: #17243a;
+            color: #f5f8ff;
+            box-shadow: 0 8px 18px #070c1870;
+        }
+        .dashboard-location-switcher .location-switch-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+            min-height: 32px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            text-align: start;
+            overflow-wrap: anywhere;
+            cursor: pointer;
+        }
+        .dashboard-location-switcher .location-switch-option:hover {
+            background: #263653;
+        }
+        .dashboard-location-switcher .location-switch-option[aria-current="location"] {
+            background: #292e60;
+            color: #d4d7ff;
+        }
+        .dashboard-header-brand:has(.dashboard-location-switcher) {
+            overflow: visible;
+        }
+        @media (pointer: coarse) {
+            .dashboard-location-switcher .location-switch-trigger {
+                width: 44px;
+                height: 44px;
+            }
+            .dashboard-location-switcher .location-switch-option {
+                min-height: 44px;
+            }
+        }
+
         .balanced-picture-theme .dashboard-page-shell > .dashboard-header {
             background: linear-gradient(180deg, rgba(16, 23, 34, 0.96), rgba(16, 23, 34, 0.86) 65%, rgba(16, 23, 34, 0.05)) !important;
             border: 0;
@@ -1705,7 +1802,7 @@
             Table as TableIcon, Trash2, Route, Settings, ClipboardPaste, Award, DollarSign,
             PlusCircle, X, Loader2, ActivitySquare, MessageSquare, User, Share2,
             FileText, History, Maximize, Minimize, Bell, ThumbsUp, Smile, Search, ClipboardList,
-            Heart, Coffee, PartyPopper, Hand, Moon, Sparkles, Pizza, Cookie, Mic, Paperclip, MoreHorizontal, Phone, Building2, Wrench, GraduationCap, MapPin
+            Heart, Coffee, PartyPopper, Hand, Moon, Sparkles, Pizza, Cookie, Mic, Paperclip, MoreHorizontal, Phone, Building2, Wrench, GraduationCap, MapPin, ArrowLeftRight
         } from 'lucide-react';
 
         let firebaseConfig = {
@@ -9752,6 +9849,62 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             else url.searchParams.set('location',site);
             window.location.assign(url.toString());
         };
+        const LocationSwitcher = ({current, sites, names, disabled}) => {
+            const [open, setOpen] = useState(false);
+            const switcherRef = useRef(null);
+            const triggerRef = useRef(null);
+            const expanded = open && !disabled;
+            const name = names[current];
+
+            useEffect(() => {
+                if (disabled) setOpen(false);
+            }, [disabled]);
+
+            useEffect(() => {
+                if (!expanded) return;
+                const dismissOutside = event => {
+                    if (!switcherRef.current?.contains(event.target)) setOpen(false);
+                };
+                document.addEventListener('pointerdown', dismissOutside);
+                return () => document.removeEventListener('pointerdown', dismissOutside);
+            }, [expanded]);
+
+            const close = () => {
+                setOpen(false);
+                triggerRef.current?.focus();
+            };
+            const selectLocation = site => {
+                if (disabled || !sites.includes(site)) return;
+                close();
+                if (site !== current) navigateToLocation(site);
+            };
+            const onKeyDown = event => {
+                if (!expanded || event.key !== 'Escape') return;
+                event.preventDefault();
+                event.stopPropagation();
+                close();
+            };
+
+            return <div ref={switcherRef} className="dashboard-location-switcher" data-dashboard-edit-ignore="true"
+                onKeyDown={onKeyDown} onBlur={event => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+                }}>
+                <span className="location-switch-name" title={name}>{name}</span>
+                <button type="button" ref={triggerRef} className="location-switch-trigger" disabled={disabled}
+                    aria-label={'Switch location, current location ' + name} title="Switch location"
+                    aria-expanded={expanded} aria-controls={expanded ? 'dashboard-location-menu' : undefined}
+                    onClick={() => setOpen(value => !value)}>
+                    <ArrowLeftRight aria-hidden="true" />
+                </button>
+                {expanded && <div id="dashboard-location-menu" className="location-switch-menu" role="group" aria-label="Locations">
+                    {sites.map(site => <button key={site} type="button" className="location-switch-option"
+                        aria-current={site === current ? 'location' : undefined} onClick={() => selectLocation(site)}>
+                        <span>{names[site]}</span>
+                        {site === current && <Check aria-hidden="true" />}
+                    </button>)}
+                </div>}
+            </div>;
+        };
         const LocationAdministration = ({context,account,accounts,onRegistryChange}) => {
             const [screen,setScreen] = useState('access');
             const [uid,setUid] = useState('');
@@ -14432,11 +14585,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                 <Route aria-hidden="true" strokeWidth={1.75} className="w-7 h-7 shrink-0" style={{color:'#c9d9ef',filter:'drop-shadow(0 2px 4px #b5d8ff22)'}} />
                                 <h1 className="text-base font-bold text-white tracking-tight shrink-0 whitespace-nowrap">Final Mile Operations</h1>
                                 {locationEnabled && (locationContext.allowed.length > 1 ? (
-                                    <select aria-label="Location" value={ACTIVE_LOCATION} disabled={isEditing || settingsBusy}
-                                        className="max-w-40 rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-slate-100 disabled:opacity-50"
-                                        onChange={event => { if (locationContext.allowed.includes(event.target.value)) navigateToLocation(event.target.value); }}>
-                                        {locationContext.allowed.map(site => <option key={site} value={site}>{locationContext.registry.names[site]}</option>)}
-                                    </select>
+                                    <LocationSwitcher current={ACTIVE_LOCATION} sites={locationContext.allowed}
+                                        names={locationContext.registry.names} disabled={isEditing || settingsBusy} />
                                 ) : <span className="truncate text-xs font-semibold text-slate-300">{locationContext.registry.names[ACTIVE_LOCATION]}</span>)}
                             </div>
                             <div className="dashboard-nav-wrap min-w-0 flex justify-center">
