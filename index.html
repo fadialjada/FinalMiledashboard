@@ -1822,8 +1822,16 @@
         const LOCATION_FEATURES = ['routes','preload'];
         const workspaceKey = site => site === 'austin' ? LEGACY_WORKSPACE : site;
         const validLocationKey = value => typeof value === 'string' && /^[a-z][a-z0-9-]{0,39}$/.test(value) && value !== LEGACY_WORKSPACE;
-        const locationTimeZone = (site, registry) => registry?.zones?.[site] === 'America/Los_Angeles' || site === 'sacramento' && registry?.zones?.[site] !== 'America/Chicago'
-            ? 'America/Los_Angeles' : 'America/Chicago';
+        const LOCATION_CLOCKS = {
+            'America/Chicago': {label:'Central', short:'CT', utcHours:[5,6]},
+            'America/Los_Angeles': {label:'Pacific', short:'PT', utcHours:[7,8]},
+            'America/New_York': {label:'Eastern', short:'ET', utcHours:[4,5]}
+        };
+        const locationTimeZone = (site, registry) => {
+            const configured = registry?.zones?.[site];
+            return Object.hasOwn(LOCATION_CLOCKS, configured) ? configured
+                : site === 'sacramento' ? 'America/Los_Angeles' : 'America/Chicago';
+        };
         const normalizeLocationRegistry = raw => {
             const austinName = typeof raw?.names?.austin === 'string' ? raw.names.austin.trim() : '';
             const names = {austin:austinName && austinName.length <= 64 ? austinName : 'Austin'};
@@ -1883,6 +1891,7 @@
                 throw new Error('Another location already uses that name.');
             if (target === 'new') {
                 if (Object.keys(next.names).length >= 50) throw new Error('The location limit has been reached.');
+                if (!Object.hasOwn(LOCATION_CLOCKS,draft.zone)) throw new Error('Choose a time zone for this location.');
                 const site = 'site-' + crypto.randomUUID().slice(0,8);
                 if (Object.hasOwn(next.names,site)) throw new Error('Please try adding the location again.');
                 next.names[site]=name;
@@ -1909,7 +1918,7 @@
         const locationLocalStorage = locationBrowserStore(window.localStorage, ACTIVE_LOCATION);
         const locationSessionStorage = locationBrowserStore(window.sessionStorage, ACTIVE_LOCATION);
         let ACTIVE_LOCATION_TIME_ZONE = locationTimeZone(ACTIVE_LOCATION);
-        const locationClockLabel = () => ACTIVE_LOCATION_TIME_ZONE === 'America/Los_Angeles' ? 'Pacific' : 'Central';
+        const locationClockLabel = () => LOCATION_CLOCKS[ACTIVE_LOCATION_TIME_ZONE].label;
         let activeLocationAppearanceUid = null, activeLocationAdminUid = null, locationRolePolicyActive = false;
         const LOCATION_OPERATIONAL_RECORDS = ["dailyRecaps","weeklyBonuses","officeSchedules","preloadSchedules","config"];
         const LOCATION_MASTER_FIELDS = ["contractors","drivers","helpers","parkingAssignments","billingCompaniesForExport","lastUpdatedAt","lastUpdatedBy"];
@@ -3820,19 +3829,20 @@
             });
         };
         const taskNeedsUpdate = task => getTaskWaitingUids(task).length > 0;
-        // Store deadlines as UTC; enter and display them in the dashboard's Central time.
+        // Store deadlines as UTC and interpret input in the selected location's time zone.
         const taskDueInput = iso => iso ? new Intl.DateTimeFormat('sv-SE', { timeZone: ACTIVE_LOCATION_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso)).replace(' ', 'T') : '';
         const taskDueFromInput = value => {
-            if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error('Choose a deadline in Central time.');
+            if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error('Choose a deadline in ' + locationClockLabel() + ' time.');
             const wall = Date.parse(value + 'Z');
-            // Test both Central offsets, including the daylight-saving boundary.
-            for (const hours of [5, 6]) {
-                const iso = new Date(wall + hours * 3600000).toISOString();
-                if (taskDueInput(iso) === value) return iso;
+            if (Number.isFinite(wall)) {
+                for (const hours of LOCATION_CLOCKS[ACTIVE_LOCATION_TIME_ZONE].utcHours) {
+                    const iso = new Date(wall + hours * 3600000).toISOString();
+                    if (taskDueInput(iso) === value) return iso;
+                }
             }
-            throw new Error('That deadline does not exist in Central time. Choose another time.');
+            throw new Error('That deadline does not exist in ' + locationClockLabel() + ' time. Choose another time.');
         };
-        const formatTaskTime = iso => new Date(iso).toLocaleString('en-US', { timeZone: ACTIVE_LOCATION_TIME_ZONE, month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' CT';
+        const formatTaskTime = iso => new Date(iso).toLocaleString('en-US', { timeZone: ACTIVE_LOCATION_TIME_ZONE, month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ' + LOCATION_CLOCKS[ACTIVE_LOCATION_TIME_ZONE].short;
         const breakdownFollowupPlan = call => {
             if(call?.segment!=='truck-breakdown' || call.routeBreakdownTracking!==true)return null;
             try{
@@ -3845,14 +3855,14 @@
         const validateBreakdownFollowup = call => {
             if(call?.segment!=='truck-breakdown' || call.routeBreakdownTracking!==true || call.routeIssueStatus==='resolved')return '';
             const plan=breakdownFollowupPlan(call),completed=Number(call.routeStopsCompleted),total=Number(call.routeStopsTotal);
-            if(!plan)return 'Enter the next delivery’s original window start and end in Central time. The end must be after the start.';
+            if(!plan)return 'Enter the next delivery’s original window start and end in ' + locationClockLabel() + ' time. The end must be after the start.';
             if(!Number.isInteger(plan.stop) || plan.stop!==completed+1 || plan.stop>total)return 'Enter the next undelivered stop number, immediately after the completed stops.';
             if(!['stopped','running'].includes(call.routeTruckStatus || 'stopped'))return 'Choose whether the truck is broken down or running again.';
             if(!['pending','requested','received'].includes(call.routeWindowStage || 'pending'))return 'Choose the window-update email status.';
             if(['requested','received'].includes(call.routeWindowStage) && call.routeTruckStatus!=='running')return 'Mark the truck running again before recording a delivery-window request.';
             if(call.routeWindowStage==='received'){
                 try{if(Date.parse(taskDueFromInput(call.routeRevisedWindowEnd || ''))<=Date.parse(taskDueFromInput(call.routeRevisedWindowStart || '')))throw Error();}
-                catch(_){return 'Enter the new delivery-window start and end in Central time.';}
+                catch(_){return 'Enter the new delivery-window start and end in ' + locationClockLabel() + ' time.';}
             }
             return '';
         };
@@ -4002,13 +4012,13 @@
         const validateRouteWindowFollowup = (call,now=Date.now()) => {
             if(call?.segment!=='late-route' || call.routeWindowTracking!==true || call.routeIssueStatus==='resolved')return '';
             const plan=routeWindowPlan(call);
-            if(!plan)return 'Enter the next stop’s delivery-window start and end in Central time. The end must be after the start.';
+            if(!plan)return 'Enter the next stop’s delivery-window start and end in ' + locationClockLabel() + ' time. The end must be after the start.';
             if(!Number.isInteger(plan.stop) || plan.stop<1 || plan.stop>Number(call.routeStopsTotal))return 'Enter the stop number for this delivery window, within the route’s total stops.';
             if(!['pending','requested','received'].includes(call.routeWindowStage || 'pending'))return 'Choose the email follow-up status.';
             if(['requested','received'].includes(call.routeWindowStage) && now<Date.parse(plan.requestAt))return 'The delivery-window update can be requested one hour after the original window ends.';
             if(call.routeWindowStage==='received'){
                 try{if(Date.parse(taskDueFromInput(call.routeRevisedWindowEnd || ''))<=Date.parse(taskDueFromInput(call.routeRevisedWindowStart || '')))throw Error();}
-                catch(_){return 'Enter the revised delivery-window start and end in Central time. The end must be after the start.';}
+                catch(_){return 'Enter the revised delivery-window start and end in ' + locationClockLabel() + ' time. The end must be after the start.';}
             }
             return '';
         };
@@ -6104,7 +6114,7 @@
             const x=hosEscapeXml,template=DATA_REPORT_WORKBOOK_STYLE,mapping=template.map,lastColumn=dataReportColumn(report.columns.length-1),lastRow=6+report.rows.length;
             if(!report.columns.length || report.columns.length>16384 || lastRow>1048576)throw new Error('The selected report is too large for one Excel sheet. Choose a smaller date range.');
             const cell=(column,row,value,style)=>value==null?`<c r="${column}${row}" s="${style}"/>`:typeof value==='number'?`<c r="${column}${row}" s="${style}"><v>${value}</v></c>`:`<c r="${column}${row}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${x(value)}</t></is></c>`;
-            let sheet=`<row r="1" ht="10" customHeight="1"/><row r="2" ht="30" customHeight="1">${cell('A',2,'Final Mile Operations',mapping.title)}</row><row r="3" ht="25" customHeight="1">${cell('A',3,report.title,mapping.subtitle)}</row><row r="4" ht="27" customHeight="1">${cell('A',4,[report.context,report.rows.length+(report.rows.length===1?' record.':' records.')+' Central time.'].filter(Boolean).join(' '),mapping.context)}</row><row r="5" ht="10" customHeight="1"/>`;
+            let sheet=`<row r="1" ht="10" customHeight="1"/><row r="2" ht="30" customHeight="1">${cell('A',2,'Final Mile Operations',mapping.title)}</row><row r="3" ht="25" customHeight="1">${cell('A',3,report.title,mapping.subtitle)}</row><row r="4" ht="27" customHeight="1">${cell('A',4,[report.context,report.rows.length+(report.rows.length===1?' record.':' records.')+' '+locationClockLabel()+' time.'].filter(Boolean).join(' '),mapping.context)}</row><row r="5" ht="10" customHeight="1"/>`;
             sheet+=`<row r="6" ht="34" customHeight="1">${report.columns.map((column,index)=>cell(dataReportColumn(index),6,column.label,mapping.header)).join('')}</row>`;
             report.rows.forEach((row,index)=>{
                 const styles=mapping.body[index%2];let height=26;
@@ -7123,14 +7133,14 @@
                 setMonthKey(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
             };
             return <fieldset className="min-w-0" disabled={disabled}>
-                <legend className="text-xs font-semibold text-slate-300">Deadline (Central time)</legend>
+                <legend className="text-xs font-semibold text-slate-300">Deadline ({locationClockLabel()} time)</legend>
                 <div ref={pickerRef} className="mt-2">
                     <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
                         <div className="min-w-0"><span className="block mb-1 text-xs text-slate-400">Date</span><button ref={triggerRef} type="button" aria-label="Choose task deadline date" aria-expanded={open} aria-controls="task-deadline-calendar" onClick={() => {
                             if (!open) setMonthKey(date.slice(0, 7) || taskDueInput(new Date().toISOString()).slice(0, 7));
                             setOpen(current => !current);
                         }} className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100 hover:border-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-400"><Calendar aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400" /><span className="truncate">{date ? new Date(date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Choose date'}</span></button></div>
-                        <label className="block min-w-0 text-xs text-slate-400">Time<input aria-label="Task deadline time in Central time" type="time" style={{ colorScheme: 'dark' }} required value={time} onInput={event => onChange(date + 'T' + event.currentTarget.value)} className="mt-1 w-full min-w-0 rounded-lg border border-slate-600 bg-slate-950 px-2 py-2 text-sm text-slate-100 focus:outline-none focus:border-slate-400" /></label>
+                        <label className="block min-w-0 text-xs text-slate-400">Time<input aria-label={'Task deadline time in ' + locationClockLabel() + ' time'} type="time" style={{ colorScheme: 'dark' }} required value={time} onInput={event => onChange(date + 'T' + event.currentTarget.value)} className="mt-1 w-full min-w-0 rounded-lg border border-slate-600 bg-slate-950 px-2 py-2 text-sm text-slate-100 focus:outline-none focus:border-slate-400" /></label>
                     </div>
                     {open && <div id="task-deadline-calendar" role="group" aria-label="Task deadline calendar" className="mt-2 w-64 max-w-full rounded-xl border border-slate-700 bg-slate-900 shadow-2xl p-3 text-slate-200">
                         <div className="flex items-center justify-between mb-3">
@@ -7160,7 +7170,7 @@
             return <div className="dashboard-modal settings-modal fixed inset-0 z-[125] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4" data-dashboard-edit-ignore="true" data-html2canvas-ignore="true">
                 <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="team-tasks-title" className="settings-window flex flex-col min-h-0 w-full max-w-4xl max-h-[90dvh] rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden">
                     <div className="dashboard-mobile-toolbar flex items-center justify-between gap-3 border-b border-slate-700 bg-slate-800 px-5 py-4 shrink-0">
-                        <div className="min-w-0"><h2 id="team-tasks-title" className="text-lg font-black text-white">{owner ? 'Team Tasks' : 'Your Assignment'}</h2><p className="text-xs text-slate-400">{owner ? 'Assignments, progress, and follow-ups · Deadlines in Central time' : 'Update your progress or reply to Fadi · Deadline in Central time'}</p></div>
+                        <div className="min-w-0"><h2 id="team-tasks-title" className="text-lg font-black text-white">{owner ? 'Team Tasks' : 'Your Assignment'}</h2><p className="text-xs text-slate-400">{owner ? 'Assignments, progress, and follow-ups · Deadlines in ' : 'Update your progress or reply to Fadi · Deadline in '}{locationClockLabel()} time</p></div>
                         <button type="button" data-tasks-close aria-label={owner ? 'Close Team Tasks' : 'Close Assignment'} onClick={close} disabled={busy} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-40"><X className="w-5 h-5" /></button>
                     </div>
                     <div className="dashboard-scroll-area settings-content min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4">
@@ -7243,9 +7253,9 @@ const getMorningReport = (data, date) => ({
 });
 const morningTeamLabel = route => 'Door ' + (route.door || '—') + ' · ' +
     [route.driver || 'Driver unassigned', route.helper || 'Helper unassigned'].join(' / ');
-const getMorningReportSubject = date => {
+const getMorningReportSubject = (date, title = 'LSF PFL Morning Report') => {
     const [year, month, day] = date.split('-');
-    return 'LSF PFL Morning Report ' + month + '.' + day + ',' + year;
+    return title + ' ' + month + '.' + day + ',' + year;
 };
 const MorningReportTime = ({value, onChange, label}) => {
     const [hour = '', minute = '00'] = String(value || '').split(':');
@@ -7538,13 +7548,13 @@ const MorningReportComplianceReminder = ({reminder, onOpen}) => !reminder ? null
     </div>
 );
 
-const MorningReport = ({data, activeDate, setData, metricsTotals, displayDateString, isEditing, reportRef, onCapture, onCopyImage, onOutlookRequested, isCapturing, contractors}) => {
+const MorningReport = ({data, activeDate, setData, metricsTotals, displayDateString, isEditing, reportRef, onCapture, onCopyImage, onOutlookRequested, isCapturing, contractors, reportTitle}) => {
     const report = getMorningReport(data, activeDate);
     const [subjectCopyStatus, setSubjectCopyStatus] = useState('');
     const [isPreparingEmail, setIsPreparingEmail] = useState(false);
     const [copiedEmailSubject, setCopiedEmailSubject] = useState('');
     useEffect(() => { setSubjectCopyStatus(''); setCopiedEmailSubject(''); }, [activeDate]);
-    const subject = getMorningReportSubject(activeDate);
+    const subject = getMorningReportSubject(activeDate, reportTitle);
     const copySubject = async () => {
         try {
             if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(subject);
@@ -7633,7 +7643,7 @@ const MorningReport = ({data, activeDate, setData, metricsTotals, displayDateStr
         </div>
         <article ref={reportRef} id="morning-report" data-morning-report-screenshot="true" className={(isEditing ? 'report-is-editing ' : '') + "morning-report overflow-hidden rounded-2xl border border-slate-600/50 bg-[#1b1f25]"}>
             <header className="report-header flex flex-wrap items-center justify-between gap-3 border-b border-slate-600/40 px-5 py-5 md:px-6">
-                <div className="flex items-center gap-3"><FileText className="h-7 w-7 text-slate-200" /><div><h2 className="text-xl font-bold text-white">LSF PFL Morning Report</h2><p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Final Mile Operations · Pflugerville</p></div></div>
+                <div className="flex items-center gap-3"><FileText className="h-7 w-7 text-slate-200" /><div><h2 className="text-xl font-bold text-white">{reportTitle}</h2><p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Final Mile Operations · Pflugerville</p></div></div>
                 <div className="text-xs font-medium text-slate-300">{displayDateString}</div>
             </header>
             <div className="report-body space-y-6 p-5 md:p-6">
@@ -8139,7 +8149,7 @@ const TeamAssignmentReport = ({data, activeDate, displayDateString, preloadSched
             const fieldClass='mt-1 w-full min-w-0 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100 [color-scheme:dark]';
             const editRule=(id,patch)=>change({...settings,rules:{...settings.rules,[id]:{...settings.rules[id],...patch}}});
             return <section aria-label="Manager Alerts settings" className="manager-alert-controls space-y-5">
-                <div><h3 className="text-base font-bold text-slate-100">Manager Alerts</h3><p className="mt-1 text-sm text-slate-400">Only your account sees these warnings. Times use Central time. These controls do not change the team’s existing reminders.</p></div>
+                <div><h3 className="text-base font-bold text-slate-100">Manager Alerts</h3><p className="mt-1 text-sm text-slate-400">Only your account sees these warnings. Times use {locationClockLabel()} time. These controls do not change the team’s existing reminders.</p></div>
                 <fieldset disabled={busy || !loaded} className="grid gap-3 sm:grid-cols-2">
                     <label className="flex items-center gap-3 rounded-xl border border-slate-700 p-4 text-sm text-slate-200"><input type="checkbox" aria-label="Enable Manager Alerts" checked={settings.enabled} onChange={event=>change({...settings,enabled:event.target.checked})} className="h-5 w-5 accent-emerald-500" />Enable Manager Alerts</label>
                     <label className="flex items-center gap-3 rounded-xl border border-slate-700 p-4 text-sm text-slate-200"><input type="checkbox" aria-label="Mute Manager Alerts" checked={settings.muted} onChange={event=>change({...settings,muted:event.target.checked})} className="h-5 w-5 accent-emerald-500" />Mute Manager Alerts only</label>
@@ -8295,7 +8305,7 @@ const TeamAssignmentReport = ({data, activeDate, displayDateString, preloadSched
             const summary=hosSummarize(rows),x=hosEscapeXml;
             const cell=(column,row,value,style=0)=>value==null?'':typeof value==='number'?`<c r="${column}${row}" s="${style}"><v>${value}</v></c>`:`<c r="${column}${row}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${x(value)}</t></is></c>`;
             const textRow=(row,text,style=0)=>`<row r="${row}">${cell('A',row,text,style)}</row>`;
-            let sheet=textRow(1,'Hours of Service (HOS)',1)+textRow(2,'Estimated from 5:30 AM to the saved route ETA · Central time · Regular routes only')
+            let sheet=textRow(1,'Hours of Service (HOS)',1)+textRow(2,'Estimated from 5:30 AM to the saved route ETA · '+locationClockLabel()+' time · Regular routes only')
                 +textRow(3,`Dates: ${filters.from} to ${filters.to} | Driver: ${filters.driver||'All'} | Route: ${filters.route||'All'} | Contractor: ${filters.contractor||'All'}`)
                 +textRow(4,'Each route is calculated separately. Totals add the filtered route hours. Missing / invalid ETAs are excluded.');
             const headers=['Date','Route Number','Driver','Contractor','Start','ETA','Estimated Hours','Decimal Hours','Status'];
@@ -8339,7 +8349,7 @@ const TeamAssignmentReport = ({data, activeDate, displayDateString, preloadSched
             return <section aria-label="Hours of Service (HOS)" className="space-y-5">
                 <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 md:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
-                        <div><h3 className="text-lg font-semibold text-white">Hours of Service <span className="text-indigo-300">(HOS)</span></h3><p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Estimated hours · 5:30 AM to the saved route ETA · Central time · Regular routes only</p></div>
+                        <div><h3 className="text-lg font-semibold text-white">Hours of Service <span className="text-indigo-300">(HOS)</span></h3><p className="text-xs text-slate-400 mt-1.5 leading-relaxed">Estimated hours · 5:30 AM to the saved route ETA · {locationClockLabel()} time · Regular routes only</p></div>
                         <button type="button" onClick={exportReport} disabled={!valid||!rows.length} className="dashboard-data-export inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 cursor-pointer"><Download className="h-4 w-4 shrink-0" /> Export Excel</button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
@@ -8513,7 +8523,7 @@ const WeeklyBilling = (() => {
         for(let i=0;i<8;i++){const key=Object.keys(mappings).find(k=>identity(k)===identity(value));if(!key || visited.has(identity(value)))break;visited.add(identity(value));value=String(mappings[key] || value).trim();}
         return value;
     };
-    const build = ({week,reportDate,records,metrics,bonuses,ready}) => {
+    const build = ({week,reportDate,records,metrics,bonuses,ready,area='Pflugerville'}) => {
         const saved=bonuses || {}, people={}, hidden=new Set((saved.hiddenDrivers || []).map(n=>identity(canonicalPerson(n,saved))));
         const metricNames=new Set((metrics || []).map(m=>identity(canonicalPerson(`${m.firstName || ''} ${m.lastName || ''}`,saved))));
         const extraNames=[...Object.keys(saved.drivers || {}),...(saved.manualDrivers || []).map(m=>`${m.firstName || ''} ${m.lastName || ''}`)].filter(n=>!metricNames.has(identity(canonicalPerson(n,saved))));
@@ -8538,7 +8548,7 @@ const WeeklyBilling = (() => {
             }
         }
         for(const row of allRoutes){row.candidates=row.crew.filter(k=>people[k] && people[k].payments[row.date]?.eligible && ((people[k].payments[row.date].amount || 0)>0 || people[k].surveyBonus>0));}
-        const draft={week:{...week},reportDate,rows:allRoutes,people,ready:Boolean(ready),area:'Pflugerville',surveyNote:'Survey intake',surveyAllocations:{},skippedPayments:{},deductions:[],deductionImport:null,createdAt:new Date().toISOString()};
+        const draft={week:{...week},reportDate,rows:allRoutes,people,ready:Boolean(ready),area,surveyNote:'Survey intake',surveyAllocations:{},skippedPayments:{},deductions:[],deductionImport:null,createdAt:new Date().toISOString()};
         for(const row of allRoutes){if(row.candidates.length===1){const key=row.candidates[0],matches=allRoutes.filter(r=>r.date===row.date && r.candidates.includes(key));if(matches.length===1)assign(draft,row.id,key);}}
         for(const person of Object.values(people).filter(p=>p.surveyBonus>0)){
             const candidates=allRoutes.filter(r=>r.payee===person.key);
@@ -10100,7 +10110,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     </div> : <>
                     {target!=='all'&&<label className="block text-sm">Location name<input type="text" maxLength={64} className={selectStyle} value={settings.name} disabled={busy} onChange={event=>setSettings({...settings,name:event.target.value})}/></label>}
                     {target==='new' ? <label className="block text-sm">Time zone<select className={selectStyle} value={settings.zone} disabled={busy} onChange={event=>setSettings({...settings,zone:event.target.value})}>
-                        <option value="America/Chicago">Central</option><option value="America/Los_Angeles">Pacific</option>
+                        {Object.entries(LOCATION_CLOCKS).map(([zone,clock])=><option key={zone} value={zone}>{clock.label}</option>)}
                     </select></label> : <div className="grid gap-3 sm:grid-cols-2">
                         {LOCATION_FEATURES.map(feature=><label key={feature} className="block text-sm">{feature==='routes'?'Routes':'Preload'}<select className={selectStyle} value={settings[feature]} disabled={busy} onChange={event=>setSettings({...settings,[feature]:event.target.value})}>
                             {target!=='all'&&<option value="shared">Use shared setting</option>}<option value="on">On</option><option value="off">Off</option>
@@ -10147,6 +10157,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const [user, setUser] = useState(null);
             const isAdminUser = isOwnerAccount(user);
             const [locationContext,setLocationContext] = useState(null);
+            const locationName = locationContext?.registry.names[ACTIVE_LOCATION] || 'Local';
+            const routeHeading = ACTIVE_LOCATION === 'austin' ? 'Pflugerville Route' : locationName + ' Routes';
+            const reportPrefix = ACTIVE_LOCATION === 'austin' ? 'LSF PFL' : 'LSF ' + locationName;
+            const displayComplianceLabel = label => label.replace(/^LSF PFL(?= )/, () => reportPrefix);
             const locationEnabled = locationContext?.registry.enabled === true;
             const showLocationPreview = isAdminUser && window.location.protocol === 'file:';
             const canActivateLocations = isAdminUser && locationContext?.registryAvailable && !locationEnabled;
@@ -12314,7 +12328,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     const ready = Boolean(getChicagoDateKey() >= reportDate && finalReport?.lastUpdatedAt && metrics.some(row => String(row.firstName || row.lastName || '').trim()));
                     const records = dates.map((date,i) => ({...(snapshots[i+2].exists() ? snapshots[i+2].data() : {}),date}));
                     const bonuses = snapshots[1].exists() ? snapshots[1].data() : {drivers:{},hiddenDrivers:[],nameMappings:{},manualDrivers:[]};
-                    const draft=WeeklyBilling.build({week,reportDate,records,metrics,bonuses,ready});
+                    const draft=WeeklyBilling.build({week,reportDate,records,metrics,bonuses,ready,area:ACTIVE_LOCATION === 'austin' ? 'Pflugerville' : locationName});
                     draft.billingNameStorageKey=WeeklyBilling.nameLinkStorageKey(appId,user.uid);
                     setBillingDraft(draft);
                 } catch(error) {
@@ -14288,7 +14302,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 const today=getChicagoDateKey(),items=[];
                 if(activeDate!==today){desktopReminderKnownRef.current=null;return;}
                 for(const [id,due,label] of [[12,timeAlerts.show12,'LSF PFL 12 PM Route Update Has Been Sent'],[17,timeAlerts.show17,'LSF PFL 5 PM Route Update Has Been Sent'],[19,timeAlerts.show19,'LSF PFL EOD Route Update Has Been Sent']]){
-                    if(canRemindForLocation && due && !dismissedAlerts[id] && !data.loadout?.compliance?.some(item=>item.label===label && item.status===true))items.push({key:'compliance:'+today+':'+id,title:'Compliance reminder',body:label,target:{kind:'overview'}});
+                    if(canRemindForLocation && due && !dismissedAlerts[id] && !data.loadout?.compliance?.some(item=>item.label===label && item.status===true))items.push({key:'compliance:'+today+':'+id,title:'Compliance reminder',body:displayComplianceLabel(label),target:{kind:'overview'}});
                 }
                 if(morningReportReminder)items.push({key:'morning-report:'+today,title:'Morning Report compliance reminder',body:morningReportReminder.overdue?'Morning Report is overdue. Send it to the audit team now.':'Send the Morning Report to the audit team by 11:45 AM ' + locationClockLabel() + '.',target:{kind:'morning-report'}});
                 const arrived=isPreloadArrivedStatus(allPreloadSchedules[today]?.status),notes=data.shiftNotes || [];
@@ -14297,7 +14311,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 const prior=desktopReminderKnownRef.current;
                 if(prior)for(const item of items)if(!prior.has(item.key))showDesktopAlert(item);
                 desktopReminderKnownRef.current=new Set(items.map(item=>item.key));
-            },[canRemindForLocation,user?.uid,isLoading,soundSettingsLoaded,activeDate,timeAlerts,dismissedAlerts,preloadDismissed,showPreloadAlert,preloadArrivalAlert?.signature,morningReportReminder?.dateKey,morningReportReminder?.overdue,data.loadout?.compliance,data.shiftNotes,data.routeTable,allPreloadSchedules]);
+            },[reportPrefix,canRemindForLocation,user?.uid,isLoading,soundSettingsLoaded,activeDate,timeAlerts,dismissedAlerts,preloadDismissed,showPreloadAlert,preloadArrivalAlert?.signature,morningReportReminder?.dateKey,morningReportReminder?.overdue,data.loadout?.compliance,data.shiftNotes,data.routeTable,allPreloadSchedules]);
 
             const resolveManagerIssue = async alert => {
                 if(!canManageRecords || !canManageLocationRecords(auth.currentUser) || auth.currentUser.uid!==user?.uid || !db || managerAlertWriteRef.current || !['urgentFollowUp','driverIssue'].includes(alert.rule)) return;
@@ -14818,7 +14832,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                             <div className="bg-sky-500/20 p-2 rounded-lg animate-pulse"><Clock className="w-6 h-6" /></div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className="font-black tracking-widest text-xs uppercase mb-0.5">Compliance Reminder: {alert.timeStr}</h3>
-                                                <span className="font-medium text-sm">Please ensure the <strong>{alert.label}</strong> compliance check is completed.</span>
+                                                <span className="font-medium text-sm">Please ensure the <strong>{displayComplianceLabel(alert.label)}</strong> compliance check is completed.</span>
                                             </div>
                                             <button onClick={() => acknowledgeComplianceReminder(alert.id, alert.label, alert.timeStr)} className="ml-auto shrink-0 self-center px-3 py-1.5 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-100 hover:bg-sky-500/30 transition-colors text-[10px] font-black uppercase tracking-widest cursor-pointer">Acknowledge</button>
                                         </div>
@@ -15029,7 +15043,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                     if (displayLabel ==="System Data Sync Completed") displayLabel ="LSF Morning Report Has Been Sent";
                                                     return (
                                                         <div key={idx} className="flex items-center justify-between h-full bg-slate-900/30 px-4 py-3 rounded-lg border border-slate-700 gap-4">
-                                                            <span className="text-slate-300 font-medium text-xs uppercase block">{displayLabel}</span>
+                                                            <span className="text-slate-300 font-medium text-xs uppercase block">{displayComplianceLabel(displayLabel)}</span>
                                                             <StatusBadge status={item.status} isEditing={isEditing} onClick={() => { const nd = JSON.parse(JSON.stringify(data)); nd.loadout.compliance[idx].status = !nd.loadout.compliance[idx].status; setData(nd); }} />
                                                         </div>
                                                     );
@@ -15189,7 +15203,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     <div className="flex items-center gap-3 shrink-0 mr-4">
                                         <Route className="w-7 h-7 text-slate-100" />
                                         <div>
-                                            <h2 className="text-lg font-black text-white">Pflugerville Route</h2>
+                                            <h2 className="text-lg font-black text-white">{routeHeading}</h2>
                                             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Date: <span className="text-indigo-400">{displayDateString}</span></div>
                                         </div>
                                     </div>
@@ -15220,7 +15234,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
 
                                 {dataExportError&&<p role="alert" className="mb-4 text-sm text-rose-300">{dataExportError}</p>}
                                 {routesSubTab === 'morning-report' ? (
-                                    <MorningReport data={data} activeDate={activeDate} setData={setData} displayDateString={displayDateString} metricsTotals={data.metricsTracker?.mtdTotals || calculateMetricsTotals(data.metricsTracker?.mtd)} isEditing={isEditing} reportRef={morningReportScreenshotRef} onCapture={handleDownloadMorningReportScreenshot} onCopyImage={() => downloadPanelScreenshot(morningReportScreenshotRef.current, `Morning-Report-${activeDate}.png`, 'blob')} onOutlookRequested={handleMorningReportOutlookRequest} isCapturing={isCapturing} contractors={masterLists.contractors || []} />
+                                    <MorningReport reportTitle={reportPrefix + ' Morning Report'} data={data} activeDate={activeDate} setData={setData} displayDateString={displayDateString} metricsTotals={data.metricsTracker?.mtdTotals || calculateMetricsTotals(data.metricsTracker?.mtd)} isEditing={isEditing} reportRef={morningReportScreenshotRef} onCapture={handleDownloadMorningReportScreenshot} onCopyImage={() => downloadPanelScreenshot(morningReportScreenshotRef.current, `Morning-Report-${activeDate}.png`, 'blob')} onOutlookRequested={handleMorningReportOutlookRequest} isCapturing={isCapturing} contractors={masterLists.contractors || []} />
                                 ) : routesSubTab === 'team-assignment' ? (
                                     <TeamAssignmentReport data={data} activeDate={activeDate} displayDateString={displayDateString} preloadSchedule={preloadScheduleForDay(activeDate)} setData={setData} isEditing={isEditing} isCapturing={isCapturing} reportRef={teamAssignmentScreenshotRef} onCapture={handleDownloadTeamAssignmentScreenshot} />
                                 ) : (<>
@@ -15270,7 +15284,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                         <div className="flex items-center gap-3">
                                             <Route className="w-6 h-6 text-slate-100" />
                                             <div>
-                                                <div className="text-sm font-black text-white tracking-wide">Pflugerville Route</div>
+                                                <div className="text-sm font-black text-white tracking-wide">{routeHeading}</div>
                                                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Route table snapshot</div>
                                             </div>
                                         </div>
