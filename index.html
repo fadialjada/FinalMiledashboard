@@ -9807,7 +9807,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     await runTransaction(db,async transaction=>{
                         const ref=locationGrantRef(uid), current=await transaction.get(ref);
                         if(!isCurrentOwner())throw new Error('Your account changed. Open Settings again.');
-                        if(!sameSavedValue(current.data()||null,baseline))throw new Error('This account changed. Reopen it before saving.');
+                        if(!sameLocationValue(current.data()||null,baseline))throw new Error('This account changed. Reopen it before saving.');
                         if(registry.locationRolesVersion===1){
                             const selectedAccount=accounts.find(person=>person.uid===uid);
                             if(!selectedAccount?.enabled)throw new Error('This user is no longer available.');
