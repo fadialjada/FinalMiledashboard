@@ -133,7 +133,7 @@
         .dashboard-location-switcher .location-switch-trigger {
             display: grid;
             flex: none;
-            place-items: center;
+            place-items: center start;
             width: 30px;
             height: 30px;
             border-radius: 7px;
@@ -172,7 +172,7 @@
             padding: 4px;
             border: 1px solid #40516a;
             border-radius: 10px;
-            background: #17243a;
+            background: #1f2937;
             color: #f5f8ff;
             box-shadow: 0 8px 18px #070c1870;
         }
@@ -1802,7 +1802,7 @@
             Table as TableIcon, Trash2, Route, Settings, ClipboardPaste, Award, DollarSign,
             PlusCircle, X, Loader2, ActivitySquare, MessageSquare, User, Share2,
             FileText, History, Maximize, Minimize, Bell, ThumbsUp, Smile, Search, ClipboardList,
-            Heart, Coffee, PartyPopper, Hand, Moon, Sparkles, Pizza, Cookie, Mic, Paperclip, MoreHorizontal, Phone, Building2, Wrench, GraduationCap, MapPin, ArrowLeftRight
+            Heart, Coffee, PartyPopper, Hand, Moon, Sparkles, Pizza, Cookie, Mic, Paperclip, MoreHorizontal, Phone, Building2, Wrench, GraduationCap, MapPin, ChevronDown
         } from 'lucide-react';
 
         let firebaseConfig = {
@@ -1930,6 +1930,7 @@
             || Boolean(activeLocationAppearanceUid && activeLocationAppearanceUid === auth.currentUser?.uid);
 
 
+        const MORNING_REPORT_COMPLIANCE_LABEL = "LSF Morning Report Has Been Sent";
         const DEFAULT_DATA = {
             loadout: {
                 metrics: [{ label:"Total Routes", value:"0" }, { label:"Number of Same Day Routes", value:"0" }],
@@ -1937,7 +1938,7 @@
                 completedRoutesCount:"0", uniformCount:"0", offDockCount:"0", etaCount:"0",
                 podsReconciled:"0",
                 compliance: [
-                    { label:"LSF Morning Report Has Been Sent", status: false },
+                    { label:MORNING_REPORT_COMPLIANCE_LABEL, status: false },
                     { label:"LSF PFL 12 PM Route Update Has Been Sent", status: false },
                     { label:"LSF PFL 5 PM Route Update Has Been Sent", status: false },
                     { label:"LSF PFL EOD Route Update Has Been Sent", status: false }
@@ -2903,10 +2904,9 @@
 
         // Apply only this editor's changes to the latest saved record. Identified
         // rows merge individually so concurrent replies/likes are not discarded.
-        const mergeConcurrentEdits = (base, local, remote) => {
+        const mergeConcurrentEdits = (base, local, remote, key = item => item && (item.id ?? item.uid)) => {
             if (JSON.stringify(local) === JSON.stringify(base)) return remote;
             if (Array.isArray(base) && Array.isArray(local) && Array.isArray(remote)) {
-                const key = item => item && (item.id ?? item.uid);
                 if ([...base, ...local, ...remote].every(item => key(item) !== undefined && key(item) !== null)) {
                     const before = new Map(base.map(item => [String(key(item)), item]));
                     const mine = new Map(local.map(item => [String(key(item)), item]));
@@ -5208,8 +5208,16 @@
         };
         const mergeDailyRecapEdits = (baseline, local, remote, dateKey) => {
             let merged = mergeConcurrentEdits(baseline || {}, local, remote);
-            // A later form save or copied report must not erase today's shared button receipt.
-            if (hasMorningReportOutlookRequest(remote, dateKey)) merged = applyMorningReportOutlookRequest(merged, remote.loadout.morningReport.outlookEmailRequest);
+            const localCompliance = local?.loadout?.compliance, savedCompliance = remote?.loadout?.compliance;
+            if (Array.isArray(localCompliance) && Array.isArray(savedCompliance)) {
+                const compliance = mergeConcurrentEdits(baseline?.loadout?.compliance || [], localCompliance, savedCompliance, item => item?.label);
+                merged = {...merged, loadout:{...merged.loadout, compliance}};
+            }
+            // Preserve the saved Outlook click and its completion during a concurrent edit.
+            if (hasMorningReportOutlookRequest(remote, dateKey)) {
+                const newlyCompliant = isMorningReportCompliant(remote.loadout.compliance) && !isMorningReportCompliant(baseline?.loadout?.compliance);
+                merged = applyMorningReportOutlookRequest(merged, remote.loadout.morningReport.outlookEmailRequest, newlyCompliant);
+            }
             // Coaching is saved transactionally outside the day editor. Keep the saved map authoritative.
             merged={...merged,shiftNotes:(merged.shiftNotes || []).map(note=>{const saved=(remote?.shiftNotes || []).find(item=>String(item.id)===String(note.id));return saved && (saved.driverCoaching || note.driverCoaching)?{...note,driverCoaching:saved.driverCoaching || {}}:note;})};
             const before = getLinkedPreloadTeam(baseline?.routeTable, dateKey);
@@ -7289,9 +7297,17 @@ const getMorningReport = (data, date) => ({
 });
 const morningTeamLabel = route => 'Door ' + (route.door || '—') + ' · ' +
     [route.driver || 'Driver unassigned', route.helper || 'Helper unassigned'].join(' / ');
-const getMorningReportSubject = (date, title = 'LSF PFL Morning Report') => {
+const getDatedReportSubject = (date, title = 'LSF PFL Morning Report') => {
     const [year, month, day] = date.split('-');
     return title + ' ' + month + '.' + day + ',' + year;
+};
+const getRouteUpdateSubject = (date, locationLabel) => getDatedReportSubject(date,
+    locationLabel.replace(/ Has Been Sent$/, '').replace(/ EOD Route Update$/, ' End-of-Day Route Update'));
+const openReportOutlookDraft = subject => {
+    const link = document.createElement('a');
+    link.href = 'mailto:?subject=' + encodeURIComponent(subject);
+    document.body.appendChild(link);
+    try { link.click(); } finally { link.remove(); }
 };
 const MorningReportTime = ({value, onChange, label}) => {
     const [hour = '', minute = '00'] = String(value || '').split(':');
@@ -7527,7 +7543,7 @@ const hasMorningReportOutlookRequest = (data, dateKey) => {
     return getPreloadClock(new Date(request.requestedAt)).dateKey === dateKey;
 };
         // The first rollout displayed reminders before new locations had any routes.
-        const startupComplianceLabels = {
+        const routeUpdateComplianceLabels = {
             12:"LSF PFL 12 PM Route Update Has Been Sent",
             17:"LSF PFL 5 PM Route Update Has Been Sent",
             19:"LSF PFL EOD Route Update Has Been Sent"
@@ -7535,9 +7551,9 @@ const hasMorningReportOutlookRequest = (data, dateKey) => {
         const resetStartupCompliance = (recap,dateKey) => {
             if (ACTIVE_LOCATION==='austin' || dateKey!=='2026-11-07' || !recap?.loadout?.compliance || recap.routeTable?.length) return recap;
             const notes=recap.shiftNotes || [];
-            const startupNote=note=>note.system===true && note.complianceDate===dateKey && Object.hasOwn(startupComplianceLabels,note.complianceAlertId);
+            const startupNote=note=>note.system===true && note.complianceDate===dateKey && Object.hasOwn(routeUpdateComplianceLabels,note.complianceAlertId);
             if (!notes.length || notes.some(note=>!startupNote(note))) return recap;
-            const labels=new Set(notes.map(note=>startupComplianceLabels[note.complianceAlertId]));
+            const labels=new Set(notes.map(note=>routeUpdateComplianceLabels[note.complianceAlertId]));
             const compliance=recap.loadout.compliance.map(item=>item.status===true && labels.has(item.label) ? {...item,status:false} : item);
             return compliance.some((item,index)=>item!==recap.loadout.compliance[index]) ? {...recap,loadout:{...recap.loadout,compliance}} : recap;
         };
@@ -7554,23 +7570,55 @@ const getMorningReportComplianceReminder = (data, dateKey, clock) => {
     if (dateKey !== clock.dateKey || clock.minutes < MORNING_REPORT_REMINDER_MINUTES || hasMorningReportOutlookRequest(data, dateKey)) return null;
     return {dateKey, overdue:clock.minutes >= MORNING_REPORT_DEADLINE_MINUTES};
 };
-const applyMorningReportOutlookRequest = (data, request) => ({
-    ...data, loadout:{...data.loadout, morningReport:{...data.loadout?.morningReport, outlookEmailRequest:request}}
+const isMorningReportCompliance = item => item?.label === MORNING_REPORT_COMPLIANCE_LABEL || item?.label === "System Data Sync Completed";
+const isMorningReportCompliant = compliance => compliance?.some(item => isMorningReportCompliance(item) && item.status === true);
+const completeComplianceItem = (compliance, label) => {
+    const matches = label === MORNING_REPORT_COMPLIANCE_LABEL ? isMorningReportCompliance : item => item?.label === label;
+    return compliance.some(matches)
+        ? compliance.map(item => matches(item) && item.status !== true ? {...item, status:true} : item)
+        : [...compliance, {label, status:true}];
+};
+const applyMorningReportOutlookRequest = (data, request, markCompliant = false) => ({
+    ...data,
+    loadout:{
+        ...data.loadout,
+        ...(markCompliant ? {compliance:completeComplianceItem(data.loadout?.compliance || [], MORNING_REPORT_COMPLIANCE_LABEL)} : {}),
+        morningReport:{...data.loadout?.morningReport, outlookEmailRequest:request}
+    }
 });
 const saveMorningReportOutlookRequest = async ({dateKey, uid, name}) => {
     if (dateKey !== getPreloadClock().dateKey) return null;
     requireTeamAccount(); requirePermission('overview');
     if (!db || !uid || auth.currentUser?.uid !== uid) throw new Error('Sign in before recording the Outlook request.');
-    let request;
     const ref = doc(db, 'artifacts', appId, 'public', 'data', 'dailyRecaps', dateKey);
-    await runTransaction(db, async transaction => {
+    return runTransaction(db, async transaction => {
         const snapshot = await transaction.get(ref), saved = snapshot.exists() ? snapshot.data() : {};
         if (auth.currentUser?.uid !== uid || dateKey !== getPreloadClock().dateKey) throw new Error('The account or report date changed. Open the current report again.');
-        if (hasMorningReportOutlookRequest(saved, dateKey)) {request = saved.loadout.morningReport.outlookEmailRequest;return;}
-        request = {dateKey, requestedAt:new Date().toISOString(), requestedByUid:uid, requestedBy:cleanFirstName(name || getDefaultUserName(auth.currentUser))};
-        transaction.set(ref, {loadout:{morningReport:{outlookEmailRequest:request}},lastUpdatedBy:name || uid,lastUpdatedAt:request.requestedAt}, {merge:true});
+        const existing = hasMorningReportOutlookRequest(saved, dateKey) ? saved.loadout.morningReport.outlookEmailRequest : null;
+        const before = saved.loadout?.compliance || [];
+        const compliance = completeComplianceItem(before, MORNING_REPORT_COMPLIANCE_LABEL);
+        if (existing && sameSavedValue(before, compliance)) return existing;
+        const timestamp = new Date().toISOString();
+        const request = existing || {dateKey, requestedAt:timestamp, requestedByUid:uid, requestedBy:cleanFirstName(name || getDefaultUserName(auth.currentUser))};
+        transaction.set(ref, {loadout:{compliance,morningReport:{outlookEmailRequest:request}},lastUpdatedBy:name || uid,lastUpdatedAt:timestamp}, {merge:true});
+        return request;
     });
-    return request;
+};
+const saveRouteUpdateCompliance = async ({dateKey, label, uid, name}) => {
+    requireTeamAccount(); requirePermission('overview');
+    if (!db || !uid || !Object.values(routeUpdateComplianceLabels).includes(label)) throw new Error('This route update is unavailable.');
+    const checkContext = () => {
+        if (auth.currentUser?.uid !== uid || dateKey !== getPreloadClock().dateKey) throw new Error('Open today’s route update and try again.');
+    };
+    checkContext();
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'dailyRecaps', dateKey);
+    await runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(ref);
+        checkContext();
+        const before = snapshot.data()?.loadout?.compliance || [];
+        const compliance = completeComplianceItem(before, label);
+        if (!sameSavedValue(before, compliance)) transaction.set(ref, {loadout:{compliance}, lastUpdatedBy:name || uid, lastUpdatedAt:new Date().toISOString()}, {merge:true});
+    });
 };
 const MorningReportComplianceReminder = ({reminder, onOpen}) => !reminder ? null : (
     <div role="alert" aria-label="Morning Report compliance reminder" className={'dashboard-reminder mb-4 flex items-center gap-4 rounded-xl border p-4 ' + (reminder.overdue ? 'border-rose-500/50 bg-rose-500/15 text-rose-300' : 'border-sky-500/50 bg-sky-500/20 text-sky-300')}>
@@ -7590,7 +7638,7 @@ const MorningReport = ({data, activeDate, setData, metricsTotals, displayDateStr
     const [isPreparingEmail, setIsPreparingEmail] = useState(false);
     const [copiedEmailSubject, setCopiedEmailSubject] = useState('');
     useEffect(() => { setSubjectCopyStatus(''); setCopiedEmailSubject(''); }, [activeDate]);
-    const subject = getMorningReportSubject(activeDate, reportTitle);
+    const subject = getDatedReportSubject(activeDate, reportTitle);
     const copySubject = async () => {
         try {
             if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(subject);
@@ -7635,14 +7683,14 @@ const MorningReport = ({data, activeDate, setData, metricsTotals, displayDateStr
         try {
             await copyScreenshotImageForEmail(onCopyImage, {label:'Morning report'});
             
-            let requestRecorded = true;
-            try { await onOutlookRequested?.(activeDate); } catch (_) { requestRecorded = false; }
-            setSubjectCopyStatus(requestRecorded ? 'Email-size report copied. Paste it into the Outlook message body.' : 'Report copied. The Outlook request could not sync, so the reminder may remain visible.');
+            try {
+                const request = await onOutlookRequested?.(activeDate);
+                setSubjectCopyStatus(request ? 'Morning Report marked Compliant. Paste the report into Outlook and send it.' : 'Email-size report copied. Paste it into the Outlook message body.');
+            } catch {
+                setSubjectCopyStatus('Report copied. The checklist could not sync. Paste the report into Outlook and send it.');
+            }
             setCopiedEmailSubject(subject);
-            const link = document.createElement('a');
-            link.href = 'mailto:?subject=' + encodeURIComponent(subject);
-            document.body.appendChild(link);
-            try { link.click(); } finally { link.remove(); }
+            openReportOutlookDraft(subject);
         } catch {
             setSubjectCopyStatus('The report image could not be copied. Try again, or use the camera to download the same image and insert it in Outlook.');
         } finally { setIsPreparingEmail(false); }
@@ -9940,7 +9988,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     aria-label={'Switch location, current location ' + name} title="Switch location"
                     aria-expanded={expanded} aria-controls={expanded ? 'dashboard-location-menu' : undefined}
                     onClick={() => setOpen(value => !value)}>
-                    <ArrowLeftRight aria-hidden="true" />
+                    <ChevronDown aria-hidden="true" />
                 </button>
                 {expanded && <div id="dashboard-location-menu" className="location-switch-menu" role="group" aria-label="Locations">
                     {sites.map(site => <button key={site} type="button" className="location-switch-option"
@@ -10609,8 +10657,31 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const handleMorningReportOutlookRequest = async dateKey => {
                 const uid = user?.uid;
                 const request = await saveMorningReportOutlookRequest({dateKey, uid, name:userName || getDefaultUserName(auth.currentUser)});
-                if (request && auth.currentUser?.uid === uid) setData(local => dailySnapshotRef.current.date === dateKey ? applyMorningReportOutlookRequest(local, request) : local);
+                if (request && auth.currentUser?.uid === uid) setData(local => dailySnapshotRef.current.date === dateKey ? applyMorningReportOutlookRequest(local, request, true) : local);
                 return request;
+            };
+            const [routeUpdateEmailNotice, setRouteUpdateEmailNotice] = useState(null);
+            const routeUpdateEmailInFlight = useRef(false);
+            const emailRouteUpdate = async label => {
+                const dateKey = activeDate, uid = user?.uid;
+                if (!uid || auth.currentUser?.uid !== uid || routeUpdateEmailInFlight.current || isLoading ||
+                    dateKey !== getPreloadClock().dateKey || !canEditSection('overview')) return;
+                routeUpdateEmailInFlight.current = true;
+                setRouteUpdateEmailNotice({dateKey, busy:true, text:'Saving the route update checklist…'});
+                try {
+                    // Open Outlook within the click so the browser can hand off the draft.
+                    openReportOutlookDraft(getRouteUpdateSubject(dateKey, displayComplianceLabel(label)));
+                    await saveRouteUpdateCompliance({dateKey, label, uid, name:userName || getDefaultUserName(auth.currentUser)});
+                    if (auth.currentUser?.uid !== uid) { setRouteUpdateEmailNotice(null); return; }
+                    setData(local => dailySnapshotRef.current.date === dateKey ? {...local, loadout:{...local.loadout,
+                        compliance:completeComplianceItem(local.loadout?.compliance || [], label)}} : local);
+                    setRouteUpdateEmailNotice({dateKey, text:'Marked Compliant. Finish and send the draft in Outlook.'});
+                } catch (error) {
+                    console.error('Could not complete the route update checklist:', error);
+                    setRouteUpdateEmailNotice({dateKey, error:true, text:'The checklist update could not save. Try again from the Pending badge.'});
+                } finally {
+                    routeUpdateEmailInFlight.current = false;
+                }
             };
             const [timeAlerts, setTimeAlerts] = useState({ show12: false, show17: false, show19: false });
             const [dismissedAlerts, setDismissedAlerts] = useState(() => {
@@ -11348,10 +11419,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         if (!dbData.loadout) dbData.loadout = {};
                         if (!dbData.loadout.compliance) dbData.loadout.compliance = [];
                         
-                        const requiredCompliance = ["LSF Morning Report Has Been Sent","LSF PFL 12 PM Route Update Has Been Sent","LSF PFL 5 PM Route Update Has Been Sent","LSF PFL EOD Route Update Has Been Sent"
+                        const requiredCompliance = [MORNING_REPORT_COMPLIANCE_LABEL,"LSF PFL 12 PM Route Update Has Been Sent","LSF PFL 5 PM Route Update Has Been Sent","LSF PFL EOD Route Update Has Been Sent"
                         ];
                         requiredCompliance.forEach(req => {
-                            if (!dbData.loadout.compliance.some(c => c.label === req || (req ==="LSF Morning Report Has Been Sent" && c.label ==="System Data Sync Completed"))) {
+                            if (!dbData.loadout.compliance.some(c => c.label === req || (req === MORNING_REPORT_COMPLIANCE_LABEL && isMorningReportCompliance(c)))) {
                                 dbData.loadout.compliance.push({ label: req, status: false });
                             }
                         });
@@ -14540,8 +14611,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 return <span className={`text-[11px] font-bold ${isBetter ? 'text-emerald-400' : 'text-rose-400'} flex items-center gap-1`}><ArrowUp className={`w-3 h-3 ${diff < 0 ? 'rotate-180' : ''}`} /> {toFixedSafe(Math.abs(diff))}{isPercent ? '%' : ''}</span>;
             };
 
-            const StatusBadge = ({ status, onClick, isEditing, trueLabel = 'COMPLIANT' }) => (
-                <button disabled={!isEditing} onClick={onClick} className={`px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 transition-all ${status ?"bg-emerald-900/40 text-emerald-400 border border-emerald-500/30" :"bg-amber-900/40 text-amber-400 border border-amber-500/30"} ${isEditing ?"hover:scale-105 cursor-pointer ring-2 ring-transparent hover:ring-indigo-500/50" :""}`}>
+            const StatusBadge = ({ status, onClick, isEditing, trueLabel = 'COMPLIANT', actionLabel }) => (
+                <button type="button" disabled={!isEditing} onClick={onClick} aria-label={actionLabel} className={`px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 transition-all ${status ?"bg-emerald-900/40 text-emerald-400 border border-emerald-500/30" :"bg-amber-900/40 text-amber-400 border border-amber-500/30"} ${isEditing ?"hover:scale-105 cursor-pointer ring-2 ring-transparent hover:ring-indigo-500/50" :""}`}>
                     {status ? <CheckCircle2 className="w-3 h-3" /> : <Info className="w-3 h-3" />} {status ? trueLabel :"PENDING"}
                 </button>
             );
@@ -15114,15 +15185,20 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                 {(data.loadout?.compliance || []).map((item, idx) => {
                                                     let displayLabel = String(item.label);
                                                     if (displayLabel ==="All POD's Reconciled") return null;
-                                                    if (displayLabel ==="System Data Sync Completed") displayLabel ="LSF Morning Report Has Been Sent";
+                                                    if (isMorningReportCompliance(item)) displayLabel = MORNING_REPORT_COMPLIANCE_LABEL;
+                                                    const routeUpdatePending = item.status !== true && activeDate === preloadClock.dateKey && Object.values(routeUpdateComplianceLabels).includes(item.label);
+                                                    const canEmail = routeUpdatePending && !isLoading && canEditSection('overview') && !routeUpdateEmailNotice?.busy;
                                                     return (
                                                         <div key={idx} className="flex items-center justify-between h-full bg-slate-900/30 px-4 py-3 rounded-lg border border-slate-700 gap-4">
                                                             <span className="text-slate-300 font-medium text-xs uppercase block">{displayComplianceLabel(displayLabel)}</span>
-                                                            <StatusBadge status={item.status} isEditing={isEditing} onClick={() => { const nd = JSON.parse(JSON.stringify(data)); nd.loadout.compliance[idx].status = !nd.loadout.compliance[idx].status; setData(nd); }} />
+                                                            <StatusBadge status={item.status} isEditing={routeUpdatePending ? canEmail : isEditing}
+                                                                actionLabel={canEmail ? 'Pending. Open Outlook for ' + getRouteUpdateSubject(activeDate, displayComplianceLabel(displayLabel)) : undefined}
+                                                                onClick={routeUpdatePending ? () => emailRouteUpdate(item.label) : () => { const nd = JSON.parse(JSON.stringify(data)); nd.loadout.compliance[idx].status = !nd.loadout.compliance[idx].status; setData(nd); }} />
                                                         </div>
                                                     );
                                                 })}
                                             </div>
+                                            {routeUpdateEmailNotice?.dateKey === activeDate && <p role={routeUpdateEmailNotice.error ? 'alert' : 'status'} className={'mt-3 text-xs ' + (routeUpdateEmailNotice.error ? 'text-rose-300' : 'text-slate-300')}>{routeUpdateEmailNotice.text}</p>}
                                         </div>
                                     </div>
 
