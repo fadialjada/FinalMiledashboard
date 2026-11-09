@@ -11295,6 +11295,31 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 }
             }, [activeTab, authReady]);
 
+            // Keep collection-wide feeds open when only the selected day or office week changes.
+            useEffect(() => {
+                if (!user || !db) return;
+                const historyCol = collection(db, 'artifacts', appId, 'public', 'data', 'dailyRecaps');
+                let firstHistorySnapshot = true;
+                const unsubscribeHistory = onSnapshot(historyCol, {includeMetadataChanges:true}, (snapshot) => {
+                    const replaceHistory = firstHistorySnapshot;
+                    firstHistorySnapshot = false;
+                    const changed = replaceHistory || snapshot.docChanges().length > 0;
+                    if (changed) setHistoryData(previous => reconcileDailyHistorySnapshot(previous, snapshot, replaceHistory));
+                    setManagerHistoryLoaded(previous => previous || snapshot.metadata?.fromCache !== true);
+                    setRouteWindowHistoryLoaded(previous => previous || snapshot.metadata?.fromCache !== true);
+                    if (changed && canManageLocationRecords(user)) setManagerAlertNow(new Date());
+                }, error => {if(canManageLocationRecords(user))setManagerAlertError('Saved daily records could not refresh. Check your connection.');});
+
+                const preloadCol = collection(db, 'artifacts', appId, 'public', 'data', 'preloadSchedules');
+                const unsubscribePreload = onSnapshot(preloadCol, {includeMetadataChanges:true}, (snapshot) => {
+                    const pData = {};
+                    snapshot.forEach(d => { pData[d.id] = d.data(); });
+                    setAllPreloadSchedules(pData); setManagerSchedulesLoaded(previous=>previous || snapshot.metadata?.fromCache !== true);
+                }, error => {if(canManageLocationRecords(user))setManagerAlertError('The preload schedule could not refresh. Check your connection.');});
+
+                return () => { unsubscribeHistory(); unsubscribePreload(); };
+            }, [user, canManageRecords]);
+
             useEffect(() => {
                 if (!user || !db) return;
                 setIsLoading(true);
@@ -11360,18 +11385,6 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         setDashboardConnection(isDashboardConnectionError(error) ? 'lost' : 'error');
                         console.error('Dashboard sync failed:', error);
                     });
-
-                    const historyCol = collection(db, 'artifacts', appId, 'public', 'data', 'dailyRecaps');
-                    let firstHistorySnapshot = true;
-                    const unsubscribeHistory = onSnapshot(historyCol, {includeMetadataChanges:true}, (snapshot) => {
-                        const replaceHistory = firstHistorySnapshot;
-                        firstHistorySnapshot = false;
-                        const changed = replaceHistory || snapshot.docChanges().length > 0;
-                        if (changed) setHistoryData(previous => reconcileDailyHistorySnapshot(previous, snapshot, replaceHistory));
-                        setManagerHistoryLoaded(previous => previous || snapshot.metadata?.fromCache !== true);
-                        setRouteWindowHistoryLoaded(previous => previous || snapshot.metadata?.fromCache !== true);
-                        if (changed && canManageLocationRecords(user)) setManagerAlertNow(new Date());
-                    }, error => {if(canManageLocationRecords(user))setManagerAlertError('Saved daily records could not refresh. Check your connection.');});
 
                     const masterRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'masterLists');
                     const unsubscribeMaster = onSnapshot(masterRef, (docSnap) => {
@@ -11479,14 +11492,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         }
                     });
 
-                    const preloadCol = collection(db, 'artifacts', appId, 'public', 'data', 'preloadSchedules');
-                    const unsubscribePreload = onSnapshot(preloadCol, {includeMetadataChanges:true}, (snapshot) => {
-                        const pData = {};
-                        snapshot.forEach(d => { pData[d.id] = d.data(); });
-                        setAllPreloadSchedules(pData); setManagerSchedulesLoaded(previous=>previous || snapshot.metadata?.fromCache !== true);
-                    }, error => {if(canManageLocationRecords(user))setManagerAlertError('The preload schedule could not refresh. Check your connection.');});
-
-                    return () => { clearTimeout(cacheTimer); unsubscribeData(); unsubscribeHistory(); unsubscribeMaster(); unsubscribeBonus(); unsubscribeOffice(); unsubscribePreload(); };
+                    return () => { clearTimeout(cacheTimer); unsubscribeData(); unsubscribeMaster(); unsubscribeBonus(); unsubscribeOffice(); };
                 } catch(e) {
                     clearTimeout(cacheTimer);
                     setDashboardConnection(isDashboardConnectionError(e) ? 'lost' : 'error');
