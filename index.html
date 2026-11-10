@@ -3392,9 +3392,8 @@
             const fields={routes:['routeTable'],metrics:['metricsTracker.wtd','metricsTracker.mtd','metricsTracker.feedback'],shiftNotes:['shiftNotes']};
             const normalize=value=>Object.fromEntries(sections.map(key=>[key,value?.[key]===true]));
             const today=(now=new Date())=>now.toLocaleDateString('en-CA',{timeZone:ACTIVE_LOCATION_TIME_ZONE});
-            const shift=(date,offset)=>{const value=new Date(date+'T12:00:00Z');value.setUTCDate(value.getUTCDate()+offset);return value.toISOString().slice(0,10);};
             const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T12:00:00Z'))&&new Date(value+'T12:00:00Z').toISOString().slice(0,10)===value;
-            const recent=(date,now=new Date())=>validDate(date)&&date>=shift(today(now),-1)&&date<=shift(today(now),1);
+            const sameDay=(date,now=new Date())=>date===today(now);
             const getRows=(data,field)=>field==='routeTable'||field==='shiftNotes'?(data?.[field]||[]):(data?.metricsTracker?.[field.split('.')[1]]||[]);
             const putRows=(data,field,rows)=>{
                 if(field==='routeTable'||field==='shiftNotes')return {...data,[field]:rows};
@@ -3403,14 +3402,14 @@
                 return {...data,metricsTracker:tracker};
             };
             const ordinaryOwnNote=(note,uid)=>Boolean(uid&&note?.authorUid===uid&&note.category!=='Manager Note'&&!note.system&&!note.preloadHistory&&!note.preloadReminder&&!note.preloadArrivalConfirmed&&!note.managerNoteAcknowledgement);
-            const canUse=(account,section,profile=accessProfilesCache.get(account?.uid))=>isOwnerAccount(account)||Boolean(account?.uid&&profile?.enabled&&(locationRolePolicyActive&&section==='routes'||normalize(profile.recentDeletion)[section])&&accountHasPermission(account,section,profile));
+            const canUse=(account,section,profile=accessProfilesCache.get(account?.uid))=>sections.includes(section)&&(canManageLocationRecords(account)||Boolean(account?.uid&&profile?.enabled&&profile.permissions?.[section]
+                &&(locationRolePolicyActive||normalize(profile.recentDeletion)[section])
+                &&(accountCanAction(account,section,'add',profile)||accountCanAction(account,section,'edit',profile))));
             const approveRole=account=>canManageLocationRecords(account)||isUserAdministrator(account);
             const label=field=>field==='routeTable'?'Routes':field==='shiftNotes'?'Shift Notes':field.endsWith('.wtd')?'WTD Metrics':field.endsWith('.mtd')?'MTD Metrics':'Feedback';
             const rowLabel=(row,index)=>row.serviceUnit||row.route||row.driverCall?.route||[row.firstName,row.lastName].filter(Boolean).join(' ')||String(row.text||row.note||'').slice(0,90)||'Row '+(index+1);
-            const holdReasons=({date,section,beforeRows,afterRows,usage={},now=new Date()})=>{
+            const holdReasons=({date,section,beforeRows,afterRows,usage={}})=>{
                 const reasons=[],dates=Array.from(new Set([...(usage.dates||[]),date]));
-                if(locationRolePolicyActive&&section==='routes'&&date<today(now))reasons.push('Only today and tomorrow can be changed');
-                if(!recent(date,now))reasons.push('Outside yesterday, today, and tomorrow');
                 if(dates.length>2)reasons.push('Deletions across more than two report dates today');
                 if(beforeRows.length&&afterRows.length===0&&(usage.fullClears?.[section]||[]).some(day=>day!==date))reasons.push('Repeated whole-table clears across report dates');
                 return reasons;
@@ -3478,6 +3477,7 @@
                 const identity=actor(),operationId=crypto.randomUUID(),requestId=crypto.randomUUID(),now=new Date();
                 return firebaseRunTransaction(db,async transaction=>{
                     if(auth.currentUser?.uid!==identity.uid)throw new Error('Your account changed. Reopen the dashboard.');
+                    if (!isOwnerAccount(auth.currentUser) && !sameDay(date)) throw new Error('You can delete only today’s records.');
                     await checkEnabled(transaction);
                     const profile=await readProfile(transaction,identity.uid);
                     if(!canUse(auth.currentUser,section,profile))throw new Error('You do not have recent-delete permission for this section.');
@@ -3489,7 +3489,7 @@
                     const usageSnapshot=await transaction.get(ref('recentDeletionUsage',identity.uid+'_'+today(now))),usage=usageSnapshot.exists()?usageSnapshot.data():{};
                     const request={date,dateMillis:Date.parse(date+'T00:00:00Z'),section,field,beforeRows:selection.beforeRows,afterRows:selection.afterRows,indexes:selection.indexes,requesterUid:identity.uid,requesterName:identity.name,beforeTotals:field.startsWith('metricsTracker.')?data.metricsTracker?.[field.split('.')[1]+'Totals']??null:null};
                     validatePlan(request);
-                    const reasons=isOwnerAccount(auth.currentUser)?[]:holdReasons({...request,usage,now});
+                    const reasons=isOwnerAccount(auth.currentUser)?[]:holdReasons({...request,usage});
                     if(reasons.length){
                         transaction.set(ref('deletionRequests',requestId),{...request,id:requestId,status:'pending',reasons,createdAt:serverTimestamp(),createdAtText:now.toISOString()});
                         return {status:'pending',requestId,count:selection.removed.length,reasons};
@@ -3549,7 +3549,7 @@
                 });
             };
             const enable=async()=>{if(!isOwnerAccount(auth.currentUser))throw new Error('Only the dashboard owner can enable these controls.');await firebaseSetDoc(ref('config','recentDeletionPolicy'),{version:1,updatedByUid:auth.currentUser.uid,updatedAt:serverTimestamp()});};
-            return {enabled,setEnabled,sections,fields,normalize,today,recent,getRows,putRows,ordinaryOwnNote,canUse,approveRole,label,rowLabel,holdReasons,nextUsage,select,validatePlan,remove,decide,restore,enable,ref};
+            return {enabled,setEnabled,sections,fields,normalize,today,sameDay,getRows,putRows,ordinaryOwnNote,canUse,approveRole,label,rowLabel,holdReasons,nextUsage,select,validatePlan,remove,decide,restore,enable,ref};
         })();
 
         const PERMISSION_OPTIONS = [
@@ -5291,11 +5291,11 @@
         // so Firestore can prove that no existing note or author was removed.
         const saveDailyRecapDocument = async (ref, draft, baseline) => {
             requireTeamAccount();
-            const owner = isOwnerAccount(auth.currentUser);
+            const canManage = canManageLocationRecords(auth.currentUser);
             const beforeNotes = baseline?.shiftNotes || [];
             const notes = draft.shiftNotes || [];
             validateManagerNoteChanges(beforeNotes, notes);
-            if (!owner && !accountCanAction(auth.currentUser,'shiftNotes','delete') && beforeNotes.some(note => !notes.some(next => next.id === note.id))) {
+            if (!canManage && !accountCanAction(auth.currentUser,'shiftNotes','delete') && beforeNotes.some(note => !notes.some(next => next.id === note.id))) {
                 throw new Error('Only the dashboard owner can delete Shift Notes.');
             }
             await runTransaction(db, async transaction => {
@@ -5320,8 +5320,8 @@
                         ...(assignmentChanged ? { status: 'Pending' } : {}),
                         lastUpdatedBy: draft.lastUpdatedBy, lastUpdatedAt: draft.lastUpdatedAt }, { merge: true });
                 }
-                if (owner || accountHasPermission(auth.currentUser, 'routes') || accountHasPermission(auth.currentUser, 'overview')) merged = withAutoRouteMetrics(merged, { syncUniformCount: owner || accountHasPermission(auth.currentUser, 'overview') });
-                if (!owner && !snapshot.exists()) {
+                if (canManage || accountHasPermission(auth.currentUser, 'routes') || accountHasPermission(auth.currentUser, 'overview')) merged = withAutoRouteMetrics(merged, { syncUniformCount: canManage || accountHasPermission(auth.currentUser, 'overview') });
+                if (!canManage && !snapshot.exists()) {
                     for (const [field, key] of [['routeTable','routes'],['metricsTracker','metrics'],['midDay','overview'],['endOfDay','overview']]) {
                         if (!accountHasPermission(auth.currentUser, key)) delete merged[field];
                     }
@@ -5330,11 +5330,11 @@
                         else delete merged.loadout;
                     }
                 }
-                const initial = owner ? merged : { ...merged, shiftNotes: latest.shiftNotes || [] };
-                if (!owner && !accountHasPermission(auth.currentUser, 'shiftNotes') && !snapshot.exists()) delete initial.shiftNotes;
+                const initial = canManage ? merged : { ...merged, shiftNotes: latest.shiftNotes || [] };
+                if (!canManage && !accountHasPermission(auth.currentUser, 'shiftNotes') && !snapshot.exists()) delete initial.shiftNotes;
                 transaction.set(ref, initial);
             });
-            if (owner) return;
+            if (canManage) return;
             for(const removed of beforeNotes.filter(item=>!notes.some(note=>note.id===item.id))){await runTransaction(db,async transaction=>{const snapshot=await transaction.get(ref),saved=snapshot.data()||{},current=(saved.shiftNotes||[]).find(note=>note.id===removed.id);if(!current)return;if(!sameSavedValue(current,removed))throw new Error('This note changed after you opened it. Refresh before deleting.');validateManagerNoteChanges(saved.shiftNotes,saved.shiftNotes.filter(note=>note.id!==removed.id));transaction.set(ref,{shiftNotes:saved.shiftNotes.filter(note=>note.id!==removed.id),lastUpdatedBy:draft.lastUpdatedBy,lastUpdatedAt:draft.lastUpdatedAt},{merge:true});});}
             for (const note of notes) {
                 const before = beforeNotes.find(item => item.id === note.id);
@@ -9395,7 +9395,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
         const RecentDeletionPermissions=({draft,change,inbox,owner})=>{
             const flags=RecentDeletion.normalize(draft.recentDeletion);
             return <fieldset disabled={!draft.enabled} className="mt-4 rounded-xl border border-slate-700 p-4 disabled:opacity-50"><legend className="px-1 text-xs font-bold text-slate-200">Recent deletion permissions</legend>
-                <p className="mb-3 text-xs text-slate-400">Allow corrections for yesterday, today, or tomorrow. One day’s Routes or Metrics table may be cleared. Repeated clears across dates wait for Admin or the dashboard owner approval. Shift Notes are limited to the author’s own ordinary notes.</p>
+                <p className="mb-3 text-xs text-slate-400">Allow deletions on today’s dashboard date. Shift Notes are limited to the author’s own ordinary notes.</p>
                 {!inbox.policy.enabled&&<div className="mb-3 text-xs text-amber-200">Matching database controls must be installed and enabled first. {owner&&<button type="button" disabled={!!inbox.busy||!inbox.policy.ready} onClick={inbox.enable} className="ml-2 rounded-lg border border-amber-600/60 px-2 py-1 disabled:opacity-40">Enable recent deletion controls</button>}</div>}
                 <div className="grid gap-2 sm:grid-cols-3">{[['routes','Routes'],['metrics','Metrics'],['shiftNotes','Own Shift Notes']].map(([key,label])=><label key={key} className="flex items-center gap-2 text-xs text-slate-200"><input type="checkbox" aria-label={'Allow recent deletion: '+label} checked={flags[key]} disabled={!inbox.policy.enabled||!draft.enabled||!draft.permissions?.[key]} onChange={event=>change({...draft,recentDeletion:{...flags,[key]:event.target.checked}})} className="h-4 w-4 accent-indigo-400"/>{label}</label>)}</div>
                 <p className="mt-3 text-xs text-slate-400">This does not grant an Admin role, history deletion, or access to other sections.</p>{inbox.error&&<p role="alert" className="mt-2 text-xs text-rose-200">{inbox.error}</p>}
@@ -11768,12 +11768,18 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 setIsEditing(true);
             };
 
+            const canDeleteTodayRows = section => recentInbox.policy.enabled && RecentDeletion.sameDay(activeDate)
+                && RecentDeletion.canUse(user,section,accessProfile) && canEditSection(section);
             const beginRecentDeletion=(section,field,index=null,all=false)=>{
                 try{
-                    if(!RecentDeletion.canUse(user,section,accessProfile))throw new Error('You do not have recent-delete permission for this section.');
-                    if(locationRolePolicyActive&&!canManageRecords&&section==='routes'&&(!RecentDeletion.recent(activeDate)||activeDate<RecentDeletion.today()))
-                        throw new Error('You can only delete routes dated today or tomorrow.');
-                    if(!recentInbox.policy.enabled)throw new Error('Recent deletion controls need their matching database setup before use.');
+                    if (canManageRecords && all) {
+                        if (!canEditSection(section)) throw new Error('This section is locked.');
+                        if (section==='routes') applyLocalRouteTableChange([]);
+                        else setData(previous=>RecentDeletion.putRows(previous,field,[]));
+                        return;
+                    }
+                    if (!RecentDeletion.sameDay(activeDate)) throw new Error('You can delete only today’s records.');
+                    if (!canDeleteTodayRows(section)) throw new Error('You do not have deletion permission for this section.');
                     if(hasUnsavedDashboardChanges)throw new Error('Save or cancel your other dashboard edits before deleting saved rows.');
                     const selected=RecentDeletion.select(data,{section,field,index,all},user.uid);
                     setRecentDeletionError('');setRecentDeletionNotice('');setRecentDeletionPending({date:activeDate,section,field,index,all,count:selected.removed.length,expectedRows:JSON.parse(JSON.stringify(selected.beforeRows))});
@@ -13347,7 +13353,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             };
 
             const removeMasterListItem = (id) => {
-                if (!canEditSection('masterLists')) return;
+                if (!canManageRecords || !canEditSection('masterLists')) return;
                 const newLists = { ...masterLists };
                 newLists[masterActiveTab] = newLists[masterActiveTab].filter(item => item.id !== id);
                 saveMasterLists(newLists);
@@ -15416,7 +15422,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     <TeamAssignmentReport data={data} activeDate={activeDate} displayDateString={displayDateString} preloadSchedule={preloadScheduleForDay(activeDate)} setData={setData} isEditing={isEditing} isCapturing={isCapturing} reportRef={teamAssignmentScreenshotRef} onCapture={handleDownloadTeamAssignmentScreenshot} />
                                 ) : (<>
                                 <DriverAssignmentAlert />
-                                {isEditing&&recentInbox.policy.enabled&&RecentDeletion.canUse(user,'routes',accessProfile)&&(data.routeTable||[]).length>0&&<div className="mb-3 flex justify-end"><button type="button" onClick={()=>beginRecentDeletion('routes','routeTable',null,true)} className="rounded-lg border border-rose-700/50 px-3 py-2 text-xs font-bold text-rose-200">Delete this day’s routes</button></div>}
+                                {isEditing&&(canManageRecords?canEditSection('routes'):canDeleteTodayRows('routes'))&&(data.routeTable||[]).length>0&&<div className="mb-3 flex justify-end"><button type="button" onClick={()=>beginRecentDeletion('routes','routeTable',null,true)} className="rounded-lg border border-rose-700/50 px-3 py-2 text-xs font-bold text-rose-200">Delete this day’s routes</button></div>}
                                 {isEditing && canEditSection('preload') && canEditSection('preloadAssignments') && <p className="mb-3 text-xs text-slate-400">Use the three dots beside a route to assign the preload team for this date. Enter its ETA in Routes, then Save.</p>}
                                 {isEditing && routeOptionsId != null && (() => {
                                     const row = (data.routeTable || []).find(item => item.id === routeOptionsId);
@@ -15566,7 +15572,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                             {isEditing && (
                                                                 <td data-panel-screenshot-ignore="true" className="px-2 py-1 text-center sticky right-0 bg-slate-800 border-l border-slate-700">
                                                                     {(isSameDayRoute(row) || canChoosePreloadTeam) && <button type="button" aria-haspopup="dialog" onClick={event => openRouteOptions(event, row)} aria-label={`Route options for ${row.serviceUnit || row.route || 'route'}`} title="Route options" className="p-1 text-slate-400 hover:text-emerald-300"><MoreHorizontal className="w-4 h-4" /></button>}
-                                                                    <button disabled={canManageRecords?(Boolean(row.preloadArrival)&&!canEditSection('preloadAssignments')):!RecentDeletion.canUse(user,'routes',accessProfile)} title={canManageRecords?'Delete route':RecentDeletion.canUse(user,'routes',accessProfile)?'Delete saved route':'Recent-delete permission required'} onClick={() => { if(!canManageRecords){beginRecentDeletion('routes','routeTable',data.routeTable.findIndex(item=>item.id===row.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.routeTable = nd.routeTable.filter(r => r.id !== row.id); applyLocalRouteTableChange(nd.routeTable); }} className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                                                                    <button disabled={canManageRecords?(Boolean(row.preloadArrival)&&!canEditSection('preloadAssignments')):!canDeleteTodayRows('routes')} title={canManageRecords?'Delete route':canDeleteTodayRows('routes')?'Delete saved route':'Recent-delete permission required'} onClick={() => { if(!canManageRecords){beginRecentDeletion('routes','routeTable',data.routeTable.findIndex(item=>item.id===row.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.routeTable = nd.routeTable.filter(r => r.id !== row.id); applyLocalRouteTableChange(nd.routeTable); }} className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                                                                 </td>
                                                             )}
                                                         </tr>
@@ -15624,7 +15630,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                         </div>
                                     </div>
                                      <div className="flex items-center gap-2">
-                                        {isEditing&&recentInbox.policy.enabled&&RecentDeletion.canUse(user,'metrics',accessProfile)&&RecentDeletion.getRows(data,'metricsTracker.'+metricsSubTab).length>0&&<button type="button" onClick={()=>beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,null,true)} className="rounded-lg border border-rose-700/50 px-3 py-2 text-xs font-bold text-rose-200">Delete this metrics table</button>}
+                                        {isEditing&&(canManageRecords?canEditSection('metrics'):canDeleteTodayRows('metrics'))&&RecentDeletion.getRows(data,'metricsTracker.'+metricsSubTab).length>0&&<button type="button" onClick={()=>beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,null,true)} className="rounded-lg border border-rose-700/50 px-3 py-2 text-xs font-bold text-rose-200">Delete this metrics table</button>}
                                         <button onClick={handleDownloadMetricsScreenshot} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white border border-slate-600 transition-colors cursor-pointer" title="Download Metrics Screenshot">
                                             <Camera className="w-4 h-4" />
                                         </button>
@@ -15711,7 +15717,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                     </td>
                                                                     {isEditing && (
                                                                         <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center border-b border-slate-700/50">
-                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} count={data.metricsTracker[metricsSubTab].length} editing={isMetricRowEditing(idx)} onMove={direction => moveMetricRow(idx, direction)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete feedback row" disabled={!canManageRecords&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { setEditingMetricsRow(null); if(!canManageRecords){beginRecentDeletion('metrics','metricsTracker.feedback',data.metricsTracker.feedback.findIndex(item=>item.id===row.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.feedback = nd.metricsTracker.feedback.filter(r => r.id !== row.id); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
+                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} count={data.metricsTracker[metricsSubTab].length} editing={isMetricRowEditing(idx)} onMove={direction => moveMetricRow(idx, direction)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete feedback row" disabled={!canManageRecords&&!canDeleteTodayRows('metrics')} onClick={() => { setEditingMetricsRow(null); if(!canManageRecords){beginRecentDeletion('metrics','metricsTracker.feedback',data.metricsTracker.feedback.findIndex(item=>item.id===row.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.feedback = nd.metricsTracker.feedback.filter(r => r.id !== row.id); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
                                                                         </button></div>
                                                                         </td>
@@ -15761,7 +15767,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                     <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('exchange', row.exchange, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'exchange', 'exchange', {numeric:true, max:100}) : `${row.exchange?.toFixed(2)}%`}</td>
                                                                     {isEditing && (
                                                                         <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>
-                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} count={data.metricsTracker[metricsSubTab].length} editing={isMetricRowEditing(idx)} onMove={direction => moveMetricRow(idx, direction)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete metric row" disabled={!canManageRecords&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { setEditingMetricsRow(null); if(!canManageRecords){beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,idx);return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker[metricsSubTab] = nd.metricsTracker[metricsSubTab].filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
+                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} count={data.metricsTracker[metricsSubTab].length} editing={isMetricRowEditing(idx)} onMove={direction => moveMetricRow(idx, direction)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete metric row" disabled={!canManageRecords&&!canDeleteTodayRows('metrics')} onClick={() => { setEditingMetricsRow(null); if(!canManageRecords){beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,idx);return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker[metricsSubTab] = nd.metricsTracker[metricsSubTab].filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
                                                                             </button></div>
                                                                         </td>
@@ -16084,7 +16090,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {isEditing && (isAdminUser||(canManageRecords&&isManagerNote(note))||(RecentDeletion.canUse(user,'shiftNotes',accessProfile)&&RecentDeletion.ordinaryOwnNote(note,user.uid))) && (canManageRecords||!isManagerNote(note)) && <button aria-label={'Delete note '+note.id} onClick={() => { if(!isAdminUser&&!(canManageRecords&&isManagerNote(note))){beginRecentDeletion('shiftNotes','shiftNotes',(data.shiftNotes||[]).findIndex(item=>item.id===note.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.shiftNotes = nd.shiftNotes.filter(n => n.id !== note.id); setData(nd); }} className="text-slate-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"><X className="w-5 h-5" /></button>}
+                                                    {isEditing && (canManageRecords || (canDeleteTodayRows('shiftNotes') && RecentDeletion.ordinaryOwnNote(note,user.uid))) && <button aria-label={'Delete note '+note.id} onClick={() => { if(!canManageRecords){beginRecentDeletion('shiftNotes','shiftNotes',(data.shiftNotes||[]).findIndex(item=>item.id===note.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.shiftNotes = nd.shiftNotes.filter(n => n.id !== note.id); setData(nd); }} className="text-slate-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"><X className="w-5 h-5" /></button>}
                                                 </div>
                                                 {isEditing && canManageRecords && isManagerNote(note) && <ManagerNoteTeamOverride note={note} defaults={masterLists.managerNoteAcknowledgementUids} people={locationTaskAssignees.filter(person=>!isProtectedMasterAdminProfile({uid:person.uid,...accessProfilesCache.get(person.uid)}) && !masterLists.deletedDashboardUsers?.[person.uid])} onChange={selected=>setData(previous=>({...previous,shiftNotes:(previous.shiftNotes || []).map(item=>{if(item.id!==note.id)return item;const updated={...item};if(selected===null)delete updated.managerNoteAcknowledgementUids;else updated.managerNoteAcknowledgementUids=normalizeManagerNoteAcknowledgementUids(selected);return updated;})}))}/>}
                                                 {isEditing && saveErrorNoteId!=null && String(note.id)===String(saveErrorNoteId) && (()=>{const prior=dailySnapshotRef.current.date===activeDate?(dailySnapshotRef.current.data?.shiftNotes || []).find(item=>String(item.id)===String(note.id))?.driverCall:null;const message=validateDriverCallIssue(note.driverCall,prior);return message?<p role="alert" className="mb-3 text-sm text-rose-200">{message}</p>:null;})()}
@@ -16331,7 +16337,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                                 ) : (
                                                                                     <button onClick={() => setEditingWtdIdx(idx)} className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-900/30 rounded transition-colors cursor-pointer"><Edit3 className="w-3 h-3" /></button>
                                                                                 )}
-                                                                                <button disabled={!isAdminUser&&!RecentDeletion.canUse(user,'metrics',accessProfile)} onClick={() => { if(!isAdminUser){beginRecentDeletion('metrics','metricsTracker.wtd',idx);return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.wtd = nd.metricsTracker.wtd.filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"><Trash2 className="w-3 h-3" /></button>
+                                                                                <button disabled={!canManageRecords&&!canDeleteTodayRows('metrics')} onClick={() => { if(!canManageRecords){beginRecentDeletion('metrics','metricsTracker.wtd',idx);return;} const nd = JSON.parse(JSON.stringify(data)); nd.metricsTracker.wtd = nd.metricsTracker.wtd.filter((_, i) => i !== idx); setData(nd); }} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"><Trash2 className="w-3 h-3" /></button>
                                                                             </div>
                                                                         </td>
                                                                     )}
@@ -16861,7 +16867,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                 {isAdminUser&&!locationRolePolicyActive&&<div className="rounded-lg border border-slate-600 p-3 text-xs text-slate-300"><label className="flex items-center gap-3 font-bold"><input aria-label="Admin user-management access" type="checkbox" checked={accountDraft.administrator===true} disabled={settingsBusy||!adminRolesAvailable||accountDraft.restoringDashboardAccess} onChange={event=>setAccountDraft({...accountDraft,administrator:event.target.checked})} className="h-4 w-4 accent-indigo-400"/>Admin · manage ordinary users and permissions</label><p className="mt-2 text-slate-400">Admin cannot manage the dashboard owner accounts, promote other Admins, delete history, or change protected app settings. An assigned Admin may approve another user’s held deletion request.</p>{!adminRolesAvailable&&<p className="mt-2 text-amber-200">Admin role setup needs its matching database rules. Nobody is assigned automatically.</p>}</div>}
                                                 <label className="flex gap-3 items-center text-sm font-bold text-slate-200"><input type="checkbox" checked={accountDraft.enabled} disabled={settingsBusy} onChange={event => setAccountDraft({ ...accountDraft, enabled: event.target.checked })} className="h-4 w-4 accent-emerald-500" />Dashboard access enabled</label>
                                                 {ownerPolicyEnabled?<OwnerPermissionsGrid draft={accountDraft} change={setAccountDraft} disabled={!accountDraft.enabled||settingsBusy}/>:<><p className="text-xs text-amber-200">Detailed action permissions are available after activating Data Management. Your existing editing controls remain available below.</p><fieldset disabled={!accountDraft.enabled || settingsBusy} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 disabled:opacity-50"><legend className="text-xs font-bold text-slate-300 mb-3">Allow editing</legend>{PERMISSION_OPTIONS.filter(([key])=>key!=='history').map(([key, label]) => <label key={key} className="flex gap-3 items-center rounded-lg border border-slate-700 p-3 text-xs text-slate-200"><input type="checkbox" checked={accountDraft.permissions[key] === true} onChange={event => setAccountDraft({ ...accountDraft, permissions: { ...accountDraft.permissions, [key]: event.target.checked } })} className="h-4 w-4 accent-indigo-400" />{label}</label>)}</fieldset></>}
-                                                <RecentDeletionPermissions draft={accountDraft} change={setAccountDraft} inbox={recentInbox} owner={isAdminUser}/>
+                                                {locationRolePolicyActive ? <p className="text-xs text-slate-400">Users with editing access can delete today’s routes, metrics and their own ordinary Shift Notes.</p> : <RecentDeletionPermissions draft={accountDraft} change={setAccountDraft} inbox={recentInbox} owner={isAdminUser}/>}
                                                 <div className="flex flex-wrap gap-3"><button type="button" onClick={saveAccountPermissions} disabled={settingsBusy || !settingsReady} className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">{settingsBusy ? accountDraft.mode === 'create' ? 'Creating user…' : 'Saving…' : accountDraft.createdLogin ? 'Retry permissions' : accountDraft.isNew && accountDraft.mode === 'create' ? 'Create user' : 'Save permissions'}</button><button type="button" onClick={() => setAccountDraft(null)} disabled={settingsBusy} className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-bold text-slate-300">{accountDraft.createdLogin ? 'Close' : 'Cancel'}</button></div>
                                             </div>}
                                         </div>
@@ -17320,7 +17326,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                                 {isMasterEditing && canEditMasterItem && (
                                                                                     <div data-master-screenshot-ignore="true" className="flex items-center gap-1 shrink-0 bg-slate-900/50 p-1 rounded-lg border border-slate-700/50">
                                                                                         <button onClick={() => startEditingMasterItem(item)} className="text-slate-400 hover:text-indigo-400 hover:bg-indigo-900/50 p-1.5 rounded transition-colors cursor-pointer" title="Edit"><Edit3 className="w-3 h-3" /></button>
-                                                                                        {canEditSection('masterLists') && <button onClick={() => removeMasterListItem(item.id)} className="text-slate-500 hover:text-rose-400 hover:bg-rose-900/50 p-1.5 rounded transition-colors cursor-pointer" title="Delete"><Trash2 className="w-3 h-3" /></button>}
+                                                                                        {canManageRecords && canEditSection('masterLists') && <button onClick={() => removeMasterListItem(item.id)} className="text-slate-500 hover:text-rose-400 hover:bg-rose-900/50 p-1.5 rounded transition-colors cursor-pointer" title="Delete"><Trash2 className="w-3 h-3" /></button>}
                                                                                     </div>
                                                                                 )}
                                                                             </div>
@@ -17372,7 +17378,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                     {isMasterEditing && (
                                                                         <div data-master-screenshot-ignore="true" className="flex items-center gap-1 shrink-0 ml-3">
                                                                             <button onClick={() => startEditingMasterItem(item)} className="text-slate-400 hover:text-indigo-400 hover:bg-indigo-900/30 p-1.5 rounded transition-colors cursor-pointer" title="Edit"><Edit3 className="w-4 h-4" /></button>
-                                                                            <button onClick={() => removeMasterListItem(item.id)} className="text-slate-500 hover:text-rose-400 hover:bg-rose-900/30 p-1.5 rounded transition-colors cursor-pointer" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                                                                            {canManageRecords && <button onClick={() => removeMasterListItem(item.id)} className="text-slate-500 hover:text-rose-400 hover:bg-rose-900/30 p-1.5 rounded transition-colors cursor-pointer" title="Delete"><Trash2 className="w-4 h-4" /></button>}
                                                                         </div>
                                                                     )}
                                                                 </>
