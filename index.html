@@ -1260,6 +1260,10 @@
             .metric-ring-fireworks { display: none !important; }
             .metric-ring-spark { animation: none !important; }
         }
+        [data-bonus-screenshot-panel="true"][data-screenshot-surface="true"] { display: block; }
+        [data-bonus-screenshot-panel="true"][data-screenshot-surface="true"] > * { margin: 0; border: 0; border-radius: 0; }
+        [data-bonus-screenshot-panel="true"][data-screenshot-surface="true"] > * + * { border-top: 1px solid #344154; }
+
         /* Export copies only: override theme shadows, including rounded panel edges. */
         [data-screenshot-surface="true"],
         [data-screenshot-surface="true"] *,
@@ -12330,16 +12334,19 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         const isMorningReport = element.matches('[data-morning-report-screenshot="true"]');
                         const isTeamAssignment = element.matches('[data-team-assignment-screenshot="true"]');
                         const isTruckAssignmentRequest = element.matches('[data-truck-assignment-request="true"]');
+                        const isBonusPanel = element.matches('[data-bonus-screenshot-panel="true"]');
+                        const screenshotBackground = isBonusPanel ? '#17202c' : SCREENSHOT_BACKGROUND;
+                        const bonusTableWidths = isBonusPanel ? Array.from(element.querySelectorAll('table'), table => table.getBoundingClientRect().width) : [];
                         const isReportPanel = isMorningReport || isTeamAssignment || isTruckAssignmentRequest;
                         const baseWidth = Math.ceil(isReportPanel ? Math.max(isTruckAssignmentRequest ? 900 : 1100, element.getBoundingClientRect().width) : isMasterPanel
                             ? element.getBoundingClientRect().width
-                            : Math.max(element.offsetWidth, element.scrollWidth, element.getBoundingClientRect().width));
+                            : Math.max(element.offsetWidth, element.scrollWidth, element.getBoundingClientRect().width, ...bonusTableWidths));
                         screenshotClone = element.cloneNode(true);
                         screenshotClone.style.position = 'fixed';
                         screenshotClone.style.left = '-10000px';
                         screenshotClone.style.top = '0';
                         screenshotClone.style.width = `${baseWidth}px`;
-                        if (isMasterPanel || isPreloadTable || isReportPanel) screenshotClone.style.boxSizing = 'border-box';
+                        if (isMasterPanel || isPreloadTable || isReportPanel || isBonusPanel) screenshotClone.style.boxSizing = 'border-box';
                         screenshotClone.style.maxWidth = 'none';
                         screenshotClone.style.maxHeight = 'none';
                         screenshotClone.style.height = 'auto';
@@ -12351,7 +12358,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         screenshotClone.style.filter = 'none';
                         screenshotClone.style.outline = 'none';
                         screenshotClone.style.borderRadius = '16px';
-                        prepareScreenshotSurface(screenshotClone);
+                        prepareScreenshotSurface(screenshotClone, screenshotBackground);
                         screenshotClone.style.transform = 'none';
                         screenshotClone.style.animation = 'none';
                         screenshotClone.querySelectorAll('[data-panel-screenshot-ignore="true"], [data-master-screenshot-ignore="true"]').forEach(node => {
@@ -12416,9 +12423,9 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             : Math.max(screenshotClone.scrollWidth, captureRect.width, baseWidth));
                         const captureHeight = isMasterPanel || isPreloadTable || isReportPanel
                             ? Math.ceil(captureRect.height)
-                            : Math.ceil(Math.max(screenshotClone.scrollHeight, captureRect.height)) + 6;
+                            : Math.ceil(Math.max(screenshotClone.scrollHeight, captureRect.height)) + (isBonusPanel ? 0 : 6);
                         const image = await downloadScreenshotPng(screenshotClone, fileName, {
-                            backgroundColor: SCREENSHOT_BACKGROUND,
+                            backgroundColor: screenshotBackground,
                             useCORS: true,
                             logging: false,
                             allowTaint: true,
@@ -16220,7 +16227,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
 
                                 {billingError && <div role="alert" className="mb-4 px-4 py-3 rounded-lg border border-amber-700 bg-amber-950/30 text-amber-200 text-xs flex items-center justify-between gap-3"><span>{billingError}</span><button className="px-2 py-1" onClick={() => setBillingError('')} aria-label="Dismiss billing message">×</button></div>}
                                 {billingDraft && <WeeklyBillingPreview initialDraft={billingDraft} weekLocked={ownerPolicyEnabled&&(!ownerLocksReady||ownerIsSectionLocked('bonus',activeDate))} billingCompanyCatalog={masterLists.billingCompaniesForExport} canEditCompanies={canManageRecords && settingsReady} saveCompanyCatalog={async (catalog,baseline)=>{const saved=await saveBillingCompanyCatalog({uid:user.uid,catalog,baseline,name:getSavedDisplayName(user)});if(auth.currentUser?.uid!==user.uid)throw new Error('Your account changed. Reopen billing.');setMasterLists(previous=>({...previous,billingCompaniesForExport:saved}));return saved;}} onClose={() => setBillingDraft(null)} />}
-                                <div ref={bonusScreenshotRef} className={isBonusFullscreen ? 'flex-1 flex flex-col gap-4 overflow-hidden' : ''}>
+                                <div ref={bonusScreenshotRef} data-bonus-screenshot-panel="true" className={isBonusFullscreen ? 'flex-1 flex flex-col gap-4 overflow-hidden' : ''}>
                                     <div data-panel-screenshot-only="true" className="hidden items-center justify-between gap-4 px-5 py-4 bg-slate-900 border border-slate-700 rounded-xl mb-4">
                                         <div className="flex items-center gap-3">
                                             <Award className="w-6 h-6 text-slate-100" />
