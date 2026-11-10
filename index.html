@@ -3366,17 +3366,17 @@
                 && !ackIds.includes(managerNoteAckKey(dateKey, note.id))
                 && !hasManagerNoteAcknowledgement(note, uid));
         const validateManagerNoteChanges = (before = [], after = []) => {
-            if (isOwnerAccount(auth.currentUser)) return;
+            if (canManageLocationRecords(auth.currentUser)) return;
             const allowedActivity = new Set(['replies', 'likes', 'acknowledgedBy', 'acknowledgedAt']);
             for (const note of after) {
                 const previous = before.find(item => item.id === note.id);
-                if (isManagerNote(note) && !isManagerNote(previous)) throw new Error('Only the dashboard owner can create Manager Notes.');
+                if (isManagerNote(note) && !isManagerNote(previous)) throw new Error('Only a location admin can create Manager Notes.');
             }
             for (const previous of before.filter(isManagerNote)) {
                 const note = after.find(item => item.id === previous.id);
                 if (!note || [...new Set([...Object.keys(previous), ...Object.keys(note)])].some(key =>
                     !allowedActivity.has(key) && !sameSavedValue(previous[key], note[key]))) {
-                    throw new Error('Only the dashboard owner can edit or remove Manager Notes.');
+                    throw new Error('Only a location admin can edit or remove Manager Notes.');
                 }
             }
         };
@@ -3780,19 +3780,23 @@
         const getTaskAssignedUids = task => Array.isArray(task?.assignedUids) ? task.assignedUids : task?.assignedUid ? [task.assignedUid] : [];
         const isTaskAssignedTo = (task, uid) => Boolean(uid && getTaskAssignedUids(task).includes(uid));
         const getTaskAssignedName = (task, uid, accounts = []) => accounts.find(account => account.uid === uid)?.name || task.assignedNames?.[uid] || (task.assignedUid === uid ? task.assignedName : 'Team member');
-        const getTaskRecipientUids = (task, actorUid) => isMasterAdminUid(actorUid) ? getTaskAssignedUids(task) : [OWNER_UID, ...getTaskAssignedUids(task).filter(uid => uid !== actorUid && uid !== OWNER_UID)];
+        const getTaskRecipientUids = (task, account) => {
+            const assigned = getTaskAssignedUids(task);
+            if (canManageLocationRecords(account)) return assigned;
+            return [...new Set([OWNER_UID, task.createdByUid, ...assigned].filter(uid => uid && uid !== account?.uid))];
+        };
         const getTaskEventRecipients = event => Array.isArray(event.recipientUids) ? event.recipientUids : [event.recipientUid];
         const TEAM_TASK_FIELDS = ['id', 'title', 'instructions', 'assignedUid', 'assignedName', 'assignedUids', 'assignedNames', 'dueAt', 'status', 'createdAt', 'createdByUid', 'createdBy', 'updatedAt', 'updatedByUid', 'updatedBy', 'events', '_auditId'];
         const validateTeamTaskWrite = (before, after, operation, account = auth.currentUser) => {
-            const owner = isOwnerAccount(account);
-            if (operation === 'delete') { if (!owner) throw new Error('Only the dashboard owner can delete tasks.'); return; }
+            const canManage = canManageLocationRecords(account);
+            if (operation === 'delete') { if (!canManage) throw new Error('Only a location admin can delete tasks.'); return; }
             const validString = (value, max, required = true) => typeof value === 'string' && value.length <= max && (!required || value.trim().length > 0);
             if (!after || Object.keys(after).some(key => !TEAM_TASK_FIELDS.includes(key)) || !validString(after.id, 128)
                 || !validString(after.title, 160) || !validString(after.instructions, 4000, false)
                 || !validString(after.assignedUid, 128) || !validString(after.assignedName, 100)
                 || !TEAM_TASK_STATUSES[after.status] || !Number.isFinite(Date.parse(after.dueAt))
                 || !Array.isArray(after.events) || after.events.length > 500
-                || (operation === 'create' ? after.createdByUid !== account?.uid || !owner : after.createdByUid !== before?.createdByUid) || after.updatedByUid !== account?.uid) throw new Error('The task has invalid details.');
+                || (operation === 'create' ? after.createdByUid !== account?.uid || !canManage : after.createdByUid !== before?.createdByUid) || after.updatedByUid !== account?.uid) throw new Error('The task has invalid details.');
             if ('assignedUids' in after || 'assignedNames' in after) {
                 const ids = after.assignedUids, names = after.assignedNames;
                 if (!Array.isArray(ids) || !ids.length || ids.length > MAX_TASK_ASSIGNEES || new Set(ids).size !== ids.length
@@ -3801,10 +3805,10 @@
                     || Object.keys(names).some(uid => !ids.includes(uid)) || after.assignedUid !== ids[0] || after.assignedName !== names[ids[0]]) throw new Error('Choose one to eight team members.');
             }
             if (operation === 'create') {
-                if (!owner || after.status !== 'open' || after.events.length !== 1 || after.events[0]?.type !== 'assigned') throw new Error('Only the dashboard owner can create and assign tasks.');
+                if (!canManage || after.status !== 'open' || after.events.length !== 1 || after.events[0]?.type !== 'assigned') throw new Error('Only a location admin can create and assign tasks.');
             } else {
                 if (['id', 'createdAt', 'createdByUid', 'createdBy'].some(key => !sameSavedValue(before[key], after[key]))) throw new Error('The original task record must be preserved.');
-                if (!owner && (!isTaskAssignedTo(before, account?.uid) || ['title', 'instructions', 'assignedUid', 'assignedName', 'assignedUids', 'assignedNames', 'dueAt'].some(key => !sameSavedValue(before[key], after[key])))) throw new Error('Only the dashboard owner can change task assignments and details.');
+                if (!canManage && (!isTaskAssignedTo(before, account?.uid) || ['title', 'instructions', 'assignedUid', 'assignedName', 'assignedUids', 'assignedNames', 'dueAt'].some(key => !sameSavedValue(before[key], after[key])))) throw new Error('Only a location admin can change task assignments and details.');
             }
             const previous = before?.events || [], event = after.events.at(-1);
             if (after.events.length !== previous.length + 1 || !previous.every((item, index) => sameSavedValue(item, after.events[index]))
@@ -3813,15 +3817,15 @@
                 || !validString(event.author, 100) || event.authorUid !== account?.uid || event.status !== after.status
                 || event.timestamp !== after.updatedAt || !Number.isFinite(Date.parse(event.timestamp))
                 || !['assigned', 'edited', 'status', 'update-request', 'update'].includes(event.type)
-                || !sameSavedValue(getTaskEventRecipients(event), getTaskRecipientUids(after, account?.uid))
-                || event.recipientUid !== getTaskRecipientUids(after, account?.uid)[0]) throw new Error('The task update is invalid.');
-            if (!owner && !['status', 'update'].includes(event.type)) throw new Error('Only the dashboard owner can request updates or assign tasks.');
+                || !sameSavedValue(getTaskEventRecipients(event), getTaskRecipientUids(after, account))
+                || event.recipientUid !== getTaskRecipientUids(after, account)[0]) throw new Error('The task update is invalid.');
+            if (!canManage && !['status', 'update'].includes(event.type)) throw new Error('Only a location admin can request updates or assign tasks.');
             if (event.type !== 'status' && operation !== 'create' && before.status !== after.status) throw new Error('Choose a status action to change progress.');
             if (['update-request', 'update'].includes(event.type) && !event.text.trim()) throw new Error('Enter your update message.');
         };
-        const getTeamTaskNotifications = (tasks, uid, readIds = []) => {
+        const getTeamTaskNotifications = (tasks, uid, readIds = [], canManage = false) => {
             const read = new Set(readIds);
-            return tasks.flatMap(task => (task.events || []).filter(event => (isMasterAdminUid(uid) || isTaskAssignedTo(task, uid)) && (getTaskEventRecipients(event).includes(uid) || (isMasterAdminUid(uid)&&getTaskEventRecipients(event).includes(OWNER_UID))) && event.authorUid !== uid && !read.has(event.id))
+            return tasks.flatMap(task => (task.events || []).filter(event => (canManage || isTaskAssignedTo(task, uid)) && (getTaskEventRecipients(event).includes(uid) || (isMasterAdminUid(uid)&&getTaskEventRecipients(event).includes(OWNER_UID))) && event.authorUid !== uid && !read.has(event.id))
                 .map(event => ({ ...event, taskId: task.id, title: task.title }))).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
         };
         const getTaskWaitingUids = task => {
@@ -7218,7 +7222,7 @@
             return <div className="dashboard-modal settings-modal fixed inset-0 z-[125] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4" data-dashboard-edit-ignore="true" data-html2canvas-ignore="true">
                 <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="team-tasks-title" className="settings-window flex flex-col min-h-0 w-full max-w-4xl max-h-[90dvh] rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden">
                     <div className="dashboard-mobile-toolbar flex items-center justify-between gap-3 border-b border-slate-700 bg-slate-800 px-5 py-4 shrink-0">
-                        <div className="min-w-0"><h2 id="team-tasks-title" className="text-lg font-black text-white">{owner ? 'Team Tasks' : 'Your Assignment'}</h2><p className="text-xs text-slate-400">{owner ? 'Assignments, progress, and follow-ups · Deadlines in ' : 'Update your progress or reply to Fadi · Deadline in '}{locationClockLabel()} time</p></div>
+                        <div className="min-w-0"><h2 id="team-tasks-title" className="text-lg font-black text-white">{owner ? 'Team Tasks' : 'Your Assignment'}</h2><p className="text-xs text-slate-400">{owner ? 'Assignments, progress, and follow-ups · Deadlines in ' : 'Update your progress or reply to the task request · Deadline in '}{locationClockLabel()} time</p></div>
                         <button type="button" data-tasks-close aria-label={owner ? 'Close Team Tasks' : 'Close Assignment'} onClick={close} disabled={busy} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-40"><X className="w-5 h-5" /></button>
                     </div>
                     <div className="dashboard-scroll-area settings-content min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4">
@@ -10409,6 +10413,12 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const selectPrivateChat=useCallback(uid=>{setPrivateRecipientUid(uid);setChatTab('private');setConfirmTeamChatClear(false);setChatInboxList(false);},[]);
             const selectSharedChat=useCallback(()=>{setChatTab('team');setConfirmTeamChatClear(false);setChatInboxList(false);},[]);
             const isTeamChatOpen = isChatPanelOpen && chatTab === 'team';
+            const isViewingPrivatePopupChat = isChatPanelOpen && chatTab === 'private' && privateChatPopup?.uid === privateRecipientUid;
+            useEffect(() => {
+                if (isViewingPrivatePopupChat) {
+                    setPrivateChatPopup(popup => popup?.uid === privateRecipientUid ? null : popup);
+                }
+            }, [isViewingPrivatePopupChat, privateRecipientUid]);
             const closeChatWindow=()=>{setIsTeamChatOpen(false);if(!teamChatClearBusy)setConfirmTeamChatClear(false);};
             useEffect(()=>{if(!isChatPanelOpen)setChatInboxList(false);},[isChatPanelOpen]);
             useEffect(()=>{setPrivateChatUnread(0);setChatTab('team');setPrivateRecipientUid('');setPrivateChatPopup(null);setPrivateChatBusy(false);setChatFilePreview(null);},[user?.uid]);
@@ -10772,7 +10782,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const masterContractorOptions = useMemo(() => sortMasterPeople(masterLists.contractors || []), [masterLists.contractors]);
             const masterVisibleItems = useMemo(() => masterActiveTab === 'contractors' ? (masterLists.contractors || []) : sortMasterPeople(masterLists[masterActiveTab] || [], masterSortBy, masterLists.contractors || []), [masterLists, masterActiveTab, masterSortBy]);
 
-            const NOTE_CATEGORIES = ["URGENT", ...(isAdminUser ? ["Manager Note"] : []), "Follow-up","Incident","Driver Calls","Route Issues","Driver Issue","Damage/Loss","Facility","Safety","General"];
+            const NOTE_CATEGORIES = ["URGENT", ...(canManageRecords ? ["Manager Note"] : []), "Follow-up","Incident","Driver Calls","Route Issues","Driver Issue","Damage/Loss","Facility","Safety","General"];
             useEffect(() => {
                 dailySnapshotRef.current = { date: null, data: null };
                 dashboardSaveTracker.reset();
@@ -10799,7 +10809,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 setShiftNoteSearchError('');setShiftNotesView('notes');
             };
             const addShiftNote = (category = 'Follow-up') => {
-                if (!canEditSection('notes') || (category === 'Manager Note' && !isAdminUser)) return;
+                if (!canEditSection('notes') || (category === 'Manager Note' && !canManageRecords)) return;
                 clearShiftNoteSearch('current');
                 const current = getCurrentShiftUser();
                 setData(previous => ({ ...previous, shiftNotes: [{
@@ -12656,20 +12666,31 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     && !masterLists.deletedDashboardUsers?.[person.uid] && masterLists.chatDirectory?.[person.uid]?.enabled !== false && managedAccounts.find(account => account.uid === person.uid)?.enabled !== false)
                     .sort((a,b) => a.name.localeCompare(b.name));
             }, [taskAssignees, teamChatMessages, masterLists.nameOverrides, masterLists.chatDirectory, masterLists.deletedDashboardUsers, managedAccounts, user?.uid]);
-            const taskNotifications = useMemo(() => getTeamTaskNotifications(teamTasks, user?.uid, taskReadIds), [teamTasks, user?.uid, taskReadIds]);
+            const [localManagerRecipients,setLocalManagerRecipients]=useState(null);
+            useEffect(()=>{
+                setLocalManagerRecipients(null);
+                if(!isLocationAdmin || !user?.uid)return;
+                return onSnapshot(query(locationMemberCollection(ACTIVE_LOCATION),where('listed','==',true)),snapshot=>{
+                    if(!snapshot.metadata.fromCache)setLocalManagerRecipients(snapshot.docs.map(row=>row.data()).filter(person=>person.allowed===true));
+                },()=>setLocalManagerRecipients(null));
+            },[isLocationAdmin,user?.uid]);
+            const locationTaskAssignees = isLocationAdmin
+                ? (localManagerRecipients || []).filter(person => !masterLists.deletedDashboardUsers?.[person.uid])
+                : taskAssignees;
+            const taskNotifications = useMemo(() => getTeamTaskNotifications(teamTasks, user?.uid, taskReadIds, canManageRecords), [teamTasks, user?.uid, taskReadIds, canManageRecords]);
             const openTeamTasks = () => {
-                if (!isAdminUser) return;
+                if (!canManageRecords) return;
                 setIsShiftNotificationOpen(false); setIsTeamChatOpen(false); setIsHeaderCalendarOpen(false);
                 setTeamTaskMessage(''); setIsTeamTasksOpen(true);
             };
             const openTaskAssignment = taskId => {
                 const task = teamTasks.find(item => item.id === taskId);
-                if (!task || (!isAdminUser && !isTaskAssignedTo(task, user?.uid))) return;
+                if (!task || (!canManageRecords && !isTaskAssignedTo(task, user?.uid))) return;
                 setSelectedTaskId(taskId); setTaskFilter('all'); setTaskAssigneeFilter('');
                 setIsShiftNotificationOpen(false); setIsTeamChatOpen(false); setIsHeaderCalendarOpen(false);
                 setTeamTaskMessage(''); setIsTeamTasksOpen(true);
             };
-            const ownActiveTasks = isAdminUser ? [] : teamTasks.filter(task => isTaskAssignedTo(task, user?.uid) && task.status !== 'completed');
+            const ownActiveTasks = canManageRecords ? [] : teamTasks.filter(task => isTaskAssignedTo(task, user?.uid) && task.status !== 'completed');
             const markTaskAlertsRead = async ids => {
                 if (!user || !db || !ids.length) return false;
                 try {
@@ -12690,7 +12711,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 if (!user || !db) return;
                 const taskCollection = collection(db, 'artifacts', appId, 'public', 'data', 'teamTasks');
                 // Keep existing single-person records without a data migration.
-                const taskSources = isAdminUser ? [taskCollection] : [query(taskCollection, where('assignedUid', '==', user.uid)), query(taskCollection, where('assignedUids', 'array-contains', user.uid))];
+                const taskSources = canManageRecords ? [taskCollection] : [query(taskCollection, where('assignedUid', '==', user.uid)), query(taskCollection, where('assignedUids', 'array-contains', user.uid))];
                 const snapshots = new Map(); let active = true, failed = false;
                 const unsubscribers = taskSources.map((source, index) => onSnapshot(source, snapshot => {
                     if (!active || failed) return;
@@ -12702,21 +12723,21 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         const previous = merged.get(task.id);
                         if (!previous || task.updatedAt >= previous.updatedAt) merged.set(task.id, task);
                     }));
-                    const tasks = [...merged.values()].filter(task => isAdminUser || isTaskAssignedTo(task, user.uid));
+                    const tasks = [...merged.values()].filter(task => canManageRecords || isTaskAssignedTo(task, user.uid));
                     if (taskSoundKnownRef.current === null) taskSoundKnownRef.current = new Set(tasks.flatMap(task => (task.events || []).map(event => event.id)));
                     setTeamTasks(tasks.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))); setTeamTasksLoaded(true);
                 }, error => { if (!active) return; failed = true; setTeamTasks([]); setTeamTasksLoaded(false); setTeamTaskError(error.code === 'permission-denied' ? 'Team Tasks is waiting for its database access rules to be activated.' : 'Team Tasks could not connect. Check your connection and refresh the dashboard.'); }));
                 return () => { active = false; unsubscribers.forEach(unsubscribe => unsubscribe()); };
-            }, [user?.uid, isAdminUser]);
+            }, [user?.uid, canManageRecords]);
             useEffect(() => {
-                if (isAdminUser || !isTeamTasksOpen || !teamTasksLoaded) return;
+                if (canManageRecords || !isTeamTasksOpen || !teamTasksLoaded) return;
                 if (!teamTasks.some(task => task.id === selectedTaskId && isTaskAssignedTo(task, user?.uid))) {
                     setIsTeamTasksOpen(false); setSelectedTaskId(null); setTaskUpdateDrafts({});
                 }
-            }, [teamTasks, teamTasksLoaded, isAdminUser, isTeamTasksOpen, selectedTaskId, user?.uid]);
+            }, [teamTasks, teamTasksLoaded, canManageRecords, isTeamTasksOpen, selectedTaskId, user?.uid]);
             useEffect(() => {
                 if (!isTeamTasksOpen || !isAdminUser || !settingsReady) return;
-                return onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'accessProfiles'), snapshot => {
+                return onSnapshot(collection(db, 'artifacts', LEGACY_WORKSPACE, 'public', 'data', 'accessProfiles'), snapshot => {
                     const accounts = new Map([...TEAM_UIDS].map(uid => [uid, defaultAccessProfile(uid)]));
                     snapshot.forEach(item => accounts.set(item.id, normalizeAccessProfile(item.id, item.data())));
                     setManagedAccounts([...accounts.values()]);
@@ -12750,13 +12771,14 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 return () => clearTimeout(timer);
             }, [isTeamTasksOpen, selectedTaskId, taskFilter, taskAssigneeFilter]);
             const startTaskDraft = task => {
-                if (!isAdminUser || !teamTasksLoaded || taskPendingRef.current) return;
+                if (!canManageRecords || !teamTasksLoaded || taskPendingRef.current) return;
+                if (isLocationAdmin && localManagerRecipients === null) { setTeamTaskError('The location team list is unavailable. Please try again.'); return; }
                 setTaskDraft(task ? { id: task.id, title: task.title, instructions: task.instructions, assignedUids: getTaskAssignedUids(task).slice(), due: taskDueInput(task.dueAt), baseline: task }
                     : { id: '', title: '', instructions: '', assignedUids: [], due: '', baseline: null });
                 setTeamTaskMessage(''); setTeamTaskError('');
             };
             const commitTeamTaskAction = async (taskId, action, details = {}) => {
-                if (!user || !db || !teamTasksLoaded || taskPendingRef.current) return;
+                if (!user || auth.currentUser?.uid !== user.uid || !db || !teamTasksLoaded || taskPendingRef.current) return;
                 taskPendingRef.current = true; setTaskBusy(true); setTeamTaskError(''); setTeamTaskMessage('');
                 const readIds = taskNotifications.filter(event => event.taskId === taskId).map(event => event.id);
                 const id = taskId || crypto.randomUUID(), eventId = crypto.randomUUID(), timestamp = new Date().toISOString();
@@ -12764,11 +12786,12 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     const ref = doc(db, 'artifacts', appId, 'public', 'data', 'teamTasks', id);
                     await runTransaction(db, async transaction => {
                         const snapshot = await transaction.get(ref), previous = snapshot.exists() ? snapshot.data() : null;
-                        if (action === 'create') {
-                            if (!isAdminUser || previous) throw new Error('Only the dashboard owner can create tasks.');
-                        } else if (!previous) throw new Error('This task was removed.');
-                        if (!isAdminUser && !isTaskAssignedTo(previous, user.uid)) throw new Error('Only an assigned person or Fadi can update this task.');
-                        if (['create', 'edit', 'request', 'delete'].includes(action) && !isAdminUser) throw new Error('Only the dashboard owner can manage assignments and request updates.');
+                        if (auth.currentUser?.uid !== user.uid) throw new Error('Your account changed. Reopen Team Tasks.');
+                        const canManage = canManageLocationRecords(auth.currentUser);
+                        if (['create', 'edit', 'request', 'delete'].includes(action) && !canManage) throw new Error('Only a location admin can manage assignments.');
+                        if (action === 'create' && previous) throw new Error('This task already exists. Reopen Team Tasks.');
+                        if (action !== 'create' && !previous) throw new Error('This task was removed.');
+                        if (!canManage && !isTaskAssignedTo(previous, user.uid)) throw new Error('Only an assignee or a location admin can update this task.');
                         if (action === 'delete') { transaction.delete(ref); return; }
                         let next = previous ? { ...previous } : { id, status: 'open', createdByUid: user.uid, createdBy: getSavedDisplayName(user), createdAt: timestamp, events: [] };
                         let type, text = String(details.text || '').trim();
@@ -12776,11 +12799,16 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             if (action === 'edit' && (['title', 'instructions', 'dueAt'].some(key => !sameSavedValue(previous[key], details.baseline?.[key])) || !sameSavedValue(getTaskAssignedUids(previous), getTaskAssignedUids(details.baseline)))) throw new Error('Task details changed on another device. Cancel editing and reopen the task.');
                             const ids = details.assignedUids;
                             if (!Array.isArray(ids) || !ids.length || ids.length > MAX_TASK_ASSIGNEES || new Set(ids).size !== ids.length) throw new Error('Choose one to eight active team members.');
-                            const accounts = ids.map(uid => taskAssignees.find(item => item.uid === uid));
+                            const accounts = ids.map(uid => locationTaskAssignees.find(item => item.uid === uid));
                             if (accounts.some(account => !account)) throw new Error('Choose active team members.');
                             for (const account of accounts) {
-                                const accountSnapshot = await transaction.get(doc(db, 'artifacts', appId, 'public', 'data', 'accessProfiles', account.uid));
-                                if (!normalizeAccessProfile(account.uid, accountSnapshot.exists() ? accountSnapshot.data() : null).enabled) throw new Error(account.name + ' no longer has dashboard access. Choose another person.');
+                                const accountRef = isLocationAdmin ? locationMemberRef(ACTIVE_LOCATION, account.uid)
+                                    : doc(db, 'artifacts', LEGACY_WORKSPACE, 'public', 'data', 'accessProfiles', account.uid);
+                                const accountSnapshot = await transaction.get(accountRef);
+                                const membership = accountSnapshot.data();
+                                const enabled = isLocationAdmin ? membership?.allowed === true && membership?.listed === true
+                                    : normalizeAccessProfile(account.uid, membership).enabled;
+                                if (!enabled) throw new Error(account.name + ' no longer has access. Choose another person.');
                             }
                             const assignedNames = Object.fromEntries(accounts.map(account => [account.uid, account.name]));
                             next = { ...next, title: String(details.title || '').trim(), instructions: String(details.instructions || '').trim(), assignedUids: ids.slice(), assignedNames, assignedUid: ids[0], assignedName: assignedNames[ids[0]], dueAt: taskDueFromInput(details.due) };
@@ -12797,7 +12825,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             if (!text) throw new Error('Write your update before sending.');
                             type = 'update';
                         } else throw new Error('Unknown task action.');
-                        const recipientUids = getTaskRecipientUids(next, user.uid);
+                        const recipientUids = getTaskRecipientUids(next, auth.currentUser);
                         const event = { id: eventId, type, text, status: next.status, authorUid: user.uid, author: getSavedDisplayName(user), timestamp, recipientUid: recipientUids[0], recipientUids };
                         next = { ...next, updatedAt: timestamp, updatedByUid: user.uid, updatedBy: getSavedDisplayName(user), events: [...(previous?.events || []), event] };
                         transaction.set(ref, next);
@@ -14370,14 +14398,6 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const displayedTeamChatMessages = chatJumpMessage && isTeamChatMessageAvailable(chatJumpMessage,masterLists.teamChatClear,teamChatMessages) && !teamChatMessages.some(message => message.id === chatJumpMessage.id)
                 ? [chatJumpMessage, ...teamChatMessages] : teamChatMessages;
             const managerAlertsLoaded=canManageRecords && managerAlertSettingsLoaded && managerHistoryLoaded && managerSchedulesLoaded && notificationStateLoaded;
-            const [localManagerRecipients,setLocalManagerRecipients]=useState(null);
-            useEffect(()=>{
-                setLocalManagerRecipients(null);
-                if(!isLocationAdmin || !user?.uid)return;
-                return onSnapshot(query(locationMemberCollection(ACTIVE_LOCATION),where('listed','==',true)),snapshot=>{
-                    if(!snapshot.metadata.fromCache)setLocalManagerRecipients(snapshot.docs.map(row=>row.data()));
-                },()=>setLocalManagerRecipients(null));
-            },[isLocationAdmin,user?.uid]);
             const scopedRecipientsLoaded=isLocationAdmin?localManagerRecipients!==null:managerRecipientsLoaded;
             const managerAlertRecipients=(isLocationAdmin?localManagerRecipients||[]:taskAssignees).filter(person=>!masterLists.deletedDashboardUsers?.[person.uid]);
             const managerAlerts=useMemo(()=>managerAlertsLoaded ? getManagerAlerts({account:user,settings:savedManagerAlerts,records:historyData,schedules:allPreloadSchedules,tasks:teamTasks,recipients:managerAlertRecipients,resolutions:managerIssueResolutions,dismissals:managerAlertDismissals,now:managerAlertNow,tasksLoaded:teamTasksLoaded,recipientsLoaded:scopedRecipientsLoaded,managerNoteAcknowledgementUids:masterLists.managerNoteAcknowledgementUids}) : [],
@@ -14870,11 +14890,11 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                             </div>
                                         </div>
                                 </div>
-                                {privateChatPopup&&<div role="status" aria-label="New private message" data-dashboard-edit-ignore="true" data-html2canvas-ignore="true" className="fixed bottom-16 right-4 z-[145] max-w-[calc(100vw-2rem)] rounded-xl border border-slate-600 bg-slate-900 p-4 shadow-2xl sm:w-96">
+                                {privateChatPopup && !isViewingPrivatePopupChat && <div role="status" aria-label="New private message" data-dashboard-edit-ignore="true" data-html2canvas-ignore="true" className="fixed bottom-16 right-4 z-[145] max-w-[calc(100vw-2rem)] rounded-xl border border-slate-600 bg-slate-900 p-4 shadow-2xl sm:w-96">
                                     <div className="flex items-start gap-3"><UserAvatar uid={privateChatPopup.uid} name={privateChatPopup.name} photos={profilePhotos} titles={profileTitles} onView={viewUserProfile}/><div className="min-w-0 flex-1"><p className="text-xs font-semibold text-white">New message from {privateChatPopup.name}</p><p className="mt-1 break-words text-xs text-slate-400">{privateChatPopup.preview}</p></div><button type="button" aria-label="Dismiss new message popup" onClick={()=>setPrivateChatPopup(null)} className="p-1 text-slate-400 hover:text-white"><X className="h-4 w-4"/></button></div>
                                     <button type="button" disabled={privateChatBusy} onClick={()=>{selectPrivateChat(privateChatPopup.uid);setPrivateChatPopup(null);setIsTeamChatOpen(true);setIsShiftNotificationOpen(false);}} className="mt-3 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:text-white disabled:opacity-40">Open chat</button>
                                 </div>}
-                                {isAdminUser && <button type="button" onClick={openTeamTasks} aria-label={taskNotifications.length ? `Team Tasks, ${taskNotifications.length} unread alerts` : 'Team Tasks'} title="Team Tasks" className={`relative p-1 bg-transparent border-0 transition-all active:scale-95 cursor-pointer ${taskNotifications.length ? 'text-rose-300 hover:text-rose-200' : 'text-slate-300 hover:text-white'}`}>
+                                {canManageRecords && <button type="button" onClick={openTeamTasks} aria-label={taskNotifications.length ? `Team Tasks, ${taskNotifications.length} unread alerts` : 'Team Tasks'} title="Team Tasks" className={`relative p-1 bg-transparent border-0 transition-all active:scale-95 cursor-pointer ${taskNotifications.length ? 'text-rose-300 hover:text-rose-200' : 'text-slate-300 hover:text-white'}`}>
                                     <ClipboardList className="w-4 h-4" />
                                     {taskNotifications.length > 0 && <span data-task-badge className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-4 text-center shadow-lg shadow-rose-950/40">{taskNotifications.length > 9 ? '9+' : taskNotifications.length}</span>}
                                 </button>}
@@ -14951,7 +14971,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             <button type="button" disabled={taskBusy} onClick={() => dismissTaskAlert(taskNotifications[0])} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-40">Dismiss</button>
                             {taskNotifications[0].type === 'assigned' && teamTasks.find(task => task.id === taskNotifications[0].taskId)?.status === 'open' && <button type="button" disabled={taskBusy || !teamTasksLoaded} onClick={() => commitTeamTaskAction(taskNotifications[0].taskId, 'status', { status: 'in-progress' })} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Start Task</button>}</div>
                         </section>}
-                        {!isAdminUser && ownActiveTasks.length > 0 && <section aria-label="Your assignments" data-html2canvas-ignore="true" data-dashboard-edit-ignore="true" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+                        {!canManageRecords && ownActiveTasks.length > 0 && <section aria-label="Your assignments" data-html2canvas-ignore="true" data-dashboard-edit-ignore="true" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
                             <h2 className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-400"><ClipboardList aria-hidden="true" className="h-3.5 w-3.5" />Your tasks <span className="text-slate-500">({ownActiveTasks.length})</span></h2>
                             <div className="flex min-w-0 flex-1 flex-wrap gap-2 basis-full sm:basis-auto">
                                 {ownActiveTasks.map(task => <button key={task.id} type="button" aria-label={'Open assignment: ' + task.title} title={task.title} onClick={() => openTaskAssignment(task.id)} className="group flex w-full min-w-0 items-center gap-2 rounded-lg bg-slate-800/45 px-3 py-2 text-left transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 sm:w-auto sm:max-w-[30rem] sm:py-1.5">
@@ -15930,7 +15950,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                             <button onClick={beginDriverCall} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-indigo-900/30 cursor-pointer"><Truck className="w-4 h-4" /> DRIVER CALL</button>
                                             <button type="button" onClick={beginRouteIssue} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-indigo-900/30 cursor-pointer"><Route className="w-4 h-4" /> ROUTE ISSUE</button>
                                             <button onClick={() => addShiftNote()} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-indigo-900/40 cursor-pointer"><PlusCircle className="w-4 h-4" /> NEW ENTRY</button>
-                                            {isAdminUser && <button type="button" onClick={() => addShiftNote('Manager Note')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-rose-500/50 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 text-xs font-black transition-colors cursor-pointer"><ShieldCheck className="w-4 h-4" /> MANAGER NOTE</button>}
+                                            {canManageRecords && <button type="button" onClick={() => addShiftNote('Manager Note')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-rose-500/50 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20 text-xs font-black transition-colors cursor-pointer"><ShieldCheck className="w-4 h-4" /> MANAGER NOTE</button>}
                                         </div>}
                                     </div>
                                     {user?.uid && <div className="flex gap-5 border-b border-slate-700 px-8" data-dashboard-edit-ignore="true" role="tablist" aria-label="Shift Notes views">
@@ -16037,12 +16057,12 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                             <div id={`shift-note-${note.id}`} key={note.id} className={`dashboard-note bg-slate-900/30 rounded-2xl border p-6 transition-all hover:bg-slate-900/50 relative group ${highlightedShiftNoteId === note.id ? 'border-amber-300 shadow-[0_0_24px_rgba(251,191,36,0.35)] bg-amber-950/20' : 'border-slate-700'}`}>
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div className="flex flex-col gap-2">
-                                                        {isEditing && (isAdminUser || !isManagerNote(note)) ? (
+                                                        {isEditing && (canManageRecords || !isManagerNote(note)) ? (
                                                             <select 
                                                                 className={`w-max text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border outline-none focus:ring-1 cursor-pointer ${note.category === 'URGENT' || isManagerNote(note) ? 'bg-rose-900/30 text-rose-400 border-rose-500/50 focus:ring-rose-500' : 'bg-indigo-900/30 text-indigo-400 border-indigo-500/20 focus:ring-indigo-500'}`}
                                                                 value={String(note.category)}
                                                                 onChange={(e) => {
-                                                                    if (!isAdminUser && e.target.value === 'Manager Note') return;
+                                                                    if (!canManageRecords && e.target.value === 'Manager Note') return;
                                                                     const nd = JSON.parse(JSON.stringify(data));
                                                                     nd.shiftNotes = nd.shiftNotes.map(n => n.id === note.id ? { ...n, category: e.target.value } : n);
                                                                     setData(nd);
@@ -16064,11 +16084,11 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {isEditing && (isAdminUser||(RecentDeletion.canUse(user,'shiftNotes',accessProfile)&&RecentDeletion.ordinaryOwnNote(note,user.uid))) && (isAdminUser||!isManagerNote(note)) && <button aria-label={'Delete note '+note.id} onClick={() => { if(!isAdminUser){beginRecentDeletion('shiftNotes','shiftNotes',(data.shiftNotes||[]).findIndex(item=>item.id===note.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.shiftNotes = nd.shiftNotes.filter(n => n.id !== note.id); setData(nd); }} className="text-slate-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"><X className="w-5 h-5" /></button>}
+                                                    {isEditing && (isAdminUser||(canManageRecords&&isManagerNote(note))||(RecentDeletion.canUse(user,'shiftNotes',accessProfile)&&RecentDeletion.ordinaryOwnNote(note,user.uid))) && (canManageRecords||!isManagerNote(note)) && <button aria-label={'Delete note '+note.id} onClick={() => { if(!isAdminUser&&!(canManageRecords&&isManagerNote(note))){beginRecentDeletion('shiftNotes','shiftNotes',(data.shiftNotes||[]).findIndex(item=>item.id===note.id));return;} const nd = JSON.parse(JSON.stringify(data)); nd.shiftNotes = nd.shiftNotes.filter(n => n.id !== note.id); setData(nd); }} className="text-slate-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"><X className="w-5 h-5" /></button>}
                                                 </div>
-                                                {isEditing && isAdminUser && isManagerNote(note) && <ManagerNoteTeamOverride note={note} defaults={masterLists.managerNoteAcknowledgementUids} people={taskAssignees.filter(person=>!isProtectedMasterAdminProfile({uid:person.uid,...accessProfilesCache.get(person.uid)}) && !masterLists.deletedDashboardUsers?.[person.uid])} onChange={selected=>setData(previous=>({...previous,shiftNotes:(previous.shiftNotes || []).map(item=>{if(item.id!==note.id)return item;const updated={...item};if(selected===null)delete updated.managerNoteAcknowledgementUids;else updated.managerNoteAcknowledgementUids=normalizeManagerNoteAcknowledgementUids(selected);return updated;})}))}/>}
+                                                {isEditing && canManageRecords && isManagerNote(note) && <ManagerNoteTeamOverride note={note} defaults={masterLists.managerNoteAcknowledgementUids} people={locationTaskAssignees.filter(person=>!isProtectedMasterAdminProfile({uid:person.uid,...accessProfilesCache.get(person.uid)}) && !masterLists.deletedDashboardUsers?.[person.uid])} onChange={selected=>setData(previous=>({...previous,shiftNotes:(previous.shiftNotes || []).map(item=>{if(item.id!==note.id)return item;const updated={...item};if(selected===null)delete updated.managerNoteAcknowledgementUids;else updated.managerNoteAcknowledgementUids=normalizeManagerNoteAcknowledgementUids(selected);return updated;})}))}/>}
                                                 {isEditing && saveErrorNoteId!=null && String(note.id)===String(saveErrorNoteId) && (()=>{const prior=dailySnapshotRef.current.date===activeDate?(dailySnapshotRef.current.data?.shiftNotes || []).find(item=>String(item.id)===String(note.id))?.driverCall:null;const message=validateDriverCallIssue(note.driverCall,prior);return message?<p role="alert" className="mb-3 text-sm text-rose-200">{message}</p>:null;})()}
-                                                {isEditing && (isAdminUser || !isManagerNote(note)) ? (
+                                                {isEditing && (canManageRecords || !isManagerNote(note)) ? (
                                                     note.noteType === 'driver-call' && note.driverCall ? (
                                                         <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4 space-y-3">
                                                             {isRouteStatusCall(note.driverCall)?<RouteIssueEntryFields value={note.driverCall} onChange={call=>updateDriverCallIssue(note.id,call)} people={getDriverCallPeople()} dateKey={activeDate} showEmailDraft/>:<><div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -16748,8 +16768,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     {profilePhotoOpen&&user&&<ProfilePhotoEditor key={user.uid} user={user} name={getSavedDisplayName(user)} photos={profilePhotos} titles={profileTitles} onView={viewUserProfile} onClose={()=>setProfilePhotoOpen(false)} onSaved={(uid,photo,title)=>{setProfilePhotos(previous=>({...previous,[uid]:photo}));setProfileTitles(previous=>({...previous,[uid]:title}));}}/>}
 
                     {}
-                    {isTeamTasksOpen && (isAdminUser || teamTasks.some(task => task.id === selectedTaskId && isTaskAssignedTo(task, user?.uid))) && <TeamTasksWindow dialogRef={taskDialogRef} close={() => setIsTeamTasksOpen(false)} owner={isAdminUser} uid={user?.uid}
-                        loaded={teamTasksLoaded} busy={taskBusy} error={teamTaskError} message={teamTaskMessage} tasks={teamTasks} assignees={taskAssignees}
+                    {isTeamTasksOpen && (canManageRecords || teamTasks.some(task => task.id === selectedTaskId && isTaskAssignedTo(task, user?.uid))) && <TeamTasksWindow dialogRef={taskDialogRef} close={() => setIsTeamTasksOpen(false)} owner={canManageRecords} uid={user?.uid}
+                        loaded={teamTasksLoaded} busy={taskBusy} error={teamTaskError} message={teamTaskMessage} tasks={teamTasks} assignees={locationTaskAssignees}
                         notifications={taskNotifications} readAlert={markTaskAlertsRead} filter={taskFilter} setFilter={setTaskFilter} person={taskAssigneeFilter} setPerson={setTaskAssigneeFilter}
                         selectedId={selectedTaskId} selectTask={setSelectedTaskId} draft={taskDraft} setDraft={setTaskDraft} startDraft={startTaskDraft} commit={commitTeamTaskAction}
                         updates={taskUpdateDrafts} setUpdates={setTaskUpdateDrafts} requests={taskRequestDrafts} setRequests={setTaskRequestDrafts} />}
