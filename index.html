@@ -3909,6 +3909,19 @@
             if(call.routeWindowStage==='received')try{lines.push(['New window',formatTaskTime(taskDueFromInput(call.routeRevisedWindowStart))+' – '+formatTaskTime(taskDueFromInput(call.routeRevisedWindowEnd))]);}catch(_){}
             return lines;
         };
+        const formatRouteEmailWindow = plan => {
+            if(!plan)return 'To be confirmed';
+            const options={timeZone:ACTIVE_LOCATION_TIME_ZONE,month:'short',day:'numeric',year:'numeric'};
+            const start=new Date(plan.start),end=new Date(plan.end),day=start.toLocaleDateString('en-US',options);
+            if(day!==end.toLocaleDateString('en-US',options))return formatTaskTime(plan.start)+' – '+formatTaskTime(plan.end);
+            const time={timeZone:ACTIVE_LOCATION_TIME_ZONE,hour:'numeric',minute:'2-digit'};
+            return day+', '+start.toLocaleTimeString('en-US',time)+' – '+end.toLocaleTimeString('en-US',time)+' '+LOCATION_CLOCKS[ACTIVE_LOCATION_TIME_ZONE].short;
+        };
+        const buildRouteWindowRequestRows = progress => Array.from({length:progress.total-progress.completed},(_,index)=>[
+            'Stop '+(progress.completed+index+1),
+            'SO number: ',
+            'Requested delivery window: '
+        ].join('\r\n')).join('\r\n');
         const buildBreakdownEmailDraft = (call,dateKey='',kind='window-update') => {
             if(call?.segment!=='truck-breakdown' || call.routeBreakdownTracking!==true)return null;
             const progress=getRouteIssueProgress(call),plan=breakdownFollowupPlan(call),initial=kind==='initial-notice';
@@ -3917,13 +3930,18 @@
             if(!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0,10)!==day)return null;
             const dateLabel=date.toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}),route=String(call.route).replace(/[\r\n]+/g,' ').trim(),driver=String(call.driver).replace(/[\r\n]+/g,' ').trim();
             const remaining=progress.total-progress.completed,stop=plan?.stop || progress.completed+1;
-            const subject=route+' | Truck breakdown | '+dateLabel;
-            const rows=Array.from({length:remaining},(_,index)=>'Stop '+(progress.completed+index+1)+'\nSO number: __________\nNew time window: From __________ to __________').join('\n\n');
-            const body=['Hello,','',initial?(call.routeTruckStatus==='running'?'Please be advised that this truck experienced a breakdown and is now back and running with '+remaining+' delivery stops remaining.':'Please be advised that this truck has broken down with '+remaining+' delivery stops remaining. We will request revised delivery windows once the truck is back and running.') :'The truck below is back and running. Please update the delivery windows for the remaining stops as follows.','',
-                'Route: '+route,'Driver: '+driver,'Date: '+dateLabel,'Issue type: Truck breakdown','Route issue status: '+(call.routeIssueStatus==='resolved'?'Resolved':'Active'),
-                'Truck status: '+(call.routeTruckStatus==='running'?'Running again':'Broken down'),'Total stops: '+progress.total,'Stops completed: '+progress.completed,'Stops remaining: '+remaining,'Late stops: '+progress.late,'Next stop: '+stop,
-                'Original next-stop window: '+(plan?formatTaskTime(plan.start)+' – '+formatTaskTime(plan.end):'To be confirmed'),'',
-                'Route details:',String(call.note || '').trim() || '__________','',...(!initial?['Requested delivery-window changes:',rows,'']:[]),'Thank you.'
+            const subject=route+' | '+(initial?'Truck Breakdown Notice':'Delivery Window Update Request - Truck Breakdown')+' | '+dateLabel;
+            const running=call.routeTruckStatus==='running',stops=remaining+' delivery '+(remaining===1?'stop':'stops')+' remaining';
+            const body=['Hello,','',
+                running?'The truck assigned to route '+route+' is back in service following a breakdown, with '+stops+'.':'Route '+route+' is currently stopped due to a truck breakdown, with '+stops+'.','',
+                ...(!initial?['Please update the delivery windows for the remaining stops to reflect the requested times below. Please confirm once the changes have been applied.','']:[]),
+                'Route summary:','Route: '+route,'Driver: '+driver,'Date: '+dateLabel,
+                'Route status: '+(call.routeIssueStatus==='resolved'?'Resolved':'Active'),'Truck status: '+(running?'Back in service':'Broken down'),
+                'Total stops: '+progress.total,'Stops completed: '+progress.completed,'Stops remaining: '+remaining,'Late stops: '+progress.late,'Next stop: '+stop,
+                'Original delivery window for stop '+stop+': '+formatRouteEmailWindow(plan),'',
+                'Latest route update:',String(call.note || '').trim(),'',
+                ...(initial?['We will follow up with revised arrival times and a delivery-window update request '+(running?'once those times are available.':'once the truck is back in service and those times are available.'),'']:['Requested delivery-window changes:',buildRouteWindowRequestRows(progress),'']),
+                'Thank you.'
             ].join('\r\n');
             const subjectHref='mailto:?subject='+encodeURIComponent(subject);
             return {subject,body,subjectHref,href:subjectHref+'&body='+encodeURIComponent(body),kind:initial?'initial-notice':'window-update',stop,remaining};
@@ -4081,16 +4099,17 @@
             const dateLabel=date.toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'});
             const route=String(call.route).replace(/[\r\n]+/g,' ').trim(),driver=String(call.driver).replace(/[\r\n]+/g,' ').trim();
             const remaining=progress.total-progress.completed;
-            const rows=Array.from({length:remaining},(_,index)=>'Stop '+(progress.completed+index+1)+'\nSO number: __________\nNew time window: From __________ to __________').join('\n\n');
-            const initial=kind==='initial-notice',subject=route+' | Late route | '+dateLabel;
+            const initial=kind==='initial-notice',subject=route+' | '+(initial?'Late Route Notice':'Delivery Window Update Request - Late Route')+' | '+dateLabel;
             const body=['Hello,','',
-                initial?'Please be advised that the route below is running behind schedule with '+remaining+' stops remaining. We will follow up with any requested delivery-window changes.':'The route below is running behind schedule. Please update the delivery windows for the remaining stops as follows.','',
-                'Route: '+route,'Driver: '+driver,'Date: '+dateLabel,'Issue type: Late route',
-                'Route issue status: '+(call.routeIssueStatus==='resolved'?'Resolved':'Active'),
+                'Route '+route+' is running behind schedule, with '+remaining+' delivery '+(remaining===1?'stop':'stops')+' remaining.','',
+                ...(!initial?['Please update the delivery windows for the remaining stops to reflect the requested times below. Please confirm once the changes have been applied.','']:[]),
+                'Route summary:','Route: '+route,'Driver: '+driver,'Date: '+dateLabel,
+                'Route status: '+(call.routeIssueStatus==='resolved'?'Resolved':'Active'),
                 'Total stops: '+progress.total,'Stops completed: '+progress.completed,'Stops remaining: '+remaining,'Late stops: '+progress.late,
-                'Next stop: '+plan.stop,'Original next-stop window: '+formatTaskTime(plan.start)+' – '+formatTaskTime(plan.end),'',
-                'Route details:',String(call.note || '').trim() || '__________','',
-                ...(!initial?['Requested delivery-window changes:',rows || 'No remaining stops.','']:[]),'Thank you.'
+                'Next stop: '+plan.stop,'Original delivery window for stop '+plan.stop+': '+formatRouteEmailWindow(plan),'',
+                'Latest route update:',String(call.note || '').trim(),'',
+                ...(initial?['We will follow up with revised arrival times if delivery-window changes are needed.','']:['Requested delivery-window changes:',buildRouteWindowRequestRows(progress) || 'No remaining stops.','']),
+                'Thank you.'
             ].join('\r\n');
             const subjectHref='mailto:?subject='+encodeURIComponent(subject),href=subjectHref+'&body='+encodeURIComponent(body);
             return {subject,body,href,subjectHref,kind:initial?'initial-notice':'window-update',prepareAt:plan.prepareAt,sendAt:plan.requestAt,stop:plan.stop,remaining};
@@ -4860,7 +4879,7 @@
                             changeCount: tracked.changes.length, changes: tracked.changes.slice(0, 150) });
                         if (!entry.deleted) entry.value = { ...entry.value, _auditId: eventId };
                     }
-                    if (sharedPrivateChatEnabled && tracked?.kind==='accessProfiles' && !entry.deleted) {
+                    if (privateChatSessionReady && tracked?.kind==='accessProfiles' && !entry.deleted) {
                         const profile=privateChatDirectoryRecord(tracked.afterRecord);
                         native.set(doc(database,'dashboardChatDirectory',profile.uid),profile);
                     }
@@ -5916,12 +5935,12 @@
             return image;
         };
         const chatFilePath = (uid, messageId, fileId) => `artifacts/${appId}/public/data/teamChatFiles/${fileId}`;
-        const isChatAttachment = (attachment, messageId, uid, conversationId = null) => Boolean(attachment && /^[A-Za-z0-9_-]{1,128}$/.test(attachment.id || '')
+        const isChatAttachment = (attachment, messageId, uid, conversationId = null, conversationWorkspace = LEGACY_WORKSPACE) => Boolean(attachment && /^[A-Za-z0-9_-]{1,128}$/.test(attachment.id || '')
             && /^[A-Za-z0-9_-]{1,128}$/.test(messageId || '') && /^[A-Za-z0-9_-]{1,128}$/.test(uid || '')
             && attachment.name === chatFileName(attachment.name) && attachment.name.length > 0
             && Number.isInteger(attachment.size) && attachment.size > 0 && attachment.size <= CHAT_FILE_MAX_BYTES
             && attachment.contentType === chatFileType(attachment.name) && Boolean(attachment.contentType)
-            && attachment.path === (conversationId ? privateFilePath(conversationId, attachment.id) : chatFilePath(uid, messageId, attachment.id)));
+            && attachment.path === (conversationId ? privateFilePath(conversationId, attachment.id, conversationWorkspace) : chatFilePath(uid, messageId, attachment.id)));
         const downloadBlobFile = (blob, name) => {
             const url = URL.createObjectURL(blob), link = document.createElement('a');
             link.href = url; link.download = chatFileName(name); document.body.appendChild(link);
@@ -5947,10 +5966,10 @@
             return new Blob([Uint8Array.from(decoded, character => character.charCodeAt(0))], {type:attachment.contentType});
         };
 
-        const ChatAttachmentCard = ({ attachment, messageId, uid, active, onPreview, conversationId = null }) => {
+        const ChatAttachmentCard = ({ attachment, messageId, uid, active, onPreview, conversationId = null, conversationWorkspace = LEGACY_WORKSPACE }) => {
             const [imageUrl, setImageUrl] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
             const cardRef = useRef(null), blobRef = useRef(null), aliveRef = useRef(true);
-            const valid = isChatAttachment(attachment, messageId, uid, conversationId);
+            const valid = isChatAttachment(attachment, messageId, uid, conversationId, conversationWorkspace);
             const kind = valid ? chatFilePreviewKind(attachment.contentType) : 'document';
             useEffect(() => { aliveRef.current = true; return () => { aliveRef.current = false; }; }, []);
             const readFile = async () => {
@@ -6577,39 +6596,48 @@
             if (a === b || ![a,b].every(uid => /^[A-Za-z0-9_-]{1,128}$/.test(uid || '') && !uid.includes('__'))) throw new Error('Choose a teammate.');
             return [a,b].sort().join('__');
         };
-        let sharedPrivateChatEnabled = false;
-        const privateChatWorkspace = () => sharedPrivateChatEnabled ? LEGACY_WORKSPACE : appId;
-        const privateChatStateRef = (database,uid) => sharedPrivateChatEnabled ? doc(database,'dashboardPrivateChatState',uid)
-            : doc(database,'artifacts',appId,'public','data','notificationStates',uid);
+        let privateChatSessionReady = false;
+        const privateChatWorkspace = () => LEGACY_WORKSPACE;
+        const privateChatStateRef = (database,uid) => doc(database,'dashboardPrivateChatState',uid);
+        const privateChatHistoryWorkspaces = registry => [...new Set(Object.keys(registry?.names || {}).map(workspaceKey))].filter(workspace=>workspace!==LEGACY_WORKSPACE).sort();
+        const privateChatKnownSources = new Map();
+        const privateChatSourcePath = (id,workspace=LEGACY_WORKSPACE) => `artifacts/${workspace}/public/data/privateChats/${id}`;
+        const privateChatCanUse = (account,profile=accessProfilesCache.get(account?.uid)) => Boolean(account?.uid && (isOwnerAccount(account) || profile?.enabled===true && profile.permissions?.chat===true));
+        const requirePrivateChatAction = action => {
+            requireTeamAccount();
+            if(!privateChatCanUse(auth.currentUser) || (!isOwnerAccount(auth.currentUser) && accessProfilesCache.get(auth.currentUser.uid)?.sectionActions?.chat?.[action]===false))throw new Error('You do not have permission to '+action+' private messages.');
+        };
         const privateChatDirectoryRecord = profile => ({uid:profile.uid,
             name:String(profile.name || DEFAULT_ACCOUNT_NAMES[profile.uid] || 'Team member').trim().slice(0,100),
             enabled:isMasterAdminUid(profile.uid) || profile.enabled===true && profile.permissions?.chat===true});
         const normalizeChatPeopleSearch = value => String(value || '').trim().replace(/^@\s*/,'').toLowerCase();
         const publishPrivateChatProfile = async profile => {
             const record=privateChatDirectoryRecord(profile);
-            if (!record.uid || !record.name) return;
+            if (!record.uid || !record.name || !auth.currentUser || !privateChatSessionReady) return;
             const ref=doc(db,'dashboardChatDirectory',record.uid);
             await firebaseRunTransaction(db,async transaction=>{
                 const saved=await transaction.get(ref);
-                if (!auth.currentUser || !sharedPrivateChatEnabled) return;
+                if (!auth.currentUser || !privateChatSessionReady) return;
                 if (!sameLocationValue(saved.data(),record)) transaction.set(ref,record);
             });
         };
-        const migrateAustinPrivateChatPreferences = async uid => {
-            if (!sharedPrivateChatEnabled || ACTIVE_LOCATION!=='austin') return;
+        const migratePrivateChatPreferences = async uid => {
+            if (!privateChatSessionReady) return;
             const next=privateChatStateRef(db,uid);
             await firebaseRunTransaction(db,async transaction=>{
                 const current=await transaction.get(next);
                 if (current.exists()) return;
                 const legacy=await transaction.get(doc(db,'artifacts',LEGACY_WORKSPACE,'public','data','notificationStates',uid));
-                if(auth.currentUser?.uid===uid && legacy.data()?.privateChatUI)
-                    transaction.set(next,{privateChatUI:normalizePrivateChatUI(legacy.data().privateChatUI)});
+                if(auth.currentUser?.uid===uid && legacy.data()?.privateChatUI){
+                    const ui=normalizePrivateChatUI(legacy.data().privateChatUI);
+                    transaction.set(next,{privateChatUI:ui});
+                }
             });
         };
-        const privateChatPath = id => `artifacts/${privateChatWorkspace()}/public/data/privateChats/${id}`;
-        const privateFilePath = (id, fileId) => `${privateChatPath(id)}/files/${fileId}`;
+        const privateChatPath = id => privateChatSourcePath(id);
+        const privateFilePath = (id, fileId, workspace=LEGACY_WORKSPACE) => `${privateChatSourcePath(id,workspace)}/files/${fileId}`;
         const sendPrivateChatRecord = async (database, current, recipient, text, file = null) => {
-            requireSectionAction('chat','add');
+            requirePrivateChatAction('add');
             const id = privateConversationId(current.uid, recipient.uid), trimmed = String(text || '').trim();
             if ((!trimmed && !file) || trimmed.length > 5000) throw new Error('Write a message up to 5,000 characters.');
             const message = {id:crypto.randomUUID(), text:trimmed, author:current.name, authorUid:current.uid, timestamp:new Date().toISOString()};
@@ -6646,14 +6674,190 @@
             const views = {},openThrough={};
             if (value?.views && typeof value.views === 'object' && !Array.isArray(value.views)) Object.entries(value.views).forEach(([key,item])=>{
                 if (/^[A-Za-z0-9_-]{1,128}__[A-Za-z0-9_-]{1,128}$/.test(key) && Number.isSafeInteger(item?.hiddenThrough) && item.hiddenThrough >= 0)
-                    views[key] = {hiddenThrough:item.hiddenThrough,removed:item.removed===true};
+                    views[key] = {hiddenThrough:item.hiddenThrough,removed:item.removed===true,historyThrough:Object.fromEntries(Object.entries(item.historyThrough || {}).filter(([workspace,sequence])=>validLocationKey(workspace) && Number.isSafeInteger(sequence) && sequence>=0))};
             });
             if(value?.openThrough&&typeof value.openThrough==='object')Object.entries(value.openThrough).forEach(([key,sequence])=>{if(/^[A-Za-z0-9_-]{1,128}__[A-Za-z0-9_-]{1,128}$/.test(key)&&Number.isSafeInteger(sequence)&&sequence>=0)openThrough[key]=sequence;});
             return {openedUids,activeUid:validUid(value?.activeUid)?value.activeUid:'',views,openThrough};
         };
-        const privateChatCutoff = (ui,cid,row=null,uid=null) => Math.max(ui.views?.[cid]?.hiddenThrough||0,row?.managerRemovedThrough?.[uid]||0);
-        const privateChatUnread = (row,uid,ui) => (row.incomingSequence?.[uid] || 0) > Math.max(row.readSequence?.[uid] || 0,privateChatCutoff(ui,row.id,row,uid));
-        const privateChatRowVisible = (row,ui,uid) => ((!ui.views?.[row.id]?.removed&&!row.managerRemovedThrough?.[uid])||row.sequence>privateChatCutoff(ui,row.id,row,uid));
+        /*
+         * Pure Private Chat history helpers. The embedding runtime supplies
+         * LEGACY_WORKSPACE. Copy these declarations into the dashboard; no imports,
+         * Firebase operations, storage writes, or migration are performed here.
+         *
+         * New sends must continue to target LEGACY_WORKSPACE in the parent.
+         * _canonicalRoot preserves the real canonical metadata while merged inbox
+         * preview fields may describe the latest message in another workspace.
+         */
+        const privateChatStreams = row => {
+            if (!row) return [];
+            const streams = [];
+            if (row._canonicalExists !== false) {
+                const {historySources, _canonicalRoot, _canonicalExists, ...root} = row._canonicalRoot || row;
+                streams.push({...root, id: row.id, workspace: LEGACY_WORKSPACE});
+            }
+            const seen = new Set();
+            for (const source of row.historySources || []) {
+                if (!source || typeof source.workspace !== 'string' || !source.workspace
+                    || source.workspace === LEGACY_WORKSPACE || seen.has(source.workspace)) continue;
+                // A descriptor must never point at another pair's root.
+                if (source.id !== row.id) continue;
+                if (Array.isArray(row.participantUids) && Array.isArray(source.participantUids)
+                    && [...row.participantUids].sort().join('__') !== [...source.participantUids].sort().join('__')) continue;
+                seen.add(source.workspace);
+                streams.push({...source});
+            }
+            return streams;
+        };
+        
+        /*
+         * Input: [{workspace, messages: [{id: actualDocumentId, ...payload}, ...]}].
+         * Callers must put the actual document ID AFTER snapshot.data() when loading.
+         * This attached helper avoids introducing another top-level helper name.
+         * Canonical message IDs and every source's sequence numbers stay unchanged.
+         */
+        privateChatStreams.mergeMessages = streams => {
+            const messages = new Map();
+            const timestamp = value => {
+                const parsed = typeof value === 'string' ? Date.parse(value) : NaN;
+                return Number.isFinite(parsed) ? parsed : Infinity;
+            };
+            const compareText = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+            for (const stream of streams || []) {
+                if (!stream || typeof stream.workspace !== 'string' || !stream.workspace) continue;
+                const workspace = stream.workspace;
+                for (const payload of stream.messages || []) {
+                    if (!payload || typeof payload.id !== 'string' || !payload.id) continue;
+                    const originalId = payload.id;
+                    // Reserved metadata must follow payload so saved fields cannot
+                    // impersonate a different source or override the rendered ID.
+                    const message = {...payload, _workspace: workspace, _sourceMessageId: originalId,
+                        id: workspace === LEGACY_WORKSPACE ? originalId : workspace + ':' + originalId,
+                        sequence: payload.sequence};
+                    const key = JSON.stringify([workspace, originalId]);
+                    const previous = messages.get(key);
+                    if (!previous) messages.set(key, message);
+                    else {
+                        // Repeated snapshots of the same document may include an edit.
+                        // Prefer the newer edit; equal revisions have a stable tie-break.
+                        const revision = item => timestamp(item.editedAt || item.timestamp);
+                        const before = revision(previous), after = revision(message);
+                        if ((Number.isFinite(after) && (!Number.isFinite(before) || after > before))
+                            || (after === before && JSON.stringify(message) > JSON.stringify(previous))) messages.set(key, message);
+                    }
+                }
+            }
+            return [...messages.values()].sort((a, b) => {
+                const first = timestamp(a.timestamp), second = timestamp(b.timestamp);
+                return (first < second ? -1 : first > second ? 1 : 0)
+                    || compareText(a._workspace, b._workspace)
+                    || ((Number.isSafeInteger(a.sequence) ? a.sequence : 0) - (Number.isSafeInteger(b.sequence) ? b.sequence : 0))
+                    || compareText(a._sourceMessageId, b._sourceMessageId);
+            });
+        };
+        
+        const mergePrivateChatConversations = (canonicalRows, historyRows) => {
+            const groups = new Map();
+            const pair = row => {
+                if (!Array.isArray(row?.participantUids) || row.participantUids.length !== 2) return null;
+                const participants = [...row.participantUids].sort();
+                if (participants[0] === participants[1] || !participants.every(uid => typeof uid === 'string'
+                    && /^[A-Za-z0-9_-]{1,128}$/.test(uid) && !uid.includes('__'))) return null;
+                const id = participants.join('__');
+                return row.id && row.id !== id ? null : {id, participants};
+            };
+            const time = value => {
+                const parsed = typeof value === 'string' ? Date.parse(value) : NaN;
+                return Number.isFinite(parsed) ? parsed : -Infinity;
+            };
+            const compareText = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+            const preferred = (a, b) => {
+                const first = Number.isSafeInteger(a.sequence) ? a.sequence : 0;
+                const second = Number.isSafeInteger(b.sequence) ? b.sequence : 0;
+                if (first !== second) return first > second ? a : b;
+                if (time(a.updatedAt) !== time(b.updatedAt)) return time(a.updatedAt) > time(b.updatedAt) ? a : b;
+                return JSON.stringify(a) >= JSON.stringify(b) ? a : b;
+            };
+            const add = (row, canonical) => {
+                const key = pair(row);
+                if (!key) return;
+                const workspace = canonical ? LEGACY_WORKSPACE : row.workspace;
+                if (typeof workspace !== 'string' || !workspace) return;
+                const isCanonical = workspace === LEGACY_WORKSPACE;
+                let group = groups.get(key.id);
+                if (!group) {group = {...key, canonical: null, history: new Map()}; groups.set(key.id, group);}
+                const {historySources, _canonicalRoot, _canonicalExists, lastMessageWorkspace, ...payload} = row;
+                const root = {...payload, id: key.id, participantUids: key.participants, workspace};
+                if (isCanonical) group.canonical = group.canonical ? preferred(group.canonical, root) : root;
+                else group.history.set(workspace, group.history.has(workspace) ? preferred(group.history.get(workspace), root) : root);
+            };
+            for (const row of canonicalRows || []) add(row, true);
+            for (const row of historyRows || []) add(row, false);
+            return [...groups.values()].map(group => {
+                const historySources = [...group.history.values()].sort((a, b) => compareText(a.workspace, b.workspace));
+                const roots = [...(group.canonical ? [group.canonical] : []), ...historySources];
+                const latestFirst = [...roots].sort((a, b) => {
+                    const first = time(a.updatedAt), second = time(b.updatedAt);
+                    return (first > second ? -1 : first < second ? 1 : 0)
+                        || (a.workspace === b.workspace ? 0 : a.workspace === LEGACY_WORKSPACE ? -1 : b.workspace === LEGACY_WORKSPACE ? 1 : 0)
+                        || compareText(a.workspace, b.workspace);
+                });
+                const latest = latestFirst.find(root => typeof root.lastMessageId === 'string' && root.lastMessageId
+                    && Number.isSafeInteger(root.sequence) && root.sequence > 0);
+                const names = {};
+                for (const uid of group.participants) {
+                    const source = [group.canonical, latest, ...latestFirst].find(root => typeof root?.names?.[uid] === 'string' && root.names[uid].trim());
+                    if (source) names[uid] = source.names[uid].trim();
+                }
+                const canonical = group.canonical || {id: group.id, participantUids: group.participants,
+                    sequence: 0, readSequence: Object.fromEntries(group.participants.map(uid => [uid, 0])),
+                    incomingSequence: Object.fromEntries(group.participants.map(uid => [uid, 0])), managerRemovedThrough: {}};
+                return {...canonical, id: group.id, participantUids: group.participants, names,
+                    _canonicalExists: Boolean(group.canonical), _canonicalRoot: group.canonical ? {...group.canonical} : null,
+                    historySources, lastMessageId: latest?.lastMessageId || '',
+                    lastMessageWorkspace: latest?.workspace || '', lastAuthorUid: latest?.lastAuthorUid || '',
+                    updatedAt: latest?.updatedAt || canonical.updatedAt || ''};
+            }).sort((a, b) => {
+                const first = time(a.updatedAt), second = time(b.updatedAt);
+                return (first > second ? -1 : first < second ? 1 : 0) || compareText(a.id, b.id);
+            });
+        };
+        
+        const privateChatCutoff = (ui, cid, row, uid, workspace = LEGACY_WORKSPACE) => {
+            const source = privateChatStreams(row).find(stream => stream.workspace === workspace);
+            const local = workspace === LEGACY_WORKSPACE ? ui?.views?.[cid]?.hiddenThrough : ui?.views?.[cid]?.historyThrough?.[workspace];
+            const managed = source?.managerRemovedThrough?.[uid];
+            return Math.max(Number.isSafeInteger(local) && local >= 0 ? local : 0,
+                Number.isSafeInteger(managed) && managed >= 0 ? managed : 0);
+        };
+        
+        const privateChatUnread = (row, uid, ui) => privateChatStreams(row).some(stream =>
+            (stream.incomingSequence?.[uid] || 0) > Math.max(stream.readSequence?.[uid] || 0,
+                privateChatCutoff(ui, row.id, row, uid, stream.workspace)));
+        
+        // Notification change marker only. Never compare this sum to a read/hide cutoff.
+        const privateChatIncomingSequence = (row, uid) => privateChatStreams(row).reduce((sum, stream) =>
+            sum + (Number.isSafeInteger(stream.incomingSequence?.[uid]) && stream.incomingSequence[uid] >= 0 ? stream.incomingSequence[uid] : 0), 0);
+        
+        const privateChatRowVisible = (row, ui, uid) => privateChatStreams(row).some(stream =>
+            (!ui?.views?.[row.id]?.removed && !(stream.managerRemovedThrough?.[uid] > 0))
+                || (stream.sequence || 0) > privateChatCutoff(ui, row.id, row, uid, stream.workspace));
+        
+        const privateChatMessageVisible = (message, ui, cid, row, uid) => {
+            const workspace = message?._workspace || LEGACY_WORKSPACE;
+            return Boolean(message && Number.isSafeInteger(message.sequence) && message.sequence > 0
+                && privateChatStreams(row).some(stream => stream.workspace === workspace)
+                && message.sequence > privateChatCutoff(ui, cid, row, uid, workspace));
+        };
+        
+        const privateChatSeenBy = (row, message, peerUid) => {
+            const workspace = message?._workspace || LEGACY_WORKSPACE;
+            const source = privateChatStreams(row).find(stream => stream.workspace === workspace);
+            return Boolean(source && Number.isSafeInteger(message?.sequence) && message.sequence > 0
+                && (source.readSequence?.[peerUid] || 0) >= message.sequence);
+        };
+        
+        const mergePrivateChatMessages = (canonical,history) => privateChatStreams.mergeMessages([{workspace:LEGACY_WORKSPACE,messages:canonical},...history]);
+        const privateChatViewEpoch = (ui,cid,row,uid) => privateChatStreams(row).reduce((total,source)=>total+privateChatCutoff(ui,cid,row,uid,source.workspace),0);
         const savePrivateChatChoice = async (database,uid,peerUid,reopenThrough=0) => {
             if (auth.currentUser?.uid!==uid) throw new Error('Your account changed.');
             const ref=privateChatStateRef(database,uid);
@@ -6668,33 +6872,35 @@
             });
         };
         const removePrivateChatForMe = async (database,uid,peerUid) => {
-            const cid=privateConversationId(uid,peerUid),stateRef=privateChatStateRef(database,uid),chatRef=doc(database,...privateChatPath(cid).split('/'));
+            const cid=privateConversationId(uid,peerUid),stateRef=privateChatStateRef(database,uid);
+            const workspaces=[...new Set([LEGACY_WORKSPACE,...(privateChatKnownSources.get(cid) || [])])],refs=workspaces.map(workspace=>doc(database,...privateChatSourcePath(cid,workspace).split('/')));
             if(auth.currentUser?.uid!==uid)throw new Error('Your account changed.');
             return firebaseRunTransaction(database,async transaction=>{
                 if(auth.currentUser?.uid!==uid)throw new Error('Your account changed.');
-                const savedState=await transaction.get(stateRef),savedChat=await transaction.get(chatRef);
-                const ui=normalizePrivateChatUI(savedState.exists()?savedState.data().privateChatUI:null),row=savedChat.exists()?savedChat.data():null;
-                if(row&&!row.participantUids.includes(uid))throw new Error('Conversation unavailable.');
-                const hiddenThrough=Math.max(privateChatCutoff(ui,cid),row?.sequence||0);
-                const next={...ui,activeUid:ui.activeUid===peerUid?'':ui.activeUid,openedUids:ui.openedUids.filter(id=>id!==peerUid),views:{...ui.views,[cid]:{hiddenThrough,removed:true}}};
+                const savedState=await transaction.get(stateRef),savedChats=await Promise.all(refs.map(ref=>transaction.get(ref)));
+                const ui=normalizePrivateChatUI(savedState.exists()?savedState.data().privateChatUI:null),previous=ui.views[cid] || {hiddenThrough:0,historyThrough:{}};
+                const view={...previous,removed:true,historyThrough:{...previous.historyThrough}};
+                savedChats.forEach((snapshot,index)=>{if(!snapshot.exists())return;const row=snapshot.data();if(!row.participantUids.includes(uid)||!row.participantUids.includes(peerUid))throw new Error('Conversation unavailable.');const workspace=workspaces[index];if(workspace===LEGACY_WORKSPACE)view.hiddenThrough=Math.max(view.hiddenThrough,row.sequence);else view.historyThrough[workspace]=Math.max(view.historyThrough[workspace]||0,row.sequence);});
+                const next={...ui,activeUid:ui.activeUid===peerUid?'':ui.activeUid,openedUids:ui.openedUids.filter(id=>id!==peerUid),views:{...ui.views,[cid]:view}};
                 transaction.set(stateRef,{privateChatUI:next},{merge:true});
-                if(row&&(row.readSequence?.[uid]||0)<row.sequence)transaction.set(chatRef,{readSequence:{...row.readSequence,[uid]:row.sequence}},{merge:true});
+                savedChats.forEach((snapshot,index)=>{if(snapshot.exists()){const row=snapshot.data();if((row.readSequence?.[uid]||0)<row.sequence)transaction.set(refs[index],{readSequence:{...row.readSequence,[uid]:row.sequence}},{merge:true});}});
                 return next;
             });
         };
         const removePrivateChatAsManager = async(database,uid,peerUid,scope) => {
             if(scope==='mine')return removePrivateChatForMe(database,uid,peerUid);
             if(!['peer','both'].includes(scope)||!isOwnerAccount(auth.currentUser)||auth.currentUser?.uid!==uid)throw new Error('Only the manager can remove another person’s chat view.');
-            const cid=privateConversationId(uid,peerUid),stateRef=privateChatStateRef(database,uid),chatRef=doc(database,...privateChatPath(cid).split('/'));
+            const cid=privateConversationId(uid,peerUid),stateRef=privateChatStateRef(database,uid);
+            const workspaces=[...new Set([LEGACY_WORKSPACE,...(privateChatKnownSources.get(cid) || [])])],refs=workspaces.map(workspace=>doc(database,...privateChatSourcePath(cid,workspace).split('/')));
             return firebaseRunTransaction(database,async transaction=>{
                 if(!isOwnerAccount(auth.currentUser)||auth.currentUser?.uid!==uid)throw new Error('Your account changed.');
-                const state=await transaction.get(stateRef),saved=await transaction.get(chatRef),ui=normalizePrivateChatUI(state.exists()?state.data().privateChatUI:null);
-                if(!saved.exists())throw new Error('There are no saved messages to remove.');const row=saved.data();
-                if(!row.participantUids.includes(uid)||!row.participantUids.includes(peerUid))throw new Error('You can manage only conversations you participate in.');
-                const targets=scope==='both'?[uid,peerUid]:[peerUid],managerRemovedThrough={...(row.managerRemovedThrough||{})};targets.forEach(target=>managerRemovedThrough[target]=row.sequence);
-                transaction.set(chatRef,{managerRemovedThrough},{merge:true});
+                const state=await transaction.get(stateRef),saved=await Promise.all(refs.map(ref=>transaction.get(ref))),ui=normalizePrivateChatUI(state.exists()?state.data().privateChatUI:null);
+                if(!saved.some(snapshot=>snapshot.exists()))throw new Error('There are no saved messages to remove.');
+                for(const snapshot of saved)if(snapshot.exists()&&(!snapshot.data().participantUids.includes(uid)||!snapshot.data().participantUids.includes(peerUid)))throw new Error('You can manage only conversations you participate in.');
+                const targets=scope==='both'?[uid,peerUid]:[peerUid],previous=ui.views[cid] || {hiddenThrough:0,historyThrough:{}},view={...previous,removed:true,historyThrough:{...previous.historyThrough}};
+                saved.forEach((snapshot,index)=>{if(!snapshot.exists())return;const row=snapshot.data(),managerRemovedThrough={...(row.managerRemovedThrough||{})};targets.forEach(target=>managerRemovedThrough[target]=row.sequence);transaction.set(refs[index],{managerRemovedThrough},{merge:true});if(workspaces[index]===LEGACY_WORKSPACE)view.hiddenThrough=Math.max(view.hiddenThrough,row.sequence);else view.historyThrough[workspaces[index]]=Math.max(view.historyThrough[workspaces[index]]||0,row.sequence);});
                 if(scope==='peer')return ui;
-                const next={...ui,activeUid:ui.activeUid===peerUid?'':ui.activeUid,openedUids:ui.openedUids.filter(id=>id!==peerUid),views:{...ui.views,[cid]:{hiddenThrough:Math.max(privateChatCutoff(ui,cid),row.sequence),removed:true}}};
+                const next={...ui,activeUid:ui.activeUid===peerUid?'':ui.activeUid,openedUids:ui.openedUids.filter(id=>id!==peerUid),views:{...ui.views,[cid]:view}};
                 transaction.set(stateRef,{privateChatUI:next},{merge:true});return next;
             });
         };
@@ -6842,29 +7048,53 @@
 
         const ChatSidebarToggle = ({open,onToggle}) => <button type="button" aria-label={open?'Hide conversations':'Show conversations'} title={open?'Hide conversations':'Show conversations'} aria-expanded={open} aria-controls="chat-conversation-inbox" onClick={onToggle} className="chat-inbox-toggle">{open?'‹':'›'}</button>;
         const ChatWindowClose = ({onClose}) => <button type="button" aria-label="Close" title="Close chat" onClick={onClose} className="chat-window-close"><X className="h-4 w-4"/></button>;
-        const PrivateChatPanel = ({user,users,currentName,active,chatOpen,selectedUid,onSelectPerson,onSelectTeam,sharedUnread,canSend,soundReady,onUnread,onIncoming,onBusy,onPreview,owner,photos,titles,sharedPreview,onViewProfile,sidebarOpen,onToggleSidebar,onCloseChat}) => {
+        const PrivateChatPanel = ({user,users,currentName,active,chatOpen,selectedUid,onSelectPerson,onSelectTeam,sharedUnread,canSend,soundReady,onUnread,onIncoming,onBusy,onPreview,owner,photos,titles,sharedPreview,onViewProfile,sidebarOpen,onToggleSidebar,onCloseChat,historyWorkspaces=[]}) => {
             // Auth can change before the parent's selection-reset effect runs.
             // Never construct a private conversation with the new account itself.
             const uid=user?.uid,recipientUid=selectedUid&&selectedUid!==uid?selectedUid:'';
-            const [conversations,setConversations]=useState([]),[ui,setUI]=useState(()=>normalizePrivateChatUI(null)),[viewsReady,setViewsReady]=useState(false);
+            const [canonicalConversations,setCanonicalConversations]=useState([]),[historyConversations,setHistoryConversations]=useState([]),[historyViews,setHistoryViews]=useState({});
+            const [savedUI,setUI]=useState(()=>normalizePrivateChatUI(null)),[viewsReady,setViewsReady]=useState(false);
+            const conversations=useMemo(()=>mergePrivateChatConversations(canonicalConversations,historyConversations),[canonicalConversations,historyConversations]);
+            const ui=useMemo(()=>{const next=normalizePrivateChatUI(savedUI);for(const [workspace,legacy] of Object.entries(historyViews))for(const [id,view] of Object.entries(legacy.views || {})){const current=next.views[id] || {hiddenThrough:0,removed:false,historyThrough:{}};next.views[id]=workspace===LEGACY_WORKSPACE?{...current,removed:current.removed || view.removed,hiddenThrough:Math.max(current.hiddenThrough,view.hiddenThrough)}:{...current,removed:current.removed || view.removed,historyThrough:{...current.historyThrough,[workspace]:Math.max(current.historyThrough?.[workspace]||0,view.hiddenThrough)}};}return next;},[savedUI,historyViews]);
             const [localOpened,setLocalOpened]=useState([]),[newChatOpen,setNewChatOpen]=useState(false),[search,setSearch]=useState(''),[removeTarget,setRemoveTarget]=useState(null),[removeScope,setRemoveScope]=useState('mine');
             const [localOpenThrough,setLocalOpenThrough]=useState({});
             const [previews,setPreviews]=useState({}),previewRequests=useRef(new Set());
-            const [messages,setMessages]=useState([]),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
-            const [directoryReady,setDirectoryReady]=useState(false),[busy,setBusy]=useState(false),[messageLimit,setMessageLimit]=useState(150);
+            const [messages,setMessages]=useState([]),[historyMessages,setHistoryMessages]=useState([]),[canonicalLoaded,setLoaded]=useState(false),[historyLoaded,setHistoryLoaded]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+            const [canonicalDirectoryReady,setDirectoryReady]=useState(false),[historyReady,setHistoryReady]=useState(false),[busy,setBusy]=useState(false),[messageLimit,setMessageLimit]=useState(150);
+            const directoryReady=canonicalDirectoryReady&&historyReady,loaded=canonicalLoaded&&historyLoaded,historyWorkspaceKey=historyWorkspaces.join('|');
             const [peerTyping,setPeerTyping]=useState(null),[clock,setClock]=useState(Date.now()),[editing,setEditing]=useState(null),[editText,setEditText]=useState('');
             const cid=recipientUid&&uid?privateConversationId(uid,recipientUid):'',conversation=conversations.find(item=>item.id===cid);
             const enabledRecipient=users.find(person=>person.uid===recipientUid);
             const recipient=enabledRecipient||(conversation?{uid:recipientUid,name:conversation.names?.[recipientUid]||'Former teammate'}:null);
-            const visibleMessages=messages.filter(message=>message.sequence>privateChatCutoff(ui,cid,conversation,uid));
-            const draftMemory=useRef(new Map()),clearedDraftKeys=useRef(new Set()),messageViewportRef=useRef(null),messageContentRef=useRef(null),messageScrollerRef=useRef(null),knownRef=useRef(null),readPending=useRef(''),typingRef=useRef(0),selectionRestored=useRef(false),aliveRef=useRef(true);
+            const allMessages=useMemo(()=>mergePrivateChatMessages(messages,historyMessages),[messages,historyMessages]);
+            const visibleMessages=allMessages.filter(message=>privateChatMessageVisible(message,ui,cid,conversation,uid));
+            const draftMemory=useRef(new Map()),clearedDraftKeys=useRef(new Set()),messageViewportRef=useRef(null),messageContentRef=useRef(null),messageScrollerRef=useRef(null),knownRef=useRef(null),readPending=useRef(new Set()),typingRef=useRef(0),selectionRestored=useRef(false),aliveRef=useRef(true);
             useEffect(()=>{aliveRef.current=true;return()=>{aliveRef.current=false;};},[]);
             const latestRef=useRef({});latestRef.current={ui,uid,active,chatOpen,recipientUid,currentName,soundReady,onIncoming,conversations};
+            const historySourceKey=(conversation?.historySources || []).map(source=>source.workspace).sort().join('|');
+            useEffect(()=>{privateChatKnownSources.clear();conversations.forEach(row=>privateChatKnownSources.set(row.id,(row.historySources || []).map(source=>source.workspace)));},[conversations]);
+            useEffect(()=>{
+                let cancelled=false;setHistoryReady(false);setHistoryConversations([]);setHistoryViews({});
+                if(!uid||!canSend)return;
+                const roots=new Map(),views=new Map(),readyRoots=new Set(),readyViews=new Set(),stops=[];
+                const preferenceWorkspaces=[LEGACY_WORKSPACE,...historyWorkspaces];
+                const ready=()=>setHistoryReady(readyRoots.size===historyWorkspaces.length&&readyViews.size===preferenceWorkspaces.length);
+                const failed=()=>{if(!cancelled){setHistoryReady(false);setError('Private Chat history could not load. Check your connection and ensure the matching chat permissions are published.');}};
+                for(const workspace of historyWorkspaces)stops.push(onSnapshot(query(collection(db,'artifacts',workspace,'public','data','privateChats'),where('participantUids','array-contains',uid)),{includeMetadataChanges:true},snapshot=>{
+                    if(cancelled||auth.currentUser?.uid!==uid)return;roots.set(workspace,snapshot.docs.map(item=>({...item.data(),id:item.id,workspace})));setHistoryConversations([...roots.values()].flat());
+                    if(!snapshot.metadata?.fromCache&&!snapshot.metadata?.hasPendingWrites){readyRoots.add(workspace);ready();}
+                },failed));
+                for(const workspace of preferenceWorkspaces)stops.push(onSnapshot(doc(db,'artifacts',workspace,'public','data','notificationStates',uid),{includeMetadataChanges:true},snapshot=>{
+                    if(cancelled||auth.currentUser?.uid!==uid)return;views.set(workspace,normalizePrivateChatUI(snapshot.exists()?snapshot.data().privateChatUI:null));setHistoryViews(Object.fromEntries(views));
+                    if(!snapshot.metadata?.fromCache&&!snapshot.metadata?.hasPendingWrites){readyViews.add(workspace);ready();}
+                },failed));
+                return()=>{cancelled=true;stops.forEach(stop=>stop());};
+            },[uid,canSend,historyWorkspaceKey]);
             const people=useMemo(()=>{
                 const byUid=new Map(users.map(person=>[person.uid,person]));
                 const sorted=[...conversations].sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
-                const reopened=ui.openedUids.filter(peer=>{const row=conversations.find(item=>item.participantUids.includes(peer));return !row||privateChatRowVisible(row,ui,uid)||(ui.openThrough[row.id]||0)>=privateChatCutoff(ui,row.id,row,uid);});
-                const local=localOpened.filter(peer=>{const row=conversations.find(item=>item.participantUids.includes(peer));return !row||privateChatRowVisible(row,ui,uid)||(localOpenThrough[peer]||0)>=privateChatCutoff(ui,row.id,row,uid);});
+                const reopened=ui.openedUids.filter(peer=>{const row=conversations.find(item=>item.participantUids.includes(peer));return !row||privateChatRowVisible(row,ui,uid)||(ui.openThrough[row.id]||0)>=privateChatViewEpoch(ui,row.id,row,uid);});
+                const local=localOpened.filter(peer=>{const row=conversations.find(item=>item.participantUids.includes(peer));return !row||privateChatRowVisible(row,ui,uid)||(localOpenThrough[peer]||0)>=privateChatViewEpoch(ui,row.id,row,uid);});
                 const ids=[...new Set([...reopened,...local,...sorted.filter(row=>privateChatRowVisible(row,ui,uid)).flatMap(row=>row.participantUids.filter(id=>id!==uid))])];
                 return ids.filter(id=>id!==uid).map(id=>byUid.get(id)||{uid:id,name:conversations.find(row=>row.participantUids.includes(id))?.names?.[id]||'Former teammate'});
             },[users,conversations,ui,localOpened,localOpenThrough,uid]);
@@ -6875,19 +7105,19 @@
             useEffect(()=>{
                 if(!chatOpen||!directoryReady||!viewsReady||!uid)return;
                 people.forEach(person=>{const row=conversations.find(item=>item.participantUids.includes(person.uid));if(!row?.lastMessageId||!privateChatRowVisible(row,ui,uid))return;
-                    const key=row.id+':'+row.lastMessageId;if(previewRequests.current.has(key))return;previewRequests.current.add(key);
-                    getDoc(doc(db,...privateChatPath(row.id).split('/'),'messages',row.lastMessageId)).then(snapshot=>{
+                    const key=row.id+':'+row.lastMessageWorkspace+':'+row.lastMessageId;if(previewRequests.current.has(key))return;previewRequests.current.add(key);
+                    getDoc(doc(db,...privateChatSourcePath(row.id,row.lastMessageWorkspace || LEGACY_WORKSPACE).split('/'),'messages',row.lastMessageId)).then(snapshot=>{
                         if(!aliveRef.current||auth.currentUser?.uid!==uid||!snapshot.exists())return;
                         const message=snapshot.data(),current=latestRef.current,latest=current.conversations.find(item=>item.id===row.id);
-                        if(latest?.lastMessageId!==row.lastMessageId||message.sequence<=privateChatCutoff(current.ui,row.id,latest,uid))return;
-                        setPreviews(previous=>({...previous,[row.id]:{sequence:message.sequence,text:chatPreviewText(message)}}));
+                        if(latest?.lastMessageId!==row.lastMessageId||message.sequence<=privateChatCutoff(current.ui,row.id,latest,uid,row.lastMessageWorkspace || LEGACY_WORKSPACE))return;
+                        setPreviews(previous=>({...previous,[row.id]:{sequence:message.sequence,workspace:row.lastMessageWorkspace || LEGACY_WORKSPACE,text:chatPreviewText(message)}}));
                     }).catch(()=>previewRequests.current.delete(key));
                 });
             },[chatOpen,directoryReady,viewsReady,uid,people,conversations,ui]);
             useEffect(()=>{onBusy(busy);return()=>onBusy(false);},[busy,onBusy]);
             useEffect(()=>{
                 if(!uid||!canSend||!db){onUnread(0);return;}
-                migrateAustinPrivateChatPreferences(uid).catch(console.error);
+                migratePrivateChatPreferences(uid).catch(console.error);
                 return onSnapshot(privateChatStateRef(db,uid),{includeMetadataChanges:true},snapshot=>{
                     const next=normalizePrivateChatUI(snapshot.exists()?snapshot.data().privateChatUI:null);setUI(next);
                     if(!snapshot.metadata?.fromCache&&!snapshot.metadata?.hasPendingWrites)setViewsReady(true);
@@ -6896,25 +7126,29 @@
             useEffect(()=>{
                 if(!uid||!canSend||!db)return;
                 return onSnapshot(query(collection(db,'artifacts',privateChatWorkspace(),'public','data','privateChats'),where('participantUids','array-contains',uid)),snapshot=>{
-                    const rows=[];snapshot.forEach(item=>rows.push({id:item.id,...item.data()}));setConversations(rows);setDirectoryReady(true);
+                    const rows=[];snapshot.forEach(item=>rows.push({...item.data(),id:item.id}));setCanonicalConversations(rows);setDirectoryReady(true);
                 },()=>{setDirectoryReady(false);onUnread(0);setError('Private Chat could not load. Check your connection or chat access.');});
             },[uid,canSend,onUnread]);
             useEffect(()=>{
                 if(!directoryReady||!viewsReady)return;
                 onUnread(conversations.filter(row=>privateChatUnread(row,uid,ui)).length);
-                const known=knownRef.current;knownRef.current=new Map(conversations.map(row=>[row.id,row.incomingSequence?.[uid]||0]));
+                const known=knownRef.current;knownRef.current=new Map(conversations.map(row=>[row.id,privateChatIncomingSequence(row,uid)]));
                 if(!known)return;
-                const incoming=conversations.filter(row=>(row.incomingSequence?.[uid]||0)>(known.get(row.id)||0)&&privateChatUnread(row,uid,ui));
+                const incoming=conversations.filter(row=>privateChatIncomingSequence(row,uid)>(known.get(row.id)||0)&&privateChatUnread(row,uid,ui));
                 if(!incoming.length)return;
                 if(soundReady)playNotificationChime([], 'privateChat', 'privateChat');
                 const row=incoming.sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0],peerUid=row.participantUids.find(id=>id!==uid);
                 if(chatOpen&&active&&peerUid===recipientUid&&document.visibilityState==='visible'&&document.hasFocus())return;
-                getDoc(doc(db,...privateChatPath(row.id).split('/'),'messages',row.lastMessageId)).then(snapshot=>{
+                const source=privateChatStreams(row).filter(stream=>(stream.incomingSequence?.[uid]||0)>Math.max(stream.readSequence?.[uid]||0,privateChatCutoff(ui,row.id,row,uid,stream.workspace))).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];
+                if(!source?.lastMessageId)return;
+                getDoc(doc(db,...privateChatSourcePath(row.id,source.workspace).split('/'),'messages',source.lastMessageId)).then(snapshot=>{
                     if(!aliveRef.current||auth.currentUser?.uid!==uid||!snapshot.exists())return;
                     const current=latestRef.current,latest=current.conversations.find(item=>item.id===row.id)||row;
                     if(!privateChatUnread(latest,uid,current.ui)||(current.chatOpen&&current.active&&current.recipientUid===peerUid&&document.visibilityState==='visible'&&document.hasFocus()))return;
-                    const message=snapshot.data(),text=getTeamChatSticker(message.text)?'Sent a sticker':String(message.text||('Shared '+(message.attachment?.name||'an attachment'))).slice(0,120);
-                    showDesktopAlert({key:'private:'+row.id+':'+(row.incomingSequence?.[uid] || row.lastMessageId),title:'Private Chat',body:(users.find(person=>person.uid===peerUid)?.name||row.names?.[peerUid]||'A teammate')+' sent you a private message.',target:{kind:'private',peerUid}});
+                    const message={...snapshot.data(),id:snapshot.id,_workspace:source.workspace},stream=privateChatStreams(latest).find(item=>item.workspace===source.workspace);
+                    if(stream?.lastMessageId!==source.lastMessageId||message.id!==source.lastMessageId||!privateChatMessageVisible(message,current.ui,row.id,latest,uid)||(stream.incomingSequence?.[uid]||0)<=Math.max(stream.readSequence?.[uid]||0,privateChatCutoff(current.ui,row.id,latest,uid,source.workspace)))return;
+                    const text=getTeamChatSticker(message.text)?'Sent a sticker':String(message.text||('Shared '+(message.attachment?.name||'an attachment'))).slice(0,120);
+                    showDesktopAlert({key:'private:'+row.id+':'+source.workspace+':'+source.lastMessageId,title:'Private Chat',body:(users.find(person=>person.uid===peerUid)?.name||row.names?.[peerUid]||'A teammate')+' sent you a private message.',target:{kind:'private',peerUid}});
                     current.onIncoming({uid:peerUid,name:users.find(person=>person.uid===peerUid)?.name||row.names?.[peerUid]||'Teammate',preview:text,messageId:message.id});
                 }).catch(()=>{});
             },[conversations,viewsReady,directoryReady,ui,uid,onUnread]);
@@ -6928,8 +7162,8 @@
             },[ui,viewsReady,recipientUid,conversation,cid,localOpened,onSelectTeam]);
             const choose=peerUid=>{
                 if(busy||!viewsReady)return;setError('');setNotice('');setNewChatOpen(false);setRemoveTarget(null);
-                if(peerUid){const row=conversations.find(item=>item.participantUids.includes(peerUid));setLocalOpenThrough(previous=>({...previous,[peerUid]:privateChatCutoff(ui,privateConversationId(uid,peerUid),row,uid)}));clearedDraftKeys.current.delete(privateConversationId(uid,peerUid));setLocalOpened(previous=>[...new Set([...previous,peerUid])]);onSelectPerson(peerUid);}else onSelectTeam();
-                savePrivateChatChoice(db,uid,peerUid,peerUid?privateChatCutoff(ui,privateConversationId(uid,peerUid),conversations.find(row=>row.participantUids.includes(peerUid)),uid):0).catch(()=>setError('The conversation selection could not be saved. Your messages are still saved.'));
+                if(peerUid){const row=conversations.find(item=>item.participantUids.includes(peerUid));setLocalOpenThrough(previous=>({...previous,[peerUid]:privateChatViewEpoch(ui,privateConversationId(uid,peerUid),row,uid)}));clearedDraftKeys.current.delete(privateConversationId(uid,peerUid));setLocalOpened(previous=>[...new Set([...previous,peerUid])]);onSelectPerson(peerUid);}else onSelectTeam();
+                savePrivateChatChoice(db,uid,peerUid,peerUid?privateChatViewEpoch(ui,privateConversationId(uid,peerUid),conversations.find(row=>row.participantUids.includes(peerUid)),uid):0).catch(()=>setError('The conversation selection could not be saved. Your messages are still saved.'));
             };
             const remove=async()=>{
                 if(!removeTarget||busy||!viewsReady)return;
@@ -6941,7 +7175,7 @@
                     setNotice(owner&&removeScope==='both'?'Chat removed from both views.':owner&&removeScope==='peer'?'Chat removed from '+peer.name+'’s view. Your messages remain available.':peer.name+' chat removed for you. Their messages remain available to them.');
                 }catch(failure){setError('The conversation was not removed. '+(failure.message||'Try again.'));}finally{setBusy(false);}
             };
-            useEffect(()=>{setMessages([]);setLoaded(false);setEditing(null);setMessageLimit(150);readPending.current='';setError('');},[cid]);
+            useEffect(()=>{setMessages([]);setHistoryMessages([]);setLoaded(false);setHistoryLoaded(false);setEditing(null);setMessageLimit(150);readPending.current=new Set();setError('');},[cid]);
             useEffect(()=>{
                 if(!active||!cid||!directoryReady||!viewsReady||!recipient)return;
                 return onSnapshot(query(collection(db,...privateChatPath(cid).split('/'),'messages'),orderBy('sequence','desc'),limit(messageLimit)),{includeMetadataChanges:true},snapshot=>{
@@ -6949,6 +7183,22 @@
                     if(!snapshot.metadata?.fromCache&&!snapshot.metadata?.hasPendingWrites)setLoaded(true);
                 },()=>{setLoaded(false);setMessages([]);setError('This conversation could not load. Check your connection or chat access.');});
             },[active,cid,directoryReady,viewsReady,Boolean(recipient),messageLimit]);
+            useEffect(()=>{
+                setHistoryMessages([]);setHistoryLoaded(false);
+                if(!active||!cid||!directoryReady||!viewsReady||!recipient)return;
+                const workspaces=historySourceKey?historySourceKey.split('|'):[];
+                if(!workspaces.length){setHistoryLoaded(true);return;}
+                let cancelled=false;const pending=new Set(workspaces),streams=new Map(),stops=[];
+                const failed=()=>{if(!cancelled){setHistoryLoaded(false);setError('Earlier private messages could not load. Check your connection or chat permissions.');}};
+                for(const workspace of workspaces){
+                    const path=privateChatSourcePath(cid,workspace);
+                    stops.push(onSnapshot(query(collection(db,...path.split('/'),'messages'),orderBy('sequence','desc'),limit(messageLimit)),{includeMetadataChanges:true},snapshot=>{
+                        if(cancelled)return;streams.set(workspace,{workspace,messages:snapshot.docs.map(item=>({...item.data(),id:item.id}))});setHistoryMessages([...streams.values()]);
+                        if(!snapshot.metadata?.fromCache&&!snapshot.metadata?.hasPendingWrites){pending.delete(workspace);setHistoryLoaded(pending.size===0);}
+                    },failed));
+                }
+                return()=>{cancelled=true;stops.forEach(stop=>stop());};
+            },[active,cid,directoryReady,viewsReady,Boolean(recipient),historySourceKey,messageLimit]);
             useEffect(()=>{
                 if(!active||!cid||!conversation){setPeerTyping(null);return;}
                 const stop=onSnapshot(doc(db,...privateChatPath(cid).split('/'),'typing',recipientUid),snapshot=>setPeerTyping(snapshot.exists()?snapshot.data():null),()=>setPeerTyping(null));
@@ -6960,11 +7210,14 @@
                 firebaseSetDoc(doc(db,...privateChatPath(cid).split('/'),'typing',uid),{uid,name:currentName,typingUntil:value?now+8000:0}).catch(()=>{});
             },[cid,canSend,Boolean(conversation),uid,currentName]);
             useEffect(()=>{
-                if(!active||!loaded||!conversation||document.visibilityState!=='visible'||!document.hasFocus()||!messages.length)return;
-                const latest=messages.at(-1).sequence;if(latest<(conversation.incomingSequence?.[uid]||0)||(conversation.readSequence?.[uid]||0)>=latest)return;
-                const marker=cid+':'+latest;if(readPending.current===marker)return;readPending.current=marker;
-                firebaseRunTransaction(db,async transaction=>{if(auth.currentUser?.uid!==uid)throw new Error('Account changed');const ref=doc(db,...privateChatPath(cid).split('/')),snapshot=await transaction.get(ref);if(!snapshot.exists())return;const before=snapshot.data();if(before.sequence!==latest)return;transaction.set(ref,{readSequence:{...before.readSequence,[uid]:latest}},{merge:true});}).catch(()=>{readPending.current='';});
-            },[active,loaded,conversation,cid,uid,messages,clock]);
+                if(!active||!loaded||!conversation||document.visibilityState!=='visible'||!document.hasFocus()||!allMessages.length)return;
+                for(const source of privateChatStreams(conversation)){
+                    const latest=Math.max(0,...allMessages.filter(message=>message._workspace===source.workspace).map(message=>message.sequence));
+                    if(!latest||latest<(source.incomingSequence?.[uid]||0)||(source.readSequence?.[uid]||0)>=latest)continue;
+                    const marker=cid+':'+source.workspace+':'+latest;if(readPending.current.has(marker))continue;readPending.current.add(marker);
+                    firebaseRunTransaction(db,async transaction=>{if(auth.currentUser?.uid!==uid)throw new Error('Account changed');const ref=doc(db,...privateChatSourcePath(cid,source.workspace).split('/')),snapshot=await transaction.get(ref);if(!snapshot.exists())return;const before=snapshot.data();if(before.sequence!==latest)return;transaction.set(ref,{readSequence:{...before.readSequence,[uid]:latest}},{merge:true});}).catch(()=>{readPending.current.delete(marker);});
+                }
+            },[active,loaded,conversation,cid,uid,allMessages,clock]);
             useEffect(()=>{
                 if(!active||!loaded||!cid||!messageViewportRef.current)return;
                 const scroller=createTeamChatAutoScroller(messageViewportRef.current,messageContentRef.current,visibleMessages.at(-1)?.id,null);
@@ -6980,9 +7233,9 @@
                 catch(failure){setError(failure.code==='permission-denied'?'Message did not send. Check both users’ chat access.':failure.message||'Message did not send. It is ready to retry.');return false;}finally{setBusy(false);}
             };
             const saveEdit=async()=>{
-                if(!accountCanAction(auth.currentUser,'chat','edit')){setError('You do not have permission to edit chat messages.');return;}
+                try{requirePrivateChatAction('edit');}catch(failure){setError(failure.message);return;}
                 if(busy||!editing||!canSend)return;setBusy(true);setError('');
-                try{const ref=doc(db,...privateChatPath(cid).split('/'),'messages',editing);await firebaseRunTransaction(db,async transaction=>{
+                try{const message=allMessages.find(item=>item.id===editing);if(!message)throw new Error('This message is no longer available.');const ref=doc(db,...privateChatSourcePath(cid,message._workspace).split('/'),'messages',message._sourceMessageId);await firebaseRunTransaction(db,async transaction=>{
                     if(auth.currentUser?.uid!==uid)throw new Error('Sign in again.');const snapshot=await transaction.get(ref),saved=snapshot.exists()?snapshot.data():null;
                     if(saved?.authorUid!==uid)throw new Error('You can edit only your own messages.');const text=editText.trim();if((!text&&!saved.attachment)||text.length>5000)throw new Error('Write a message up to 5,000 characters.');transaction.set(ref,{text,editedAt:new Date().toISOString()},{merge:true});});setEditing(null);
                 }catch(failure){setError(failure.message||'Your edit could not be saved.');}finally{setBusy(false);}
@@ -6996,7 +7249,7 @@
                     <div className="chat-inbox-list" role="tablist" aria-orientation="vertical" aria-label="Chat conversations">
                         {!newChatOpen&&(!search.trim()||'team chat'.includes(search.trim().toLowerCase()))&&<button type="button" role="tab" aria-selected={!active} disabled={busy} onClick={()=>choose('')} className="chat-inbox-row"><span className="user-profile-avatar" style={{width:34,height:34}}><Users className="h-4 w-4"/></span><span className="chat-inbox-row-copy"><span className="chat-inbox-row-title"><span className="chat-inbox-row-name">Team Chat</span>{sharedUnread>0&&<span className="chat-inbox-badge" aria-label={sharedUnread+' unread team messages'}>{sharedUnread}</span>}</span><span className="chat-inbox-row-preview">{sharedPreview||'Messages for your team'}</span></span></button>}
                         {(newChatOpen?users:inboxPeople).filter(person=>person.uid!==uid&&person.name.toLowerCase().includes(normalizeChatPeopleSearch(search))).map(person=>{
-                            const row=conversations.find(item=>item.participantUids.includes(person.uid)),unread=row&&privateChatUnread(row,uid,ui),preview=row&&previews[row.id],canPreview=preview&&preview.sequence>privateChatCutoff(ui,row.id,row,uid);
+                            const row=conversations.find(item=>item.participantUids.includes(person.uid)),unread=row&&privateChatUnread(row,uid,ui),preview=row&&previews[row.id],canPreview=preview&&preview.sequence>privateChatCutoff(ui,row.id,row,uid,preview.workspace);
                             return <div key={person.uid} className="chat-inbox-person">
                                 <button type="button" role="tab" aria-label={'Chat with '+person.name} aria-selected={active&&recipientUid===person.uid} disabled={busy||!viewsReady} onClick={event=>{if(event.target.closest('[data-profile-avatar]')){onViewProfile({uid:person.uid,name:person.name,photo:photos[person.uid]});return;}setSearch('');choose(person.uid);}} className="chat-inbox-row"><UserAvatar uid={person.uid} name={person.name} photos={photos} titles={titles}/><span className="chat-inbox-row-copy"><span className="chat-inbox-row-title"><span className="chat-inbox-row-name" title={titles[person.uid]||undefined}>{person.name}</span>{unread?<span aria-label="New message" className="chat-inbox-badge">1</span>:<span className="chat-inbox-row-time">{row&&privateChatRowVisible(row,ui,uid)?chatInboxTime(row.updatedAt):''}</span>}</span><span className="chat-inbox-row-preview">{newChatOpen?'Private conversation':canPreview?preview.text:row&&privateChatRowVisible(row,ui,uid)?'Open conversation':'Start a conversation'}</span></span></button>
                                 {!newChatOpen&&<button type="button" aria-label={'Remove '+person.name+' chat'} title="Remove conversation" disabled={busy||!viewsReady} onClick={()=>{setRemoveScope('mine');setRemoveTarget(person);setError('');}} className="chat-tab-remove"><X className="h-3 w-3"/></button>}
@@ -7021,19 +7274,19 @@
                     {!recipient ? <div className="flex h-44 items-center justify-center text-center text-xs font-bold text-slate-500">Choose a teammate to start a private conversation.</div>
                     : !loaded ? <div role="status" className="py-10 text-center text-xs text-slate-400">{error?'Conversation unavailable.':'Loading conversation…'}</div>
                     : visibleMessages.length===0 ? <div className="flex h-44 items-center justify-center text-center text-xs font-bold text-slate-500">No private messages with {recipient.name} yet.</div> : <>
-                        {messages.length>=messageLimit&&<button type="button" onClick={()=>setMessageLimit(value=>value+150)} className="mx-auto text-xs text-slate-300 hover:text-white">Load earlier messages</button>}
+                        {(messages.length>=messageLimit||historyMessages.some(stream=>stream.messages.length>=messageLimit))&&<button type="button" onClick={()=>setMessageLimit(value=>value+150)} className="mx-auto text-xs text-slate-300 hover:text-white">Load earlier messages</button>}
                         {visibleMessages.map(message=>{const mine=message.authorUid===uid;return <div key={message.id} data-private-chat-message data-chat-message-owner={mine?'self':'other'} className="minimal-chat-row">
                             <UserAvatar uid={message.authorUid} name={mine?currentName:recipient.name} photos={photos} titles={titles} onView={onViewProfile} size={40}/>
                             <div className="minimal-chat-stack"><div className={`team-chat-message group text-slate-100 ${!String(message.text || '').trim() && chatFilePreviewKind(message.attachment?.contentType) === 'image' && editing !== message.id ? 'chat-image-message' : ''}`}>
-                                {editing===message.id?<div><textarea aria-label="Edit private message" value={editText} disabled={busy} onChange={event=>setEditText(event.target.value)} className="w-full rounded border border-slate-600 bg-slate-950 p-2 text-xs text-slate-100" rows="3"/><div className="mt-2 flex gap-3"><button type="button" onClick={saveEdit} disabled={busy} className="text-xs text-emerald-300">Save</button><button type="button" disabled={busy} onClick={()=>setEditing(null)} className="text-xs text-slate-300">Cancel</button></div></div>:<><ChatMessageText text={message.text}/>{message.attachment&&<ChatAttachmentCard conversationId={cid} attachment={message.attachment} messageId={message.id} uid={message.authorUid} active={active} onPreview={onPreview}/>}</>}
+                                {editing===message.id?<div><textarea aria-label="Edit private message" value={editText} disabled={busy} onChange={event=>setEditText(event.target.value)} className="w-full rounded border border-slate-600 bg-slate-950 p-2 text-xs text-slate-100" rows="3"/><div className="mt-2 flex gap-3"><button type="button" onClick={saveEdit} disabled={busy} className="text-xs text-emerald-300">Save</button><button type="button" disabled={busy} onClick={()=>setEditing(null)} className="text-xs text-slate-300">Cancel</button></div></div>:<><ChatMessageText text={message.text}/>{message.attachment&&<ChatAttachmentCard conversationId={cid} conversationWorkspace={message._workspace} attachment={message.attachment} messageId={message._sourceMessageId} uid={message.authorUid} active={active} onPreview={onPreview}/>}</>}
                                 <div className="minimal-chat-meta">{mine&&!getTeamChatSticker(message.text)&&editing!==message.id&&<button type="button" aria-label="Edit your private message" onClick={()=>{setEditing(message.id);setEditText(message.text);}} className="chat-message-edit opacity-0 group-hover:opacity-100 focus:opacity-100">Edit</button>}{message.editedAt&&<span>Edited</span>}<span>{new Date(message.timestamp).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></div>
-                                {mine&&(conversation?.readSequence?.[recipientUid]||0)>=message.sequence&&<div className="minimal-chat-read-status">Seen by {recipient.name}</div>}
+                                {mine&&privateChatSeenBy(conversation,message,recipientUid)&&<div className="minimal-chat-read-status">Seen by {recipient.name}</div>}
                             </div></div>
                         </div>;})}</>}
                 </div></div>
                 {error&&<div role="alert" className="border-t border-rose-900/40 bg-rose-950/30 px-4 py-2 text-[11px] font-semibold text-rose-300">{error}</div>}
                 {peerTyping?.typingUntil>clock&&<div role="status" className="px-4 py-2 text-[11px] text-slate-400">{recipient?.name} is typing…</div>}
-                <TeamChatComposer key={(cid||'choose')+':'+privateChatCutoff(ui,cid,conversation,uid)} messageLabel="Private message" placeholder={recipient?'Write a private message…':'Choose a teammate first'} open={active} canSend={canSend&&directoryReady&&viewsReady&&Boolean(enabledRecipient)&&loaded&&!busy} draftMemory={draftMemory} draftMemoryKey={cid} clearedDraftKeys={clearedDraftKeys} draftEpoch={privateChatCutoff(ui,cid,conversation,uid)} sendMessage={send} publishTyping={publishTyping}/>
+                <TeamChatComposer key={(cid||'choose')+':'+privateChatViewEpoch(ui,cid,conversation,uid)} messageLabel="Private message" placeholder={recipient?'Write a private message…':'Choose a teammate first'} open={active} canSend={canSend&&directoryReady&&viewsReady&&Boolean(enabledRecipient)&&loaded&&!busy} draftMemory={draftMemory} draftMemoryKey={cid} clearedDraftKeys={clearedDraftKeys} draftEpoch={privateChatViewEpoch(ui,cid,conversation,uid)} sendMessage={send} publishTyping={publishTyping}/>
                 </div>
             </>;
         };
@@ -10208,10 +10461,6 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             {target!=='all'&&<option value="shared">Use shared setting</option>}<option value="on">On</option><option value="off">Off</option>
                         </select></label>)}
                     </div>}
-                    {target==='all' && <label className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={settings.globalChatEnabled} disabled={busy} onChange={event=>setSettings({...settings,globalChatEnabled:event.target.checked})}/>
-                        Company-wide direct messages
-                    </label>}
                     <button type="button" disabled={busy} onClick={saveSettings} className={buttonStyle}>{target==='new'?'Add location':'Save settings'}</button>
                     {target!=='austin' && target!=='all' && target!=='new' && (
                         <div className="space-y-3 border-t border-slate-700 pt-3">
@@ -11234,7 +11483,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
                     const currentGeneration = ++generation;
                     activeLocationAppearanceUid = null;
-                    sharedPrivateChatEnabled = false;
+                    privateChatSessionReady = false; privateChatKnownSources.clear();
                     setLocationContext(null);
                     setUser(null);
                     setAuthReady(false);
@@ -11306,7 +11555,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         locationRolePolicyActive = context.registry.locationRolesVersion===1;
                         activeLocationAdminUid = hasSiteAdmin(context,ACTIVE_LOCATION) ? firebaseUser.uid : null;
                         activeLocationAppearanceUid = activeLocationAdminUid || (context.registry.enabled && context.registry.locationRolesVersion!==1 && context.assignment.role==='admin' ? firebaseUser.uid : null);
-                        sharedPrivateChatEnabled = context.registry.enabled && context.registry.globalChatEnabled === true;
+                        privateChatSessionReady = true;
                         setLocationContext(context);
                         const savedName = isOwnerAccount(firebaseUser) ? locationLocalStorage.getItem(getUserNameKey(firebaseUser.uid))?.trim() : '';
                         setUserName(savedName || profile.name || getDefaultUserName(firebaseUser));
@@ -12582,8 +12831,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const applyLocationRegistry = registry => {
                 const next = {...locationContext,registry,
                     allowed:accessibleLocations(registry,locationContext.assignment,locationContext.owner)};
-                if (sharedPrivateChatEnabled !== (registry.enabled && registry.globalChatEnabled === true)) window.location.reload();
-                else if (!next.allowed.includes(ACTIVE_LOCATION)) navigateToLocation(next.allowed[0]);
+                if (!next.allowed.includes(ACTIVE_LOCATION)) navigateToLocation(next.allowed[0]);
                 else setLocationContext(next);
             };
             const activateDashboardLocations = async () => {
@@ -12609,7 +12857,6 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             else setAuthError('Your account has no active locations. Please contact Fadi.');
                             return;
                         }
-                        if (sharedPrivateChatEnabled !== (next.registry.enabled && next.registry.globalChatEnabled === true)) {window.location.reload();return;}
                         locationRolePolicyActive = next.registry.locationRolesVersion===1;
                         activeLocationAdminUid = hasSiteAdmin(next,ACTIVE_LOCATION) ? user.uid : null;
                         activeLocationAppearanceUid = activeLocationAdminUid || (next.registry.enabled && next.registry.locationRolesVersion!==1 && next.assignment.role==='admin' ? user.uid : null);
@@ -12645,7 +12892,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 return [...accounts.values()].filter(account => account.enabled).map(account => ({ uid: account.uid, name: String(masterLists.nameOverrides?.[account.uid] || account.name || DEFAULT_ACCOUNT_NAMES[account.uid] || 'Team member').trim() })).sort((a, b) => a.name.localeCompare(b.name));
             }, [managedAccounts, accessProfile, activeUsers, masterLists.nameOverrides]);
             const [companyChatPeople,setCompanyChatPeople]=useState([]);
-            const canUseCompanyChat=locationEnabled && locationContext.registry.globalChatEnabled===true && accountHasPermission(user,'chat',accessProfile);
+            const canUseCompanyChat=privateChatCanUse(user,accessProfile);
             useEffect(()=>{
                 setCompanyChatPeople([]);
                 if(!user?.uid || !canUseCompanyChat) return;
@@ -14850,7 +15097,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     </button>
                                         <div role="dialog" aria-label="Team Chat" style={{display:isChatPanelOpen ? undefined : 'none'}} data-sidebar-open={chatInboxList?'true':'false'} data-dashboard-edit-ignore="true" className="team-chat-panel dashboard-header-popover absolute right-0 top-8 z-[120] overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl shadow-slate-950/70">
                                             <div className="chat-inbox-layout" data-show-list={chatInboxList?'true':'false'}>
-                                            <PrivateChatPanel key={user?.uid || 'signed-out'} user={user} users={canUseCompanyChat?companyChatPeople:chatMentionUsers} currentName={getCurrentShiftUser().name} active={isChatPanelOpen&&chatTab==='private'} chatOpen={isChatPanelOpen} selectedUid={privateRecipientUid} onSelectPerson={selectPrivateChat} onSelectTeam={selectSharedChat} sharedUnread={teamChatUnreadCount} canSend={canEditSection('chat')} soundReady={soundSettingsLoaded} onUnread={setPrivateChatUnread} onIncoming={setPrivateChatPopup} onBusy={setPrivateChatBusy} onPreview={setChatFilePreview} owner={isOwnerAccount(user)} photos={profilePhotos} titles={profileTitles} onViewProfile={viewUserProfile} sidebarOpen={chatInboxList} onToggleSidebar={()=>setChatInboxList(value=>!value)} onCloseChat={closeChatWindow} sharedPreview={displayedTeamChatMessages.length?chatPreviewText(displayedTeamChatMessages.at(-1)):null}/>
+                                            <PrivateChatPanel key={user?.uid || 'signed-out'} user={user} users={companyChatPeople} currentName={getCurrentShiftUser().name} active={isChatPanelOpen&&chatTab==='private'} chatOpen={isChatPanelOpen} selectedUid={privateRecipientUid} onSelectPerson={selectPrivateChat} onSelectTeam={selectSharedChat} sharedUnread={teamChatUnreadCount} canSend={canUseCompanyChat} historyWorkspaces={privateChatHistoryWorkspaces(locationContext?.registry)} soundReady={soundSettingsLoaded} onUnread={setPrivateChatUnread} onIncoming={setPrivateChatPopup} onBusy={setPrivateChatBusy} onPreview={setChatFilePreview} owner={isOwnerAccount(user)} photos={profilePhotos} titles={profileTitles} onViewProfile={viewUserProfile} sidebarOpen={chatInboxList} onToggleSidebar={()=>setChatInboxList(value=>!value)} onCloseChat={closeChatWindow} sharedPreview={displayedTeamChatMessages.length?chatPreviewText(displayedTeamChatMessages.at(-1)):null}/>
                                             <div className="chat-inbox-pane" style={{display:chatTab==='team'?'flex':'none'}}>
                                             <div className="chat-inbox-conversation-head"><ChatSidebarToggle open={chatInboxList} onToggle={()=>setChatInboxList(value=>!value)}/><span className="user-profile-avatar" style={{width:34,height:34}}><Users className="h-4 w-4"/></span><div className="chat-conversation-heading-copy"><strong>Team Chat</strong><small>Everyone on your team</small></div>{isAdminUser&&<button type="button" aria-label="Clear Team Chat" disabled={!teamChatLoaded || !settingsReady || teamChatClearBusy || isSavingChatEdit || teamChatMessages.some(message=>message.pending)} onClick={()=>{setTeamChatError('');setTeamChatNotice('');setConfirmTeamChatClear(true);}} className="rounded-lg px-2 py-2 text-xs text-slate-400 hover:bg-slate-800 hover:text-rose-200 disabled:opacity-40">Clear Chat</button>}<ChatWindowClose onClose={closeChatWindow}/></div>
                                             <TeamChatClearConfirmation owner={isAdminUser} open={confirmTeamChatClear} busy={teamChatClearBusy} onConfirm={clearTeamChat} onCancel={()=>setConfirmTeamChatClear(false)}/>
