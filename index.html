@@ -8463,6 +8463,26 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
 </style>
 <style id="dashboard-grey-nav-cleanup">@media screen{html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-header .dashboard-top-nav>button{border-color:transparent!important;outline:none!important;box-shadow:none!important;}html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-header .dashboard-top-nav>button:focus-visible .dashboard-nav-label{outline:2px solid #a7d9ff;outline-offset:4px;border-radius:3px;}}</style>
 <style id="personal-settings-embedded">.profile-photo-editor.personal-settings-embedded{width:100%;max-width:none;max-height:none;overflow:visible;box-shadow:none!important;}</style>
+
+<style id="metrics-row-drag">
+/* Row movement is available only while editing Metrics. No palette or table sizing changes. */
+[data-metrics-sortable="true"] { cursor: grab; }
+[data-metrics-sortable="true"]:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
+[data-metrics-sortable="true"] button, [data-metrics-sortable="true"] input,
+[data-metrics-sortable="true"] textarea, [data-metrics-sortable="true"] a { cursor: auto; }
+.metrics-row-dragging, .metrics-row-dragging * { cursor: grabbing !important; user-select: none !important; }
+.metrics-row-held { opacity: .4; }
+.metrics-drop-before > td { box-shadow: inset 0 3px 0 currentColor !important; }
+.metrics-drop-after > td { box-shadow: inset 0 -3px 0 currentColor !important; }
+.metrics-row-drag-preview { box-shadow: 0 8px 20px rgba(0,0,0,.2); outline: 2px solid currentColor; }
+
+</style>
+<style id="dashboard-notification-badge-red">
+@media screen {
+html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-header .dashboard-notification-badge {background-color:#c62828!important;color:#ffffff!important;}
+html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-header button[title="Notifications"]>svg {color:#ffffff!important;}
+}
+</style>
 </head>
 <body class="balanced-picture-theme bg-slate-900 text-slate-100 font-sans antialiased overflow-x-hidden">
     <div id="root"></div>
@@ -8710,6 +8730,61 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
             });
             return resolveParkingAssigneeNames(cleaned, contractors);
         };
+
+        const normalizeRouteTablePrefixes = rows => (Array.isArray(rows)?rows:[]).map(row => {
+            let next=row;
+            for(const field of ['serviceUnit','route']) {
+                if(typeof row?.[field]!=='string')continue;
+                const value=row[field].replace(/^(\s*)pfl(?=\d|[\s-]|$)/i,'$1PFL');
+                if(value!==row[field]) {if(next===row)next={...row};next[field]=value;}
+            }
+            return next;
+        });
+
+        const roundRouteCube = value => {
+            if(value===null||value===undefined||value==='')return value;
+            const raw=String(value).trim();
+            if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+|\d{1,3}(?:,\d{3})+(?:\.\d*)?)$/.test(raw))return value;
+            const plain=raw.replace(/,/g,''),negative=plain.startsWith('-'),unsigned=plain.replace(/^[+-]/,'');
+            const [integer,fraction='']=unsigned.split('.');
+            let tenths=BigInt(integer||'0')*10n+BigInt(fraction[0]||'0');
+            if(Number(fraction[1]||'0')>=5)tenths+=1n;
+            const decimal=tenths%10n;
+            return (negative&&tenths>0n?'-':'')+String(tenths/10n)+(decimal?'.'+String(decimal):'');
+        };
+        const formatRouteCube = value => roundRouteCube(value);
+
+        const normalizeRouteCubeRows = rows => (Array.isArray(rows)?rows:[]).map(row => {
+            if(!row||!Object.hasOwn(row,'cube'))return row;
+            const cube=roundRouteCube(row.cube);
+            return cube===row.cube?row:{...row,cube};
+        });
+
+        const parseRouteHOSMinutes = value => {
+            const raw=String(value??'').trim().toLowerCase();
+            if(!raw||/^(?:n\/?a|[-—])$/.test(raw))return null;
+            let minutes;
+            const clock=/^(\d+)\s*:\s*([0-5]?\d)(?:\s*:\s*([0-5]\d))?$/.exec(raw);
+            if(clock)minutes=Number(clock[1])*60+Number(clock[2])+Number(clock[3]||0)/60;
+            else {
+                const units=/^(?:(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h))?\s*(?:(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m))?$/.exec(raw);
+                if(units&&(units[1]!==undefined||units[2]!==undefined))minutes=Number(units[1]||0)*60+Number(units[2]||0);
+                else if(/^\d+(?:\.\d+)?$/.test(raw))minutes=Number(raw)*60;
+                else return null;
+            }
+            return Number.isFinite(minutes)&&minutes>=0&&Number.isSafeInteger(Math.round(minutes))?Math.round(minutes):null;
+        };
+        const formatRouteHOS = value => {
+            const minutes=parseRouteHOSMinutes(value);
+            return minutes===null?String(value??'').trim():Math.floor(minutes/60)+':'+String(minutes%60).padStart(2,'0');
+        };
+        const normalizeRouteHOSRows = (rows,{strict=false}={}) => (Array.isArray(rows)?rows:[]).map(row => {
+            if(!row||!Object.hasOwn(row,'hos'))return row;
+            const raw=String(row.hos??'').trim();
+            if(strict&&raw&&!/^(?:n\/?a|[-—])$/i.test(raw)&&parseRouteHOSMinutes(raw)===null)throw new Error('Hours of Service for '+(row.serviceUnit||row.route||'this route')+' is not understood. Use hours:minutes, such as 11:16, or 11h 16m.');
+            const hos=formatRouteHOS(row.hos);
+            return hos===row.hos?row:{...row,hos};
+        });
 
         const ROUTE_COLUMNS = [
             { key: 'cnt', label: 'Cnt', type: 'text', width: 'w-10', noWrap: true },
@@ -9390,15 +9465,17 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
             return `${header}${header && String(note || '').trim() ? ': ' : ''}${String(note || '').trim()}` + (driverCallSegmentInfo(call) ? '\n'+driverCallIssueLines(call).map(([label,value])=>label+': '+value).join('\n') : '');
         };
 
-        const moveMetricsRows = (rows, index, direction) => {
-            if (!Array.isArray(rows) || !Number.isInteger(index) || ![-1, 1].includes(direction)
-                || index < 0 || index >= rows.length || index + direction < 0 || index + direction >= rows.length) return rows;
+        const moveMetricsRows = (rows, index, destination) => {
+            if (!Array.isArray(rows) || !Number.isInteger(index) || !Number.isInteger(destination)
+                || index < 0 || index >= rows.length || destination < 0 || destination >= rows.length || index === destination) return rows;
             const next = [...rows];
-            [next[index], next[index + direction]] = [next[index + direction], next[index]];
+            const [row] = next.splice(index, 1);
+            next.splice(destination, 0, row);
             return next;
         };
-        const moveMetricsEditingIndex = (editingIndex, index, direction) => editingIndex === index
-            ? index + direction : editingIndex === index + direction ? index : editingIndex;
+        const moveMetricsEditingIndex = (editingIndex, index, destination) => editingIndex === index ? destination
+            : index < destination && editingIndex > index && editingIndex <= destination ? editingIndex - 1
+            : destination < index && editingIndex >= destination && editingIndex < index ? editingIndex + 1 : editingIndex;
         const editMetricsRow = (data, tab, index, field, value) => {
             const numbers = tab === 'feedback' ? { score: 10 } : { surveyCnt: Infinity, surveyAvg: 10, onTime: 100, completion: 100, exchange: 100 };
             const fields = tab === 'feedback' ? ['date', 'firstName', 'lastName', 'type', 'score', 'orderNum', 'comment']
@@ -9440,12 +9517,769 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
             });
             return next;
         };
-        const MetricsRowControls = ({ tab, index, count, editing, onMove, onEdit }) => <>
-            <button type="button" aria-label={`Move ${tab.toUpperCase()} row ${index + 1} up`} disabled={index === 0} onClick={() => onMove(-1)} className="p-1.5 text-slate-400 hover:text-indigo-300 disabled:opacity-25 disabled:cursor-default rounded-md transition-colors"><ArrowUp className="w-4 h-4" /></button>
-            <button type="button" aria-label={`Move ${tab.toUpperCase()} row ${index + 1} down`} disabled={index === count - 1} onClick={() => onMove(1)} className="p-1.5 text-slate-400 hover:text-indigo-300 disabled:opacity-25 disabled:cursor-default rounded-md transition-colors"><ArrowUp className="w-4 h-4 rotate-180" /></button>
+        const MetricsWorkbookImport = (() => {
+            const fields = ['surveyCnt','surveyAvg','onTime','completion','exchange'];
+            const text = value => String(value ?? '').replace(/\u00a0/g,' ').trim();
+            const norm = value => text(value).toLowerCase().replace(/[^a-z0-9]/g,'');
+            const aliases = {
+                firstName:['firstname','driverfirstname','maxdriverfirstname'],
+                lastName:['lastname','driverlastname','maxdriverlastname'],
+                surveyCnt:['surveycnt','surveycount'],surveyAvg:['surveyavg','surveyaverage'],
+                onTime:['ontime','ontimepercent','ontimepercentage','ontimedelivery'],
+                completion:['completion','completionpercent','completionpercentage'],
+                exchange:['exchange','exchanged','exchangedollars','exchangepercent','exchangepercentage']
+            };
+            const columns = row => Object.fromEntries(Object.entries(aliases).map(([key,names])=>[key,row.map(norm).findIndex(value=>names.includes(value))]));
+            const header = rows => rows.slice(0,50).findIndex(row=>{const map=columns(row);return map.firstName>=0&&map.lastName>=0&&map.surveyCnt>=0;});
+            const cellName = (row,column) => {let letters='';for(let n=column+1;n;n=Math.floor((n-1)/26))letters=String.fromCharCode(65+(n-1)%26)+letters;return letters+(row+1);};
+            const numeric = (value, detail, field, address) => {
+                const raw = text(value);
+                if(detail?.error || detail?.uncachedFormula)throw new Error(`${address} contains an Excel error or an uncalculated formula. Open and save the report in Excel, then retry.`);
+                if(!raw || /^(?:n\/?a|[-—–])$/i.test(raw))return 0;
+                const cleaned=raw.replace(/,/g,'').replace(/%$/,'').trim();
+                if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(cleaned))throw new Error(`${address} is not a readable number. Check that cell in Excel.`);
+                let number=Number(cleaned);
+                if(!Number.isFinite(number))throw new Error(`${address} is not a finite number.`);
+                if(['onTime','completion','exchange'].includes(field) && detail?.percent && !raw.endsWith('%'))number*=100;
+                if(field==='surveyCnt' && (!Number.isInteger(number)||number<0))throw new Error(`${address} must contain a whole survey count.`);
+                return number;
+            };
+            const nameKey = row => [row.firstName,row.lastName].map(value=>text(value).normalize('NFKC').toLocaleLowerCase('en-US').replace(/\s+/g,' ')).join('|');
+            const sort = rows => rows.map((row,index)=>({row,index})).sort((a,b)=>{
+                for(const field of fields){const av=a.row[field],bv=b.row[field];if(av==null&&bv==null)continue;if(av==null)return 1;if(bv==null)return -1;if(av!==bv)return field==='exchange'?av-bv:bv-av;}
+                return a.index-b.index;
+            }).map(item=>item.row);
+            const parse = table => {
+                const start=header(table.rows);if(start<0)return null;
+                const map=columns(table.rows[start]),missing=Object.keys(map).filter(key=>map[key]<0);
+                if(missing.length)throw new Error(`The sheet is missing these columns: ${missing.map(key=>({firstName:'First Name',lastName:'Last Name',surveyCnt:'Survey Count',surveyAvg:'Survey Average',onTime:'On-Time %',completion:'Completion %',exchange:'Exchange %'}[key])).join(', ')}.`);
+                for(const [key,names]of Object.entries(aliases))if(table.rows[start].filter(value=>names.includes(norm(value))).length!==1)throw new Error(`The ${key} column appears more than once. Choose a report with one set of metric columns.`);
+                const rows=[],seen=new Set();let totals=null;
+                for(let index=start+1;index<table.rows.length;index++){
+                    const raw=table.rows[index];if(!raw.some(value=>text(value)))continue;
+                    if(header([raw])===0 || raw.some(value=>/^minimum\s+target/i.test(text(value))))continue;
+                    const total=raw.slice(0,Math.max(map.firstName,map.lastName)+1).some(value=>/^(?:grand\s+)?total$/i.test(text(value)));
+                    const firstName=text(raw[map.firstName]),lastName=text(raw[map.lastName]);
+                    if(!total&&!firstName&&!lastName){if(fields.some(field=>text(raw[map[field]])))throw new Error(`Row ${index+1} has metrics without a driver name. Add the name before importing.`);continue;}
+                    const values=Object.fromEntries(fields.map(field=>[field,numeric(raw[map[field]],table.cellDetails?.[index]?.[map[field]],field,cellName(index,map[field]))]));
+                    if(total){if(totals)throw new Error('More than one Total row was found. Import one complete WTD or MTD report at a time.');totals=values;continue;}
+                    const row={firstName,lastName,...values},key=nameKey(row);
+                    if(seen.has(key))throw new Error(`The sheet contains the same driver name more than once (${firstName} ${lastName}). Correct the duplicate before importing.`);
+                    seen.add(key);rows.push(row);
+                }
+                if(!rows.length)throw new Error('No driver metric rows were found below the headers.');
+                if(!totals)throw new Error('Include the Total row from the complete report so its original percentages can be kept.');
+                return {sheet:table.name,rows:sort(rows),totals};
+            };
+            const read = async file => {
+                if(!/\.xlsx$/i.test(file?.name||''))throw new Error('Choose an Excel .xlsx report. For an older .xls file, save it as .xlsx first.');
+                if(!file.size||file.size>10*1024*1024)throw new Error('Choose a nonempty Excel report smaller than 10 MB.');
+                const tables=await FinalBillingCompanyFile.xlsx(await file.arrayBuffer(),{cellDetails:true}),reports=[];
+                for(const table of tables){if(table.hidden||header(table.rows)<0)continue;try{reports.push({name:table.name,report:parse(table)});}catch(error){reports.push({name:table.name,error:error.message});}}
+                if(!reports.length)throw new Error('No WTD or MTD metric table was found. Include First Name, Last Name, Survey Count, Survey Average, On-Time %, Completion %, and Exchange %.');
+                return reports;
+            };
+            const choose = (reports,tab) => {
+                const word=tab==='wtd'?/\bwtd\b|week[\s_-]*to[\s_-]*date/i:/\bmtd\b|month[\s_-]*to[\s_-]*date/i;
+                const matching=reports.filter(item=>word.test(item.name));
+                return matching.length===1?matching[0]:reports.length===1?reports[0]:null;
+            };
+            const apply = (data,tab,report) => {
+                if(!['wtd','mtd'].includes(tab)||!report?.rows?.length||!report.totals)throw new Error('Choose a complete WTD or MTD report.');
+                const existing=data.metricsTracker?.[tab]||[],byName=new Map();
+                for(const row of existing){const key=nameKey(row);if(byName.has(key))throw new Error(`The dashboard has duplicate rows for ${row.firstName} ${row.lastName}. Correct those rows before importing.`);byName.set(key,row);}
+                const imported=new Set();
+                const updated=report.rows.map(row=>{const key=nameKey(row),saved=byName.get(key);imported.add(key);return {...saved,...row,id:saved?.id??(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2))};});
+                const kept=existing.filter(row=>!imported.has(nameKey(row)));
+                return {data:{...data,metricsTracker:{...data.metricsTracker,[tab]:sort([...updated,...kept]),[tab+'Totals']:{...report.totals}}},imported:updated.length,kept:kept.length};
+            };
+            return {read,parse,choose,apply,sort,nameKey};
+        })();
+
+        const FeedbackWorkbookImport = (()=>{
+            const text=value=>String(value??'').replace(/\u00a0/g,' ').trim();
+            const norm=value=>text(value).toLowerCase().replace(/[^a-z0-9]/g,'');
+            const aliases={date:['date','feedbackdate','surveydate','deliverydate','dayoftruckdatescheduled'],firstName:['firstname','driverfirstname','maxdriverfirstname','truckdriverfirstname'],lastName:['lastname','driverlastname','maxdriverlastname','truckdriverlastname'],type:['type','deliverytype','trucktype'],score:['score','surveyscore','rating','surveyavg'],orderNum:['order','ordernumber','ordernum','salesid','salesorder','salesordernumber'],comment:['comment','comments','feedback','feedbackcomments','surveycomments','surveycomment','customerfeedback'],completed:['surveycompleted','completed']};
+            const columns=row=>Object.fromEntries(Object.entries(aliases).map(([key,names])=>[key,row.map(norm).findIndex(value=>names.includes(value))]));
+            const required=['date','firstName','lastName','score','orderNum','comment'];
+            const header=rows=>rows.slice(0,50).findIndex(row=>{const c=columns(row);return c.firstName>=0&&c.lastName>=0&&c.score>=0&&c.orderNum>=0&&c.comment>=0;});
+            const dateKey=(value,date1904=false)=>{
+                const raw=text(value);let y,m,d,match;
+                if((match=/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(raw)))[,y,m,d]=match;
+                else if((match=/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2}|\d{4})(?:\s+.*)?$/.exec(raw))){[,m,d,y]=match;if(y.length===2)y=Number(y)+(Number(y)<70?2000:1900);}
+                else if((match=/^([a-z]+)\s+(\d{1,2}),?\s+(\d{4})(?:\s+.*)?$/i.exec(raw))){m=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(match[1].slice(0,3).toLowerCase())+1;d=match[2];y=match[3];}
+                else if(/^\d+(?:\.\d+)?$/.test(raw)&&Number(raw)>20000&&Number(raw)<80000)return new Date(Date.UTC(1899,11,30)+(Math.floor(Number(raw))+(date1904?1462:0))*86400000).toISOString().slice(0,10);
+                else return '';
+                const date=new Date(Date.UTC(+y,+m-1,+d));return date.getUTCFullYear()===+y&&date.getUTCMonth()===+m-1&&date.getUTCDate()===+d?date.toISOString().slice(0,10):'';
+            };
+            const sort=rows=>rows.map((row,index)=>({row,index,date:dateKey(row.date)})).sort((a,b)=>b.date.localeCompare(a.date)||a.index-b.index).map(item=>item.row);
+            const identity=row=>{
+                const date=dateKey(row.date),order=text(row.orderNum).normalize('NFKC').toUpperCase(),type=text(row.type).normalize('NFKC').toLowerCase().replace(/\s+/g,' ');
+                if(date&&order)return JSON.stringify([date,order,type]);
+                return JSON.stringify([date||text(row.date),order,type,text(row.firstName).toLowerCase(),text(row.lastName).toLowerCase(),Number(row.score),text(row.comment).replace(/\r\n/g,'\n')]);
+            };
+            const expand=table=>{
+                const rows=table.rows.map(row=>row.slice());
+                const column=letters=>Array.from(letters).reduce((sum,ch)=>sum*26+ch.charCodeAt(0)-64,0)-1;
+                for(const range of table.mergedCells||[]){
+                    const match=/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(range);if(!match)continue;
+                    const left=column(match[1]),right=column(match[3]),top=Number(match[2])-1,bottom=Number(match[4])-1;
+                    if(bottom>=50000||right>=256)throw new Error('The Feedback sheet contains a merged area that is too large.');
+                    const value=rows[top]?.[left];
+                    for(let r=top;r<=bottom;r++){if(!rows[r])rows[r]=[];for(let c=left;c<=right;c++)if(!text(rows[r][c]))rows[r][c]=value;}
+                }
+                return rows;
+            };
+            const parse=table=>{
+                const rows=expand(table),start=header(rows);if(start<0)return null;
+                const map=columns(rows[start]),missing=required.filter(key=>map[key]<0);if(missing.length)throw new Error('The Feedback sheet is missing: '+missing.join(', ')+'.');
+                for(const key of required)if(rows[start].filter(value=>aliases[key].includes(norm(value))).length!==1)throw new Error('The Feedback '+key+' column appears more than once.');
+                const reviews=[],seen=new Map(),carry={};let sourceDuplicates=0;
+                for(let index=start+1;index<rows.length;index++){
+                    const raw=rows[index];if(!raw.some(value=>text(value)))continue;
+                    if(header([raw])===0||['date','firstName','lastName'].some(key=>/^(?:grand\s+)?total$/i.test(text(raw[map[key]]))))continue;
+                    for(const field of ['date','firstName','lastName','type'])if(map[field]>=0&&text(raw[map[field]]))carry[field]=text(raw[map[field]]);
+                    if(map.completed>=0&&/^(?:no|false|0|not\s*completed)$/i.test(text(raw[map.completed])))continue;
+                    const orderNum=text(raw[map.orderNum]),comment=text(raw[map.comment]),scoreText=text(raw[map.score]);
+                    if(!orderNum&&!scoreText){if(comment&&reviews.length)reviews[reviews.length-1].comment+=(reviews[reviews.length-1].comment?'\n':'')+comment;continue;}
+                    for(const field of required){const detail=table.cellDetails?.[index]?.[map[field]];if(detail?.error||detail?.uncachedFormula)throw new Error('Row '+(index+1)+' contains an Excel error or an uncalculated formula. Open and save the report in Excel, then retry.');}
+                    const date=dateKey(carry.date,table.date1904);if(!date)throw new Error('Row '+(index+1)+' has an unreadable feedback date.');
+                    if(!carry.firstName||!carry.lastName)throw new Error('Row '+(index+1)+' has no complete driver name.');
+                    if(!orderNum)throw new Error('Row '+(index+1)+' is missing its order number.');
+                    if(!/^\d+(?:\.\d+)?$/.test(scoreText)||!Number.isFinite(Number(scoreText))||Number(scoreText)<0||Number(scoreText)>10)throw new Error('Row '+(index+1)+' must have a Feedback score from 0 to 10.');
+                    const review={date,firstName:carry.firstName,lastName:carry.lastName,type:carry.type||'',score:Number(scoreText),orderNum,comment},key=identity(review),existing=seen.get(key);
+                    if(existing){if(JSON.stringify(existing)!==JSON.stringify(review))throw new Error('The sheet has conflicting Feedback entries for one order, date, and type. Review those rows before importing.');sourceDuplicates++;continue;}
+                    seen.set(key,review);reviews.push(review);
+                }
+                if(!reviews.length)throw new Error('No completed Feedback reviews were found below the headers.');
+                return {sheet:table.name,rows:sort(reviews),sourceDuplicates};
+            };
+            const read=async file=>{
+                if(!/\.xlsx$/i.test(file?.name||''))throw new Error('Choose an Excel .xlsx Feedback report.');
+                if(!file.size||file.size>10*1024*1024)throw new Error('Choose a nonempty Excel report smaller than 10 MB.');
+                const tables=await FinalBillingCompanyFile.xlsx(await file.arrayBuffer(),{cellDetails:true,mergedCells:true}),reports=[];
+                for(const table of tables){if(table.hidden||header(table.rows)<0)continue;try{reports.push({name:table.name,report:parse(table)});}catch(error){reports.push({name:table.name,error:error.message});}}
+                if(!reports.length)throw new Error('No Feedback table was found. Include Date, Driver First Name, Driver Last Name, Type, Score, Order Number, and Feedback Comments.');
+                return reports;
+            };
+            const choose=reports=>{const matching=reports.filter(item=>/feedback|surveys?/i.test(item.name));return matching.length===1?matching[0]:reports.length===1?reports[0]:null;};
+            const apply=(data,report,{history=[],date}={})=>{
+                if(!dateKey(date))throw new Error('Choose a valid dashboard date before importing Feedback.');
+                if(!report?.rows?.length)throw new Error('Choose a Feedback report with review rows.');
+                const existing=data.metricsTracker?.feedback||[],seen=new Set(existing.map(identity));let previouslyRecorded=0,alreadyHere=0;
+                const older=new Set(history.filter(day=>day.date&&day.date<date).flatMap(day=>(day.metricsTracker?.feedback||[]).map(identity))),added=[];
+                for(const row of report.rows){
+                    const reviewDate=dateKey(row.date);if(!reviewDate||!text(row.firstName)||!text(row.lastName)||!Number.isFinite(Number(row.score))||Number(row.score)<0||Number(row.score)>10)throw new Error('A Feedback entry has an invalid date, driver, or score. Check the pasted rows.');
+                    const review={...row,date:reviewDate,score:Number(row.score)},key=identity(review);
+                    if(older.has(key)){previouslyRecorded++;continue;}
+                    if(seen.has(key)){alreadyHere++;continue;}
+                    const id=text(review.orderNum)&&key.length<2048?'feedback:'+encodeURIComponent(key):(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2));
+                    seen.add(key);added.push({...review,id});
+                }
+                return {data:{...data,metricsTracker:{...data.metricsTracker,feedback:sort([...existing,...added])}},imported:added.length,previouslyRecorded,alreadyHere,kept:existing.length,sourceDuplicates:report.sourceDuplicates||0};
+            };
+            const message=result=>`${result.imported} new Feedback review(s) added, newest dates first. ${result.previouslyRecorded} already recorded on earlier dashboard days and ${result.alreadyHere} already in this table were skipped. Select Save Changes to save.`;
+            return {read,parse,choose,apply,sort,dateKey,identity,expand,message};
+        })();
+
+        const numberRouteRows = rows => (Array.isArray(rows)?rows:[]).map((row,index)=>row.cnt===String(index+1)?row:{...row,cnt:String(index+1)});
+        const RouteWorkbookImport = (()=>{
+            const text=value=>String(value??'').replace(/\u00a0/g,' ').trim();
+            const norm=value=>text(value).toLowerCase().replace(/[^a-z0-9]/g,'');
+            const unit=value=>text(value).toUpperCase().replace(/\s+/g,'');
+            const aliases={serviceUnit:['routenumber','serviceunit','serviceunitnumber','su','sunumber'],route:['city','routename','route','tag'],door:['door','dockdoor'],date:['date','routedate'],stops:['stops','stps'],pcs:['pieces','pcs'],cube:['volumeft','volumeft3','cube','cubes','volume'],minutes:['totaltimemin','totaltimeminutes'],hos:['hos','hoursofservice'],mileage:['totaldistancemi','miles','mileage','mi']};
+            const columns=row=>Object.fromEntries(Object.entries(aliases).map(([key,names])=>[key,row.map(norm).findIndex(v=>names.includes(v))]));
+            const blank=value=>!text(value)||text(value)==='-';
+            const number=(value,label,integer=false)=>{const raw=text(value).replace(/,/g,'');if(!/^\d+(?:\.\d+)?$/.test(raw)||!Number.isFinite(Number(raw))||(integer&&!Number.isInteger(Number(raw))))throw new Error('Invalid '+label+': '+(text(value)||'blank')+'.');return Number(raw);};
+            const parse=table=>{
+                const rows=FeedbackWorkbookImport.expand(table),start=rows.findIndex(r=>{const c=columns(r);return c.serviceUnit>=0&&c.stops>=0&&c.pcs>=0&&c.cube>=0&&c.mileage>=0&&(c.minutes>=0||c.hos>=0);});
+                if(start<0)return null;
+                const map=columns(rows[start]),routes=[],seen=new Set();
+                for(let i=start+1;i<rows.length;i++){
+                    const raw=rows[i],serviceUnit=unit(raw[map.serviceUnit]);if(!serviceUnit||/^(?:grand\s*)?total$/i.test(serviceUnit))continue;
+                    if(columns(raw).serviceUnit>=0)continue;
+                    if(!/^[A-Z][A-Z0-9-]{1,35}$/.test(serviceUnit))throw new Error('Row '+(i+1)+' has an unreadable service unit.');
+                    if(seen.has(serviceUnit))throw new Error('The report lists '+serviceUnit+' more than once. Review the source before importing.');seen.add(serviceUnit);
+                    for(const field of ['serviceUnit','date','stops','pcs','cube','minutes','hos','mileage']){const detail=table.cellDetails?.[i]?.[map[field]];if(detail?.error||detail?.uncachedFormula)throw new Error('Row '+(i+1)+' contains an Excel error or an uncalculated formula.');}
+                    const date=map.date>=0?FeedbackWorkbookImport.dateKey(raw[map.date],table.date1904):'';
+                    if(map.date>=0&&!date)throw new Error('Row '+(i+1)+' has an unreadable route date.');
+                    const minutes=map.minutes>=0?number(raw[map.minutes],'total time in minutes',true):null;
+                    const hos=minutes!==null?Math.floor(minutes/60)+':'+String(minutes%60).padStart(2,'0'):formatRouteHOS(raw[map.hos]);
+                    if(!hos||parseRouteHOSMinutes(hos)===null)throw new Error('Row '+(i+1)+' has an unreadable HOS duration.');
+                    const route=map.route>=0&&!blank(raw[map.route])?text(raw[map.route]):'';
+                    routes.push({serviceUnit,date,door:map.door>=0&&!blank(raw[map.door])?text(raw[map.door]):'',route,stops:String(number(raw[map.stops],'stops',true)),pcs:String(number(raw[map.pcs],'pieces',true)),cube:roundRouteCube(String(number(raw[map.cube],'Cube'))),hos,mileage:String(number(raw[map.mileage],'miles'))});
+                }
+                if(!routes.length)throw new Error('No route detail rows were found.');
+                return {name:table.name,rows:routes};
+            };
+            const tables=async file=>{
+                if(!file?.size||file.size>10*1024*1024)throw new Error('Choose a nonempty report smaller than 10 MB.');
+                if(/\.csv$/i.test(file.name))return [{name:file.name,rows:WeeklyBilling.csvRows(await file.text())}];
+                if(/\.xlsx$/i.test(file.name))return FinalBillingCompanyFile.xlsx(await file.arrayBuffer(),{cellDetails:true,mergedCells:true});
+                throw new Error('Choose an Excel .xlsx or CSV route report.');
+            };
+            const read=async file=>{
+                const reports=(await tables(file)).filter(t=>!t.hidden).map(parse).filter(Boolean);
+                if(reports.length!==1)throw new Error(reports.length?'More than one route report was found. Export the required worksheet separately.':'No route report was found. Include Route Number, Date, Stops, Pieces, Volume, Total Time and Total Distance.');
+                return reports[0];
+            };
+            const parseAssignments=table=>{
+                const rows=FeedbackWorkbookImport.expand(table),result=[],seen=new Set();let map=null;
+                for(const raw of rows){const c=columns(raw);if(c.serviceUnit>=0&&c.route>=0&&c.door>=0){map=c;continue;}if(!map)continue;
+                    const serviceUnit=unit(raw[map.serviceUnit]);if(!serviceUnit||!/^([A-Z]+)\d+-\d+$/.test(serviceUnit))continue;
+                    const route=blank(raw[map.route])?'':text(raw[map.route]),door=blank(raw[map.door])?'':text(raw[map.door]);
+                    if(!route&&!door)continue;if(seen.has(serviceUnit))throw new Error('The routing sheet lists '+serviceUnit+' more than once.');seen.add(serviceUnit);
+                    result.push({serviceUnit,route,door});
+                }
+                return result;
+            };
+            const readAssignments=async file=>{const results=(await tables(file)).filter(t=>!t.hidden).map(parseAssignments).filter(r=>r.length);if(results.length!==1)throw new Error('Choose one routing worksheet with SU, City or Route, and Door headers.');return {rows:results[0],image:false};};
+            const combine=(report,assignments,date)=>{
+                if(!FeedbackWorkbookImport.dateKey(date))throw new Error('Choose the dashboard route date first.');
+                if(!report?.rows?.length)throw new Error('Choose the route report first.');
+                const dates=[...new Set(report.rows.map(r=>r.date).filter(Boolean))];
+                if(dates.some(d=>d!==date))throw new Error('This report is for '+dates.join(', ')+'. Select that dashboard date before importing.');
+                const byUnit=new Map((assignments?.rows||[]).map(r=>[unit(r.serviceUnit),r])),rows=report.rows.map(r=>{const a=byUnit.get(unit(r.serviceUnit));return {...r,door:a?a.door:r.door,route:a?.route||r.route};});
+                return {rows,warnings:[...(!dates.length?['The report has no date. Check the selected dashboard date.']:[]),...(assignments?.missing?.length?['Screenshot did not match: '+assignments.missing.join(', ')+'. Fill these doors and route names in the preview.']:[]),...(rows.some(r=>!r.door)?[rows.filter(r=>!r.door).length+' route(s) have no door. Leave blank or complete them in the preview.']:[]),...(rows.some(r=>!r.route)?[rows.filter(r=>!r.route).length+' route(s) have no route name. Add a routing screenshot or fill them in the preview.']:[]),...(assignments?.image?['Check the doors and names read from the screenshot before adding the routes.']:[])]};
+            };
+            const apply=(existing,report,date)=>{
+                const prepared=combine(report,null,date),seen=new Set((existing||[]).map(r=>unit(r.serviceUnit)).filter(Boolean)),added=[];let skipped=0;
+                for(const r of prepared.rows){if(seen.has(unit(r.serviceUnit))){skipped++;continue;}if(parseRouteHOSMinutes(r.hos)===null)throw new Error('Check HOS for '+r.serviceUnit+'. Use hours:minutes.');seen.add(unit(r.serviceUnit));added.push({id:crypto.randomUUID(),cnt:'',door:text(r.door),serviceUnit:unit(r.serviceUnit),route:text(r.route),contractor:'',driver:'',helper:'',stops:String(number(r.stops,'stops',true)),pcs:String(number(r.pcs,'pieces',true)),cube:roundRouteCube(String(number(r.cube,'Cube'))),hos:formatRouteHOS(r.hos),mileage:String(number(r.mileage,'miles')),uniform:false,uniformNote:'',timeOffDock:'',returned:'',checkedIn:false});}
+                return {rows:numberRouteRows([...(existing||[]),...added]),imported:added.length,skipped};
+            };
+            return {read,readAssignments,parse,parseAssignments,combine,apply,unit};
+        })();
+
+        const RoutePictureImport = (()=>{
+            let library=null;
+            const load=()=>{
+                if(window.Tesseract?.createWorker)return Promise.resolve(window.Tesseract);
+                if(library)return library;
+                library=new Promise((resolve,reject)=>{const script=document.createElement('script');let timer=setTimeout(()=>{script.remove();library=null;reject(new Error('The screenshot reader could not load. Retry or use the routing Excel sheet.'));},20000);script.src='https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';script.crossOrigin='anonymous';script.onload=()=>{clearTimeout(timer);resolve(window.Tesseract);};script.onerror=()=>{clearTimeout(timer);script.remove();library=null;reject(new Error('The screenshot reader could not load. Retry or use the routing Excel sheet.'));};document.head.appendChild(script);});return library;
+            };
+            const groups=values=>values.reduce((out,value)=>{if(!out.length||value>out[out.length-1].at(-1)+1)out.push([value]);else out.at(-1).push(value);return out;},[]).map(group=>(group[0]+group.at(-1))/2);
+            const prepare=async file=>{
+                if(!/^image\/(?:png|jpeg|webp)$/.test(file.type)||!file.size||file.size>10*1024*1024)throw new Error('Choose a PNG, JPG or WebP routing screenshot smaller than 10 MB.');
+                const bitmap=await createImageBitmap(file),w=bitmap.width,h=bitmap.height;if(w*h>12000000){bitmap.close();throw new Error('Crop the screenshot to the routing table before importing.');}
+                const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='white';ctx.fillRect(0,0,w,h);ctx.drawImage(bitmap,0,0);bitmap.close();const pixels=ctx.getImageData(0,0,w,h),black=new Uint8Array(w*h),horizontal=[],vertical=[];
+                for(let y=0;y<h;y++){let sum=0;for(let x=0;x<w;x++){const p=(y*w+x)*4,b=Math.max(pixels.data[p],pixels.data[p+1],pixels.data[p+2])<140;black[y*w+x]=b?1:0;if(b)sum++;}if(sum>w*.65)horizontal.push(y);}
+                for(let x=0;x<w;x++){let longest=0,run=0;for(let y=0;y<h;y++){run=black[y*w+x]?run+1:0;longest=Math.max(longest,run);}if(longest>h*.35)vertical.push(x);}
+                for(const y of horizontal)for(let x=0;x<w;x++)black[y*w+x]=0;
+                for(const x of vertical)for(let y=0;y<h;y++)black[y*w+x]=0;
+                for(let p=0;p<black.length;p++){const value=black[p]?0:255,at=p*4;pixels.data[at]=pixels.data[at+1]=pixels.data[at+2]=value;pixels.data[at+3]=255;}ctx.putImageData(pixels,0,0);
+                const scale=Math.min(3,Math.max(1,Math.floor(1800/w))),large=document.createElement('canvas');large.width=w*scale;large.height=h*scale;large.getContext('2d').drawImage(canvas,0,0,large.width,large.height);canvas.width=canvas.height=0;
+                const blob=await new Promise(resolve=>large.toBlob(resolve,'image/png'));large.width=large.height=0;if(!blob)throw new Error('This screenshot could not be prepared.');
+                return {blob,scale,width:w,height:h,vertical:groups(vertical),horizontal:groups(horizontal)};
+            };
+            const parse=(data,layout,knownUnits)=>{
+                const words=(data.blocks||[]).flatMap(b=>(b.paragraphs||[]).flatMap(p=>(p.lines||[]).flatMap(l=>l.words||[]))).filter(w=>w.text?.trim()).map(w=>({text:w.text.trim(),confidence:w.confidence,x0:w.bbox.x0/layout.scale,x1:w.bbox.x1/layout.scale,y0:w.bbox.y0/layout.scale,y1:w.bbox.y1/layout.scale}));
+                const header=name=>words.find(w=>w.text.replace(/[^a-z]/ig,'').toLowerCase()===name&&w.y0<layout.height*.20),suHeader=header('su'),cityHeader=header('city')||header('route'),doorHeader=header('door');
+                if(!suHeader||!cityHeader||!doorHeader||layout.vertical.length<3||layout.horizontal.length<3)throw new Error('Use a clear screenshot with the SU, City and Door headers and table lines visible, or import the routing Excel sheet.');
+                const limits=word=>{const x=(word.x0+word.x1)/2,edges=[0,...layout.vertical,layout.width];return {left:[...edges].reverse().find(v=>v<x)??0,right:edges.find(v=>v>x)??layout.width};},suCol=limits(suHeader),cityCol=limits(cityHeader),doorCol=limits(doorHeader);
+                const prefixes=[...new Set(knownUnits.map(value=>/^([A-Z]+)\d/.exec(value)?.[1]).filter(Boolean))];
+                const normalize=value=>{const raw=String(value).toUpperCase().replace(/\s+/g,'');for(const prefix of prefixes){if(!raw.startsWith(prefix))continue;const m=raw.slice(prefix.length).match(/^([0-9OIL]{1,4})[-–—]([0-9OIL]{1,3})$/);if(m)return [prefix,...m.slice(1).map(v=>Number(v.replace(/O/g,'0').replace(/[IL]/g,'1')))].join('|');}return '';};
+                const keys=new Map(knownUnits.map(value=>[normalize(value),value])),seen=new Set(),rows=[];
+                for(const anchor of words.filter(w=>(w.x0+w.x1)/2>suCol.left&&(w.x0+w.x1)/2<suCol.right)){
+                    const serviceUnit=keys.get(normalize(anchor.text));if(!serviceUnit)continue;if(seen.has(serviceUnit))throw new Error('The screenshot has an ambiguous match for '+serviceUnit+'. Use the routing sheet instead.');seen.add(serviceUnit);
+                    const cy=(anchor.y0+anchor.y1)/2,top=[...layout.horizontal].reverse().find(y=>y<cy)??0,bottom=layout.horizontal.find(y=>y>cy)??layout.height;
+                    const cell=col=>words.filter(w=>{const x=(w.x0+w.x1)/2,y=(w.y0+w.y1)/2;return x>col.left&&x<col.right&&y>top&&y<bottom;}).sort((a,b)=>Math.abs(a.y0-b.y0)>6?a.y0-b.y0:a.x0-b.x0);
+                    const city=cell(cityCol).map(w=>w.text).join(' ').replace(/\s+/g,' ').trim(),doorWords=cell(doorCol),door=doorWords.map(w=>w.text).join('').trim();
+                    rows.push({serviceUnit,route:city,door:/^\d{1,4}$/.test(door)?door:''});
+                }
+                if(!rows.length)throw new Error('No screenshot service units matched the route report. Check that both files are for the same location and date.');
+                return {rows,image:true,matched:rows.length,missing:knownUnits.filter(u=>!seen.has(u))};
+            };
+            const read=async(file,knownUnits,{signal,onProgress=()=>{}}={})=>{
+                let worker=null;const check=()=>{if(signal?.aborted)throw new Error('The screenshot import was canceled.');},cancel=()=>worker?.terminate();signal?.addEventListener('abort',cancel,{once:true});
+                try{
+                    check();onProgress('Preparing screenshot…');const prepared=await prepare(file);check();const Tesseract=await load();check();onProgress('Loading screenshot reader…');
+                    worker=await Tesseract.createWorker('eng',1,{workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/worker.min.js',corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@6.0.0',logger:m=>{if(m.status==='recognizing text')onProgress('Reading screenshot '+Math.round(m.progress*100)+'%…');}});check();await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
+                    const {data}=await worker.recognize(prepared.blob,{}, {text:true,blocks:true});check();let result=parse(data,prepared,knownUnits);
+                    // Re-read only the SU column with its permitted characters when the full table misses a unit.
+                    if(result.missing.length){
+                        const flatten=value=>(value.blocks||[]).flatMap(b=>(b.paragraphs||[]).flatMap(p=>(p.lines||[]).flatMap(l=>l.words||[]))),words=flatten(data),header=words.find(w=>w.text.toLowerCase()==='su'),cx=header?(header.bbox.x0+header.bbox.x1)/2/prepared.scale:0,left=[...prepared.vertical].reverse().find(v=>v<cx),right=prepared.vertical.find(v=>v>cx);
+                        if(header&&left!==undefined&&right!==undefined){
+                            const top=header.bbox.y1+3,letters=[...new Set(knownUnits.join('').replace(/[^A-Z]/g,''))].join('');onProgress('Checking service unit numbers…');await worker.setParameters({tessedit_char_whitelist:letters+'0123456789-'});
+                            const reread=await worker.recognize(prepared.blob,{rectangle:{left:Math.round(left*prepared.scale)+2,top,width:Math.round((right-left)*prepared.scale)-4,height:prepared.height*prepared.scale-top}},{text:true,blocks:true});check();
+                            const retained=words.filter(w=>w.bbox.y0<top||(w.bbox.x0+w.bbox.x1)/2<left*prepared.scale||(w.bbox.x0+w.bbox.x1)/2>right*prepared.scale),merged={blocks:[{paragraphs:[{lines:[{words:[...retained,...flatten(reread.data)]}]}]}]},second=parse(merged,prepared,knownUnits);if(second.matched>=result.matched)result=second;
+                        }
+                    }
+                    return result;
+                }finally{signal?.removeEventListener('abort',cancel);if(worker)await worker.terminate().catch(()=>{});}
+            };
+            return {read,parse};
+        })();
+
+        const RouteFileImport = ({date,locationLabel,existingRows,onImport,disabled=false})=>{
+            const [open,setOpen]=useState(false),[report,setReport]=useState(null),[assignments,setAssignments]=useState(null),[draft,setDraft]=useState(null),[busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState('');
+            const summaryInput=useRef(null),routingInput=useRef(null),card=useRef(null),request=useRef(0),alive=useRef(true),abort=useRef(null),latest=useRef(null);
+            latest.current={disabled,onImport};
+            useEffect(()=>{alive.current=true;const prevent=event=>{if(isMetricsFileDrag(event.dataTransfer))event.preventDefault();};document.addEventListener('dragover',prevent);document.addEventListener('drop',prevent);return()=>{alive.current=false;request.current++;abort.current?.abort();document.removeEventListener('dragover',prevent);document.removeEventListener('drop',prevent);};},[]);
+            const prepared=(()=>{if(!report)return null;try{return RouteWorkbookImport.combine(report,assignments,date);}catch(e){return {error:e.message};}})();
+            const rows=draft||prepared?.rows||[],seen=new Set((existingRows||[]).map(r=>RouteWorkbookImport.unit(r.serviceUnit))),newRows=rows.filter(r=>!seen.has(RouteWorkbookImport.unit(r.serviceUnit))),skipped=rows.length-newRows.length;
+            const load=async(kind,files)=>{
+                if(latest.current.disabled||busy)return;setError('');setNotice('');
+                if(files.length!==1){setError('Choose one file at a time.');return;}
+                if(kind==='routing'&&!report){setError('Choose the route report first so the service units can be matched.');return;}
+                const token=++request.current;abort.current?.abort();abort.current=new AbortController();setBusy(kind==='summary'?'Reading route report…':'Reading routing sheet…');
+                try{const file=files[0],value=kind==='summary'?await RouteWorkbookImport.read(file):/^image\//.test(file.type)?await RoutePictureImport.read(file,report.rows.map(r=>r.serviceUnit),{signal:abort.current.signal,onProgress:message=>{if(alive.current&&token===request.current)setBusy(message);}}):await RouteWorkbookImport.readAssignments(file);
+                    if(!alive.current||token!==request.current||latest.current.disabled)return;
+                    if(kind==='summary'){setReport({...value,fileName:file.name});setAssignments(null);}else setAssignments({...value,fileName:file.name});setDraft(null);
+                }catch(e){if(alive.current&&token===request.current)setError(e.message||'This route file could not be read.');}
+                finally{if(alive.current&&token===request.current)setBusy('');}
+            };
+            const drop=kind=>event=>{event.preventDefault();event.stopPropagation();if(!busy&&!disabled)load(kind,getDroppedMetricsFiles(event.dataTransfer));};
+            const drag=event=>{if(isMetricsFileDrag(event.dataTransfer)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect=disabled||busy?'none':'copy';}};
+            const edit=(unit,field,value)=>setDraft(rows.map(row=>row.serviceUnit===unit?{...row,[field]:value}:row));
+            const add=()=>{try{if(disabled||busy||prepared?.error)return;const result=latest.current.onImport({name:report.name,rows});setNotice(result.imported+' route(s) added. '+result.skipped+' already in this table were skipped. Select Save Changes to save.');setReport(null);setAssignments(null);setDraft(null);setError('');}catch(e){setError(e.message);}};
+            const button='px-3 py-2 rounded-lg border border-indigo-500/40 text-indigo-300 text-xs font-bold hover:bg-indigo-500/10 disabled:opacity-50';
+            return <section ref={card} aria-label="Route file import" className="mb-4 pb-4 border-b border-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-2"><div className="text-xs font-bold uppercase tracking-wider text-indigo-300">Import route files</div><button type="button" aria-expanded={open} onClick={()=>setOpen(v=>!v)} className={button}>{open?'Hide import':'Import routes'}</button></div>
+                {open&&<div className="mt-3 space-y-3">
+                    <p className="text-xs text-slate-300">{locationLabel} · {date}. Review the routes before adding them. Existing table columns stay the same.</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                        <div onDragOver={drag} onDrop={drop('summary')} className="rounded-lg border-2 border-dashed border-slate-600 bg-slate-900/40 p-4" aria-label="Drop route report"><div className="text-sm font-semibold text-slate-200">1. Route report</div><p className="text-xs text-slate-400 my-2">Drop the route summary CSV or Excel file here.</p><button type="button" className={button} disabled={disabled||!!busy} onClick={()=>summaryInput.current?.click()}>Choose route report</button><input ref={summaryInput} type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" aria-label="Route report file" className="hidden" onChange={e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(files.length)load('summary',files);}}/>{report&&<p className="text-xs text-emerald-300 mt-2">{report.rows.length} routes read · {report.fileName}</p>}</div>
+                        <div onDragOver={drag} onDrop={drop('routing')} className="rounded-lg border-2 border-dashed border-slate-600 bg-slate-900/40 p-4" aria-label="Drop routing screenshot"><div className="text-sm font-semibold text-slate-200">2. Doors and route names</div><p className="text-xs text-slate-400 my-2">Drop the routing screenshot or routing Excel sheet here. Match by SU.</p><button type="button" className={button} disabled={disabled||!!busy||!report} onClick={()=>routingInput.current?.click()}>Choose routing screenshot or sheet</button><input ref={routingInput} type="file" accept=".png,.jpg,.jpeg,.webp,.csv,.xlsx,image/png,image/jpeg,image/webp" aria-label="Routing screenshot or sheet file" className="hidden" onChange={e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(files.length)load('routing',files);}}/>{assignments&&<p className="text-xs text-emerald-300 mt-2">{assignments.rows.length} service units read · {assignments.fileName}</p>}</div>
+                    </div>
+                    {busy&&<p role="status" className="text-xs text-indigo-300">{busy}</p>}
+                    {prepared?.error&&<p role="alert" className="text-xs text-rose-300">{prepared.error}</p>}
+                    {prepared&&!prepared.error&&<>
+                        <div className="text-sm font-semibold text-slate-200">{newRows.length} routes to add · {skipped} already in the table</div>
+                        <p className="text-xs text-slate-400">Count numbers automatically. Contractor, Driver and Helper start blank.</p>
+                        {prepared.warnings.map(message=><p className="text-xs text-amber-300" key={message}>{message}</p>)}
+                        <div className="overflow-auto max-h-96 rounded-lg border border-slate-600"><table className="w-full min-w-[1100px] text-xs text-slate-200"><thead><tr>{ROUTE_COLUMNS.map(col=><th className="bg-slate-900 p-2 text-left sticky top-0" key={col.key}>{col.label}</th>)}</tr></thead><tbody>{newRows.map((row,index)=><tr key={row.serviceUnit} className="bg-slate-800 border-t border-slate-700">{ROUTE_COLUMNS.map(col=><td key={col.key} className="p-1 border-r border-slate-700">{col.key==='cnt'?String((existingRows||[]).length+index+1):['door','route','stops','pcs','cube','hos','mileage'].includes(col.key)?<input aria-label={'Preview '+col.label+' '+row.serviceUnit} className="w-full min-w-[4rem] bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-100" value={row[col.key]??''} onChange={e=>edit(row.serviceUnit,col.key,e.target.value)}/>:col.key==='serviceUnit'?row.serviceUnit:''}</td>)}</tr>)}</tbody></table></div>
+                        <div className="flex gap-2"><button type="button" disabled={disabled||!!busy||!newRows.length} className={button} onClick={add}>Add {newRows.length} routes to table</button><button type="button" disabled={!!busy} className={button} onClick={()=>{request.current++;setReport(null);setAssignments(null);setDraft(null);setError('');}}>Cancel import</button></div>
+                    </>}
+                </div>}
+                {notice&&<p role="status" className="text-xs text-emerald-300 mt-2">{notice}</p>}
+                {error&&<p role="alert" className="text-xs text-rose-300 mt-2">{error}</p>}
+            </section>;
+        };
+
+        const getDroppedMetricsFiles = transfer => {
+            const files=Array.from(transfer?.files||[]);
+            if(files.length)return files;
+            return Array.from(transfer?.items||[]).filter(item=>item.kind==='file').map(item=>{
+                try{return item.getAsFile?.()||null;}catch{return null;}
+            }).filter(Boolean);
+        };
+        const isMetricsFileDrag = transfer => {
+            const types=typeof transfer?.types==='string'?[transfer.types]:Array.from(transfer?.types||[]);
+            return types.some(type=>String(type).toLowerCase()==='files'||String(type).toLowerCase()==='downloadurl')
+                ||Array.from(transfer?.items||[]).some(item=>item.kind==='file')||Boolean(transfer?.files?.length);
+        };
+        const MetricsDropDetails = (()=>{
+            const inspect=transfer=>{
+                const files=Array.from(transfer?.files||[]),items=Array.from(transfer?.items||[]);
+                const detail={files:files.length,usable:files.filter(file=>file.size>0).length,fileItems:items.filter(item=>item.kind==='file').length,strings:items.filter(item=>item.kind==='string').length,reference:false,download:false,preview:false};
+                const types=typeof transfer?.types==='string'?[transfer.types]:Array.from(transfer?.types||[]);
+                const read=type=>{try{return transfer?.getData?.(type)||'';}catch{return '';}};
+                // Keep only classifications. Never retain names, mailbox details, IDs, or URLs.
+                const visit=(value,depth=0)=>{
+                    if(!value||typeof value!=='object'||depth>5)return;
+                    if(Array.isArray(value)){value.slice(0,16).forEach(item=>visit(item,depth+1));return;}
+                    const own=key=>Object.prototype.hasOwnProperty.call(value,key)?value[key]:undefined;
+                    const attachment=own('attachmentFile');
+                    if(attachment&&typeof attachment==='object'&&typeof attachment.attachmentItemId==='string')detail.reference=true;
+                    if(own('itemType')==='attachment'&&(own('attachmentId')||own('attachmentItemId')||attachment))detail.reference=true;
+                    for(const key of ['data','items','attachments','attachment','item'])visit(own(key),depth+1);
+                };
+                const readable=[...new Set([...types,'text/plain','application/json','DownloadURL','downloadurl'])].slice(0,36);
+                for(const type of readable){
+                    const kind=String(type).toLowerCase();
+                    if(kind==='text/html'||kind==='image/svg+xml'||kind.startsWith('image/'))detail.preview=true;
+                    if(kind==='files')continue;
+                    const raw=read(type);
+                    if(kind==='downloadurl'&&raw)detail.download=true;
+                    if(!raw||raw.length>128*1024)continue;
+                    const text=raw.trim();
+                    if(text[0]==='{'||text[0]==='[')try{visit(JSON.parse(text));}catch{}
+                }
+                return detail;
+            };
+            const explain=detail=>{
+                const start='No Excel file contents were received. ';
+                if(detail?.reference)return start+'Transfer check: Outlook supplied an attachment reference, but no readable workbook. No data was changed.';
+                if(detail?.fileItems||detail?.files)return start+'Transfer check: a file was offered, but Chrome could not read its contents. No data was changed.';
+                if(detail?.preview)return start+'Transfer check: preview or formatted text was supplied, but no Excel file. No data was changed.';
+                if(detail?.strings||detail?.download)return start+'Transfer check: text or a reference was supplied, but no Excel file contents. No data was changed.';
+                return start+'Transfer check: the drop arrived empty, with no file or attachment reference. No data was changed.';
+            };
+            return {inspect,explain};
+        })();
+
+        const MetricsDropTransfer = (()=>{
+            const maxBytes=10*1024*1024;
+            const unavailable='Outlook sent attachment details, but the Excel contents were not available to Chrome. No data was changed.';
+            const check=signal=>{if(signal?.aborted)throw new Error('The import was canceled.');};
+            const fileName=value=>{
+                let name=String(value||'');
+                try{name=decodeURIComponent(name);}catch{}
+                if(!name||name.length>255||/[\\/\x00-\x1f]/.test(name)||!/^.+\.xlsx$/i.test(name))throw new Error('Drop one .xlsx Excel report.');
+                return name;
+            };
+            const fileFromBlob=(blob,name)=>{
+                if(!blob?.size)throw new Error(unavailable);
+                if(blob.size>maxBytes)throw new Error('The Excel report must be 10 MB or smaller.');
+                return new File([blob],name,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+            };
+            const readDownload=async(download,signal)=>{
+                check(signal);
+                const name=fileName(download.name),url=new URL(download.url);
+                if(url.protocol==='data:'){
+                    const match=/^data:(application\/(?:vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|octet-stream));base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(download.url);
+                    if(!match)throw new Error(unavailable);
+                    if(match[2].length>Math.ceil(maxBytes/3)*4+4096)throw new Error('The Excel report must be 10 MB or smaller.');
+                    const raw=atob(match[2].replace(/[\r\n]/g,''));
+                    check(signal);
+                    return fileFromBlob(new Blob([Uint8Array.from(raw,c=>c.charCodeAt(0))]),name);
+                }
+                // Only the explicitly dropped Microsoft attachment URL may be read.
+                // Browser CORS, sign-in boundaries, and redirect restrictions stay in force.
+                const host=url.hostname.toLowerCase();
+                const microsoft=host==='outlook.office.com'||host==='outlook.office365.com'||host==='outlook.live.com'||host==='attachments.office.net'||host.endsWith('.attachments.office.net');
+                if(url.protocol!=='https:'||!microsoft||url.username||url.password||(url.port&&url.port!=='443'))throw new Error(unavailable);
+                const response=await fetch(url.href,{method:'GET',mode:'cors',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',cache:'no-store',signal});
+                if(!response.ok||response.type==='opaque')throw new Error(unavailable);
+                if(Number(response.headers.get('content-length'))>maxBytes)throw new Error('The Excel report must be 10 MB or smaller.');
+                if(/(?:text\/html|application\/json)/i.test(response.headers.get('content-type')||''))throw new Error(unavailable);
+                let blob;
+                if(response.body?.getReader){
+                    const reader=response.body.getReader(),parts=[];let bytes=0,done=false;
+                    try{
+                        while(true){check(signal);const part=await reader.read();if(part.done){done=true;break;}bytes+=part.value.byteLength;if(bytes>maxBytes)throw new Error('The Excel report must be 10 MB or smaller.');parts.push(part.value);}
+                        blob=new Blob(parts);
+                    }finally{if(!done)try{await reader.cancel();}catch{}reader.releaseLock();}
+                }else blob=await response.blob();
+                check(signal);
+                return fileFromBlob(blob,name);
+            };
+            const receive=(transfer,signal)=>{
+                const files=getDroppedMetricsFiles(transfer);
+                if(files.length>1||files.some(file=>file.size>0))return files;
+                // Capture every handle before leaving the native drop event.
+                const reads=[];let folder=false;
+                for(const item of Array.from(transfer?.items||[])){
+                    if(item.kind!=='file')continue;
+                    let handle=null,entry=null;
+                    try{if(item.getAsFileSystemHandle)handle=Promise.resolve(item.getAsFileSystemHandle()).then(value=>{if(value?.kind==='directory'){folder=true;return null;}return value?.kind==='file'?value.getFile():null;}).catch(()=>null);}catch{}
+                    try{const value=(item.getAsEntry||item.webkitGetAsEntry)?.call(item);if(value?.isDirectory)folder=true;else if(value?.isFile)entry=new Promise(resolve=>{value.file(resolve,()=>resolve(null));}).catch(()=>null);}catch{}
+                    if(handle||entry)reads.push(Promise.any([handle,entry].filter(Boolean).map(value=>Promise.resolve(value).then(file=>{if(file?.size>0)return file;throw new Error('No file contents');}))).catch(()=>null));
+                }
+                let raw='';
+                try{raw=transfer?.getData?.('DownloadURL')||transfer?.getData?.('downloadurl')||'';}catch{}
+                const match=/^([^:\r\n]*):([^:\r\n]+):([\s\S]+)$/.exec(raw),download=match?{name:match[2],url:match[3]}:null;
+                if(!reads.length&&!download&&!folder)return files;
+                return (async()=>{
+                    const resolved=(await Promise.all(reads)).filter(Boolean);check(signal);
+                    if(folder)throw new Error('Drop one Excel file, not a folder.');
+                    if(resolved.length)return resolved;
+                    if(download)return [await readDownload(download,signal)];
+                    return files;
+                })().catch(error=>{if(error.message==='The Excel report must be 10 MB or smaller.'||error.message==='Drop one .xlsx Excel report.'||error.message==='Drop one Excel file, not a folder.'||signal?.aborted)throw error;throw new Error(unavailable);});
+            };
+            return {receive};
+        })();
+
+        const MetricsExcelImport = ({tab,locationLabel,dateLabel,onImport,disabled=false}) => {
+            const importer=tab==='feedback'?FeedbackWorkbookImport:MetricsWorkbookImport;
+            const fileInput=useRef(null),dropArea=useRef(null),request=useRef(0),mounted=useRef(true),latest=useRef(null),loading=useRef(false),dragWatchdog=useRef(null),attachmentAbort=useRef(null);
+            latest.current={onImport,disabled};
+            const [busy,setBusy]=useState(false),[over,setOver]=useState(false),[reports,setReports]=useState([]),[message,setMessage]=useState(''),[error,setError]=useState('');
+            const apply = item => {
+                if(latest.current.disabled)return;
+                if(item.error)throw new Error(item.error);
+                const result=latest.current.onImport(item.report);
+                setReports([]);setError('');
+                setMessage(tab==='feedback'?FeedbackWorkbookImport.message(result):`${result.imported} drivers imported into ${tab.toUpperCase()} and sorted. Original Total figures kept. ${result.kept?result.kept+' existing driver(s) not in this sheet were kept. ':''}Select Save Changes to save.`);
+            };
+            const resetDropFeedback = () => {clearTimeout(dragWatchdog.current);dragWatchdog.current=null;setOver(false);};
+            const load = async (files,details=null) => {
+                resetDropFeedback();
+                if(loading.current||latest.current.disabled)return;
+                setError('');setMessage('');setReports([]);
+                const token=++request.current;loading.current=true;setBusy(true);let timer=null;
+                try{
+                    if(files&&typeof files.then==='function')files=await Promise.race([files,new Promise((_,reject)=>{timer=setTimeout(()=>{attachmentAbort.current?.abort();reject(new Error('Outlook did not finish transferring the attachment. No data was changed.'));},15000);})]);
+                    if(!mounted.current||token!==request.current||latest.current.disabled)return;
+                    if(!files?.length)throw new Error(MetricsDropDetails.explain(details));
+                    if(files.length!==1)throw new Error('Choose one Excel report at a time.');
+                    if(files[0].size===0)throw new Error('The attachment arrived without readable contents. No data was changed.');
+                    const items=await importer.read(files[0]);
+                    if(!mounted.current||token!==request.current||latest.current.disabled)return;
+                    const selected=importer.choose(items,tab);
+                    if(selected)apply(selected);else{setReports(items);setMessage('Choose the worksheet to import.');}
+                }catch(failure){if(mounted.current&&token===request.current)setError(failure.message||'This Excel file could not be read.');}
+                finally{clearTimeout(timer);attachmentAbort.current?.abort();attachmentAbort.current=null;loading.current=false;if(mounted.current&&token===request.current)setBusy(false);}
+            };
+            useEffect(()=>{
+                mounted.current=true;
+                // Native listeners cover the whole import/paste card, including text and buttons.
+                // Accept drag-over before the browser reveals file details in protected drag mode.
+                const card=dropArea.current?.parentElement;
+                if(!card)return()=>{mounted.current=false;request.current++;};
+                let internal=false;
+                const start=()=>{internal=true;};
+                const end=()=>{internal=false;resetDropFeedback();};
+                const overCard=event=>{
+                    if(internal)return;
+                    event.preventDefault();event.stopPropagation();
+                    const blocked=latest.current.disabled||loading.current;
+                    if(event.dataTransfer)event.dataTransfer.dropEffect=blocked?'none':'copy';
+                    if(!blocked){
+                        setOver(true);clearTimeout(dragWatchdog.current);
+                        dragWatchdog.current=setTimeout(()=>{
+                            dragWatchdog.current=null;
+                            if(!mounted.current||loading.current)return;
+                            setOver(false);setError('No file was received from that drag. Chrome did not receive the attachment contents. No data was changed.');
+                        },2000);
+                    }
+                };
+                const leave=event=>{const target=event.relatedTarget;if(!target||typeof target.nodeType!=='number'||!card.contains(target))resetDropFeedback();};
+                const drop=event=>{
+                    if(internal)return;
+                    event.preventDefault();event.stopPropagation();resetDropFeedback();
+                    if(latest.current.disabled||loading.current)return;
+                    attachmentAbort.current=new AbortController();
+                    // Capture files, handles and attachment references during the drop event.
+                    const details=MetricsDropDetails.inspect(event.dataTransfer);
+                    const files=MetricsDropTransfer.receive(event.dataTransfer,attachmentAbort.current.signal);
+                    load(files,details);
+                };
+                const preventFileNavigation=event=>{if(isMetricsFileDrag(event.dataTransfer))event.preventDefault();};
+                const outsideDrop=event=>{
+                    if(event.defaultPrevented||!isMetricsFileDrag(event.dataTransfer))return;
+                    event.preventDefault();resetDropFeedback();
+                    setError('Drop the Excel report onto the import card above the metrics table.');
+                };
+                card.addEventListener('dragstart',start);card.addEventListener('dragenter',overCard);card.addEventListener('dragover',overCard);card.addEventListener('dragleave',leave);card.addEventListener('drop',drop);
+                window.addEventListener('dragend',end);document.addEventListener('dragover',preventFileNavigation);document.addEventListener('drop',outsideDrop);
+                return()=>{
+                    mounted.current=false;request.current++;clearTimeout(dragWatchdog.current);attachmentAbort.current?.abort();
+                    card.removeEventListener('dragstart',start);card.removeEventListener('dragenter',overCard);card.removeEventListener('dragover',overCard);card.removeEventListener('dragleave',leave);card.removeEventListener('drop',drop);
+                    window.removeEventListener('dragend',end);document.removeEventListener('dragover',preventFileNavigation);document.removeEventListener('drop',outsideDrop);
+                };
+            },[]);
+            return <section ref={dropArea} aria-label={`${tab.toUpperCase()} Excel import`} className="mb-4 pb-4 border-b border-slate-700">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div><div className="text-xs font-bold uppercase tracking-wider text-indigo-300">Import {tab.toUpperCase()} Excel report</div><div className="text-xs text-slate-400 mt-1">{locationLabel} · {dateLabel}</div></div>
+                    <button type="button" disabled={disabled||busy} onClick={()=>fileInput.current?.click()} className="px-3 py-2 rounded-lg border border-indigo-500/40 text-indigo-300 text-xs font-bold hover:bg-indigo-500/10 disabled:opacity-50">{busy?'Reading Excel…':'Choose Excel file'}</button>
+                    <input ref={fileInput} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" aria-label={`Import ${tab.toUpperCase()} Excel file`} className="hidden" disabled={disabled||busy} onChange={event=>{const files=Array.from(event.target.files||[]);event.target.value='';if(files.length)load(files);}}/>
+                </div>
+                <div aria-busy={busy} className={`rounded-lg border-2 border-dashed p-4 text-center ${over?'border-indigo-400 bg-indigo-500/10':'border-slate-600 bg-slate-900/40'}`}>
+                    <div className="text-sm font-semibold text-slate-200">{busy?'Reading your report…':over?'Drop the Excel file here':`Drop your ${tab.toUpperCase()} .xlsx report here`}</div>
+                    <div className="text-xs text-slate-400 mt-1">{tab==='feedback'?'Only reviews not already recorded on earlier dashboard days will be added. Original feedback dates are kept, newest first.':'Drag the file from Desktop or File Explorer onto this card. Include the Total row.'}</div>
+                </div>
+                {reports.length>0&&<label className="block text-xs text-slate-300 mt-2">Worksheet<select aria-label={`Choose ${tab.toUpperCase()} worksheet`} value="" className="ml-2 bg-slate-900 text-slate-200 border border-slate-600 rounded p-2" onChange={event=>{const index=Number(event.target.value);try{apply(reports[index]);}catch(failure){setError(failure.message);}}}><option value="" disabled>Choose a worksheet…</option>{reports.map((item,index)=><option value={index} key={index}>{item.name}</option>)}</select></label>}
+                {message&&<p role="status" className="text-xs text-emerald-300 mt-2">{message}</p>}
+                {error&&<p role="alert" className="text-xs text-rose-300 mt-2">{error}</p>}
+            </section>;
+        };
+
+        const EMPTY_METRICS_DRAG_ROWS = [];
+        const useMetricsRowDrag = ({ enabled, scope, rows = EMPTY_METRICS_DRAG_ROWS, onReorder }) => {
+            const session = useRef(null);
+            const trailingClick = useRef(null);
+            const latest = useRef(null);
+            latest.current = { enabled, rows, onReorder };
+            const [announcement, setAnnouncement] = useState('');
+            const helpId = 'metrics-row-drag-help';
+            const rowLabel = row => [row?.firstName, row?.lastName].filter(Boolean).join(' ') || 'Row';
+            const suppressTrailingClick = () => {
+                trailingClick.current?.();
+                let timer;
+                const remove = () => {
+                    clearTimeout(timer);
+                    window.removeEventListener('click', block, true);
+                    window.removeEventListener('pointerdown', remove, true);
+                    window.removeEventListener('touchstart', remove, true);
+                    if (trailingClick.current === remove) trailingClick.current = null;
+                };
+                const block = event => { event.preventDefault(); event.stopPropagation(); remove(); };
+                window.addEventListener('click', block, true);
+                // A new deliberate press is a separate gesture and must keep working.
+                window.addEventListener('pointerdown', remove, true);
+                window.addEventListener('touchstart', remove, true);
+                timer = setTimeout(remove, 700);
+                trailingClick.current = remove;
+            };
+            const clear = () => {
+                const held = session.current;
+                if (!held) return;
+                session.current = null;
+                clearTimeout(held.timer);
+                cancelAnimationFrame(held.frame);
+                held.removeListeners?.();
+                held.ghost?.remove();
+                held.row.classList.remove('metrics-row-held');
+                held.marker?.classList.remove('metrics-drop-before', 'metrics-drop-after');
+                document.body.classList.remove('metrics-row-dragging');
+                if (held.active && !held.keyboard) suppressTrailingClick();
+            };
+            const cancel = () => {
+                const active = session.current?.active;
+                clear();
+                if (active) setAnnouncement('Move canceled. Row order is unchanged.');
+            };
+            useEffect(() => { cancel(); return clear; }, [enabled, scope, rows]);
+            const markPosition = (held, position) => {
+                held.marker?.classList.remove('metrics-drop-before', 'metrics-drop-after');
+                held.to = position;
+                const others = held.elements.filter(element => element !== held.row);
+                held.marker = others[position] || others[others.length - 1];
+                held.marker?.classList.add(position < others.length ? 'metrics-drop-before' : 'metrics-drop-after');
+            };
+            const place = held => {
+                const box = held.table.getBoundingClientRect();
+                held.valid = held.x >= box.left - 48 && held.x <= box.right + 48;
+                if (!held.valid) {
+                    held.marker?.classList.remove('metrics-drop-before', 'metrics-drop-after');
+                    return;
+                }
+                const others = held.elements.filter(element => element !== held.row);
+                const position = others.filter(element => {
+                    const rect = element.getBoundingClientRect();
+                    return held.y > rect.top + rect.height / 2;
+                }).length;
+                markPosition(held, position);
+                if (held.ghost) held.ghost.style.transform = `translateY(${held.y - held.startY}px)`;
+            };
+            const finish = () => {
+                const held = session.current;
+                if (!held) return;
+                const shouldMove = held.active && held.valid && held.from !== held.to;
+                const name = held.name, destination = held.to;
+                const keyboard = held.keyboard, table = held.table;
+                clear();
+                if (shouldMove && latest.current.enabled && latest.current.rows === held.rows
+                    && latest.current.onReorder(held.from, destination, held.rows) !== false) {
+                    setAnnouncement(`${name} moved to row ${destination + 1}. Select Save Changes to save the new order.`);
+                    if (keyboard) requestAnimationFrame(() => table.querySelector(`[data-metrics-row-index="${destination}"]`)?.focus());
+                } else if (held.active) setAnnouncement('Row order is unchanged.');
+            };
+            const activate = held => {
+                if (session.current !== held || !latest.current.enabled || latest.current.rows !== held.rows || !held.row.isConnected) return cancel();
+                held.active = true;
+                held.row.classList.add('metrics-row-held');
+                setAnnouncement(`${held.name} picked up. Move up or down, then release to place the row. Escape cancels.`);
+                if (held.keyboard) { markPosition(held, held.from); return; }
+                document.body.classList.add('metrics-row-dragging');
+                const rect = held.row.getBoundingClientRect();
+                const ghost = document.createElement('table'), clone = held.row.cloneNode(true);
+                ghost.setAttribute('aria-hidden', 'true');
+                ghost.setAttribute('data-panel-screenshot-ignore', 'true');
+                ghost.className = 'metrics-row-drag-preview';
+                ghost.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;table-layout:fixed;border-collapse:collapse;pointer-events:none;z-index:100050;`;
+                const originals = [held.row, ...held.row.querySelectorAll('*')], copies = [clone, ...clone.querySelectorAll('*')];
+                originals.forEach((element, index) => {
+                    const style = getComputedStyle(element), copy = copies[index];
+                    copy.removeAttribute('id'); copy.removeAttribute('tabindex');
+                    copy.removeAttribute('data-metrics-row-index'); copy.removeAttribute('data-metrics-sortable');
+                    copy.removeAttribute('aria-describedby');
+                    for (const property of ['background-color', 'color', 'font-family', 'font-size', 'font-weight', 'line-height', 'padding', 'border', 'text-align', 'white-space']) copy.style.setProperty(property, style.getPropertyValue(property));
+                });
+                clone.classList.remove('metrics-row-held');
+                clone.style.opacity = '1';
+                [...clone.children].forEach((cell, index) => cell.style.width = held.row.children[index].getBoundingClientRect().width + 'px');
+                const body = document.createElement('tbody'); body.appendChild(clone); ghost.appendChild(body);
+                document.body.appendChild(ghost); held.ghost = ghost;
+                place(held);
+                let scrollParent = held.table.parentElement;
+                while (scrollParent && !(scrollParent.scrollHeight > scrollParent.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scrollParent).overflowY))) scrollParent = scrollParent.parentElement;
+                held.scrollParent = scrollParent;
+                const scroll = () => {
+                    if (session.current !== held) return;
+                    const bounds = held.scrollParent?.getBoundingClientRect() || {top:0, bottom:window.innerHeight};
+                    const top = Math.max(0, bounds.top), bottom = Math.min(window.innerHeight, bounds.bottom);
+                    const delta = held.valid ? held.y < top + 65 ? -Math.ceil((top + 65 - held.y) / 6) : held.y > bottom - 65 ? Math.ceil((held.y - bottom + 65) / 6) : 0 : 0;
+                    if (delta) {
+                        if (held.scrollParent) held.scrollParent.scrollTop += Math.max(-16, Math.min(16, delta));
+                        else window.scrollBy(0, Math.max(-16, Math.min(16, delta)));
+                        place(held);
+                    }
+                    held.frame = requestAnimationFrame(scroll);
+                };
+                held.frame = requestAnimationFrame(scroll);
+            };
+            const begin = (event, index, keyboard = false, touch = null) => {
+                if (!enabled || rows.length < 2 || session.current || event.defaultPrevented) return;
+                if (!keyboard && event.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"]')) return;
+                if (!keyboard && !touch && (event.button !== 0 || event.isPrimary === false || event.pointerType === 'touch')) return;
+                const row = event.currentTarget, table = row.closest('table');
+                const held = { row, table, rows, from:index, to:index, name:rowLabel(rows[index]), keyboard,
+                    elements:[...row.parentElement.querySelectorAll('[data-metrics-row-index]')],
+                    active:false, valid:true, pointerId:event.pointerId, touchId:touch?.identifier,
+                    x:touch?.clientX ?? event.clientX, y:touch?.clientY ?? event.clientY };
+                held.startX = held.x; held.startY = held.y;
+                session.current = held;
+                const listen = (target, name, handler, options) => {
+                    target.addEventListener(name, handler, options);
+                    listeners.push(() => target.removeEventListener(name, handler, options));
+                };
+                const listeners = [];
+                held.removeListeners = () => listeners.forEach(remove => remove());
+                const move = e => {
+                    let point = e;
+                    if (touch) { point = [...e.touches].find(item => item.identifier === held.touchId); if (!point || e.touches.length !== 1) return cancel(); }
+                    else if (e.pointerId !== held.pointerId) return;
+                    held.x = point.clientX; held.y = point.clientY;
+                    if (!held.active) {
+                        if (Math.hypot(held.x-held.startX, held.y-held.startY) > 7) cancel();
+                        return;
+                    }
+                    if (e.cancelable) e.preventDefault();
+                    place(held);
+                };
+                const up = e => {
+                    if (touch ? ![...e.changedTouches].some(point => point.identifier === held.touchId) : e.pointerId !== held.pointerId) return;
+                    if (held.active && e.cancelable) e.preventDefault();
+                    finish();
+                };
+                listen(window, 'keydown', e => { if (e.key === 'Escape') {e.preventDefault(); cancel();} }, true);
+                listen(window, 'blur', cancel);
+                listen(document, 'visibilitychange', () => {if (document.hidden) cancel();});
+                if (!keyboard) {
+                    listen(window, touch ? 'touchmove' : 'pointermove', move, {capture:true, passive:false});
+                    listen(window, touch ? 'touchend' : 'pointerup', up, {capture:true, passive:false});
+                    listen(window, touch ? 'touchcancel' : 'pointercancel', cancel, true);
+                    listen(window, 'contextmenu', e => {if(held.active) e.preventDefault();}, true);
+                    held.timer = setTimeout(() => activate(held), 300);
+                } else activate(held);
+            };
+            const keyDown = (event, index) => {
+                if (event.target !== event.currentTarget || !enabled) return;
+                const held = session.current;
+                if (event.key === ' ' || event.key === 'Enter') {
+                    if (held?.keyboard) finish(); else begin(event, index, true);
+                    event.preventDefault();
+                } else if (held?.keyboard && ['ArrowUp','ArrowDown','Home','End'].includes(event.key)) {
+                    event.preventDefault();
+                    const position = event.key === 'Home' ? 0 : event.key === 'End' ? rows.length-1 : Math.max(0, Math.min(rows.length-1, held.to + (event.key === 'ArrowUp' ? -1 : 1)));
+                    markPosition(held, position);
+                    setAnnouncement(`${held.name}: position ${position+1} of ${rows.length}. Press Space or Enter to place the row.`);
+                    held.marker?.scrollIntoView({block:'nearest'});
+                } else if (held?.keyboard && event.key === 'Tab') cancel();
+            };
+            return {
+                helpId, announcement,
+                tableProps: enabled ? {onClick:event=>event.stopPropagation(), onDoubleClick:event=>event.stopPropagation()} : {},
+                rowProps: index => enabled && rows.length > 1 ? {
+                    'data-metrics-row-index':index, 'data-metrics-sortable':'true',
+                    tabIndex:0, 'aria-roledescription':'sortable row', 'aria-describedby':helpId,
+                    title:'Hold and drag to move this row. Keyboard: Space, then arrow keys, then Space.',
+                    onPointerDown:event => begin(event,index),
+                    onTouchStart:event => {if(event.touches.length===1) begin(event,index,false,event.touches[0]);},
+                    onKeyDown:event => keyDown(event,index),
+                    onBlur:() => {if(session.current?.keyboard) cancel();},
+                    onDragStart:event => event.preventDefault()
+                } : {}
+            };
+        };
+
+        const MetricsRowControls = ({ tab, index, editing, onEdit }) => <>
+            <span data-metrics-drag-handle="true" aria-hidden="true" className="p-1.5 text-slate-400 cursor-grab" title="Hold and drag to move this row"><svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="3" r="1.2"/><circle cx="11" cy="3" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="13" r="1.2"/><circle cx="11" cy="13" r="1.2"/></svg></span>
             <button type="button" aria-label={`${editing ? 'Finish editing' : 'Edit'} ${tab.toUpperCase()} row ${index + 1}`} onClick={onEdit} className={`p-1.5 rounded-md transition-colors ${editing ? 'text-emerald-300 bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-300'}`}>{editing ? <Check className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}</button>
         </>;
-
 
         const normalizeMetricsNameData = (value) => {
             const next = JSON.parse(JSON.stringify(value || {}));
@@ -10076,7 +10910,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
                 if(key!=='feedback')delete tracker[key+'Totals'];
                 return {...data,metricsTracker:tracker};
             };
-            const ordinaryOwnNote=(note,uid)=>Boolean(uid&&note&&(isMasterAdminUid(uid)||isActiveLocationAdmin({uid})||note.category!=='Manager Note'));
+            const ordinaryOwnNote=(note,uid)=>Boolean(uid&&note);
             const canUse=(account,section,profile=accessProfilesCache.get(account?.uid))=>sections.includes(section)&&Boolean(account?.uid&&(canManageLocationRecords(account)||(profile?.enabled&&profile.permissions?.[section]&&(profile.sectionActions?.[section]?.view??true))));
             const approveRole=account=>canManageLocationRecords(account)||isUserAdministrator(account);
             const label=field=>field==='routeTable'?'Routes':field==='shiftNotes'?'Shift Notes':field.endsWith('.wtd')?'WTD Metrics':field.endsWith('.mtd')?'MTD Metrics':'Feedback';
@@ -10093,15 +10927,46 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
                 fullClears:Object.fromEntries(sections.map(key=>[key,Array.from(new Set([...(previous?.fullClears?.[key]||[]),...(key===section&&beforeRows.length&&afterRows.length===0?[date]:[])])).sort()])),
                 deletedRows:Number(previous?.deletedRows||0)+beforeRows.length-afterRows.length,lastDate:date,lastOperationId:operationId,updatedAt:serverTimestamp()
             });
+            const comparable=value=>{
+                if(value&&typeof value.toJSON==='function')return comparable(value.toJSON());
+                if(Array.isArray(value))return value.map(comparable);
+                if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().filter(key=>value[key]!==undefined).map(key=>[key,comparable(value[key])]));
+                return value;
+            };
+            const equalSaved=(left,right)=>JSON.stringify(comparable(left))===JSON.stringify(comparable(right));
+            const displayedRow=(row,field)=>field.startsWith('metricsTracker.')?{...row,firstName:String(row?.firstName||'').trim(),lastName:String(row?.lastName||'').replace(/\?+\s*$/,'').trim()}:row;
+            const resolveSelection=(data,{field,index=null,all=false,expectedRows})=>{
+                const latest=getRows(data,field);
+                if(!expectedRows)return {index,all};
+                if(!Array.isArray(expectedRows))throw new Error('The deletion preview is unavailable. Reopen it.');
+                const sameDisplay=(left,right)=>equalSaved(displayedRow(left,field),displayedRow(right,field));
+                if(all){
+                    if(latest.length!==expectedRows.length||!latest.every((row,i)=>sameDisplay(row,expectedRows[i])))throw new Error('The saved rows changed. Reopen the delete-all preview.');
+                    return {index:null,all:true};
+                }
+                if(!Number.isInteger(index)||index<0||index>=expectedRows.length)throw new Error('That record is no longer available.');
+                const selected=expectedRows[index],id=selected?.id;
+                if(id!==null&&id!==undefined){
+                    if(expectedRows.filter(row=>String(row?.id)===String(id)).length!==1)throw new Error('This table has duplicate record IDs. Correct those before deleting.');
+                    const matches=latest.map((row,i)=>String(row?.id)===String(id)?i:-1).filter(i=>i>=0);
+                    if(!matches.length)throw new Error('That record was already removed. Refresh the table.');
+                    if(matches.length!==1)throw new Error('This table has duplicate record IDs. Correct those before deleting.');
+                    if(!sameDisplay(latest[matches[0]],selected))throw new Error('The selected record changed. Reopen its deletion preview.');
+                    return {index:matches[0],all:false};
+                }
+                // Legacy rows without IDs can only use their position if the whole table still matches.
+                if(latest.length!==expectedRows.length||!latest.every((row,i)=>sameDisplay(row,expectedRows[i])))throw new Error('The saved rows changed. Reopen this record before deleting.');
+                return {index,all:false};
+            };
+
             const select=(data,{section,field,index=null,all=false},uid)=>{
                 if(!sections.includes(section)||!fields[section].includes(field))throw new Error('This deletion section is not available.');
                 const beforeRows=getRows(data,field);
                 if(!Array.isArray(beforeRows)||!beforeRows.length)throw new Error('There are no saved rows to delete.');
                 if(!all&&(!Number.isInteger(index)||index<0||index>=beforeRows.length))throw new Error('That row is no longer available. Refresh first.');
-                if(all)throw new Error('Delete one record at a time. Bulk deletion is not available.');
-                const indexes=[index],removed=indexes.map(i=>beforeRows[i]);
+                if(all&&field==='shiftNotes'&&!isOwnerAccount(auth.currentUser))throw new Error('Delete notes one at a time.');
+                const indexes=all?beforeRows.map((_,i)=>i):[index],removed=indexes.map(i=>beforeRows[i]);
                 if(section==='shiftNotes'&&removed.some(note=>!ordinaryOwnNote(note,uid)))throw new Error('Only an Admin can delete Manager Notes or system records.');
-                if(section==='routes'&&removed.some(row=>row.preloadArrival))throw new Error('Remove the linked preload assignment before deleting this route.');
                 const chosen=new Set(indexes),afterRows=beforeRows.filter((_,i)=>!chosen.has(i));
                 return {beforeRows,afterRows,indexes,removed};
             };
@@ -10109,22 +10974,19 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
                 if(!validDate(request.date)||!sections.includes(request.section)||!fields[request.section].includes(request.field)||!Array.isArray(request.beforeRows)||!Array.isArray(request.afterRows)||!Array.isArray(request.indexes)||!request.indexes.length)throw new Error('The deletion request has invalid targets.');
                 if(new Set(request.indexes).size!==request.indexes.length||request.indexes.some((index,position)=>!Number.isInteger(index)||index<0||index>=request.beforeRows.length||(position>0&&index<=request.indexes[position-1])))throw new Error('The deletion request has invalid row positions.');
                 const removed=new Set(request.indexes);
-                if(!sameSavedValue(request.afterRows,request.beforeRows.filter((_,index)=>!removed.has(index))))throw new Error('A deletion request must preserve every row that is not selected.');
-                if(request.indexes.length!==1)throw new Error('Delete one record at a time.');
+                if(!equalSaved(request.afterRows,request.beforeRows.filter((_,index)=>!removed.has(index))))throw new Error('A deletion request must preserve every row that is not selected.');
+                if(request.indexes.length!==1&&request.field==='shiftNotes'&&!isOwnerAccount(auth.currentUser))throw new Error('Delete notes one at a time.');
                 if(request.section==='shiftNotes'&&request.indexes.some(index=>!ordinaryOwnNote(request.beforeRows[index],request.requesterUid)))throw new Error('Only an Admin can delete Manager Notes or system records.');
             };
             const ref=(kind,id)=>doc(db,'artifacts',appId,'public','data',kind,id);
             const actor=()=>({uid:auth.currentUser?.uid,name:currentAuditName||getDefaultUserName(auth.currentUser)});
             const readProfile=async(transaction,uid)=>{const snapshot=await transaction.get(doc(db,'artifacts',LEGACY_WORKSPACE,'public','data','accessProfiles',uid));return snapshot.exists()?snapshot.data():defaultAccessProfile(uid);};
             const checkEnabled=async transaction=>{if(locationRolePolicyActive)return;const snapshot=await transaction.get(ref('config','recentDeletionPolicy'));if(!snapshot.exists()||snapshot.data().version!==1)throw new Error('Recent deletion controls need their matching database setup before they can be used.');};
-            const checkLock=async(transaction,date,section)=>{
-                if(!ownerControlPolicyEnabled||section==='shiftNotes')return;
-                const snapshot=await transaction.get(ref(section==='routes'?'weekLockDates':'weekLockReports',date));
-                if(snapshot.exists()&&['bonus','billing',...(section==='metrics'?['metrics']:[])].some(key=>snapshot.data()[key]===true))throw new Error('This billing week is locked. the dashboard owner must unlock it first.');
-            };
+            // Controlled deletion keeps the financial lock itself unchanged.
+            const checkLock=async()=>{};
             const planData=(data,request)=>{
                 validatePlan(request);
-                if(!sameSavedValue(getRows(data,request.field),request.beforeRows))throw new Error('The saved rows changed after this request was prepared. Refresh and submit a new request.');
+                if(!equalSaved(getRows(data,request.field),request.beforeRows))throw new Error('The saved rows changed after this request was prepared. Refresh and submit a new request.');
                 if(request.field.startsWith('metricsTracker.')&&!sameSavedValue(data.metricsTracker?.[request.field.split('.')[1]+'Totals']??null,request.beforeTotals??null))throw new Error('The metrics totals changed after this request was prepared. Submit a new request.');
                 let after=putRows(data,request.field,request.afterRows);
                 if(request.section==='routes')after=withAutoRouteMetrics(after);
@@ -10158,8 +11020,8 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
                     await checkLock(transaction,date,section);
                     const snapshot=await transaction.get(ref('dailyRecaps',date));if(!snapshot.exists())throw new Error('This day has no saved data.');
                     const data=snapshot.data();
-                    if(expectedRows&&!sameSavedValue(getRows(data,field),expectedRows))throw new Error('The saved rows changed. Refresh before deleting.');
-                    const selection=select(data,{section,field,index,all},identity.uid);
+                    const target=resolveSelection(data,{field,index,all,expectedRows});
+                    const selection=select(data,{section,field,...target},identity.uid);
                     const usageSnapshot=await transaction.get(ref('recentDeletionUsage',identity.uid+'_'+today(now))),usage=usageSnapshot.exists()?usageSnapshot.data():{};
                     const request={date,dateMillis:Date.parse(date+'T00:00:00Z'),section,field,beforeRows:selection.beforeRows,afterRows:selection.afterRows,indexes:selection.indexes,requesterUid:identity.uid,requesterName:identity.name,beforeTotals:field.startsWith('metricsTracker.')?data.metricsTracker?.[field.split('.')[1]+'Totals']??null:null};
                     validatePlan(request);
@@ -10194,7 +11056,6 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
                             if(!canUse({uid:request.requesterUid},request.section,requesterProfile))throw new Error('The requester no longer has deletion permission.');
                         }
                         if(request.section==='shiftNotes'&&request.indexes.some(index=>!ordinaryOwnNote(request.beforeRows[index],request.requesterUid)))throw new Error('The request contains protected notes.');
-                        if(request.section==='routes'&&request.indexes.some(index=>request.beforeRows[index]?.preloadArrival))throw new Error('Remove the linked preload assignment first.');
                         writeDeletion(transaction,{data:day.data(),request,identity,operationId,requestId:id,approved:true,now});
                     }
                     if(decision==='denied')transaction.set(ref('auditEvents',operationId),{actorUid:identity.uid,actorName:identity.name,timestamp:now.toISOString(),createdAt:serverTimestamp(),collection:'deletionRequests',recordId:id,section:'Deletion requests',operation:'deny-deletion',summary:'Denied deletion request for '+request.date,changeCount:1,changes:[],requestId:id,requestedByUid:request.requesterUid});
@@ -10223,7 +11084,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
                 });
             };
             const enable=async()=>{if(!isOwnerAccount(auth.currentUser))throw new Error('Only the dashboard owner can enable these controls.');await firebaseSetDoc(ref('config','recentDeletionPolicy'),{version:1,updatedByUid:auth.currentUser.uid,updatedAt:serverTimestamp()});};
-            return {enabled,setEnabled,sections,fields,normalize,today,sameDay,validDate,getRows,putRows,ordinaryOwnNote,canUse,approveRole,label,rowLabel,holdReasons,nextUsage,select,validatePlan,remove,decide,restore,enable,ref};
+            return {enabled,setEnabled,sections,fields,normalize,today,sameDay,validDate,getRows,putRows,ordinaryOwnNote,canUse,approveRole,label,rowLabel,holdReasons,nextUsage,comparable,equalSaved,resolveSelection,select,validatePlan,remove,decide,restore,enable,ref};
         })();
 
         const PERMISSION_OPTIONS = [
@@ -12840,6 +13701,12 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
         };
         const dataReportValue = (value,type) => {
             if(value==null || value==='')return {value:null,type:'text'};
+            if(type==='cube'){
+                const number=dataReportNumber(roundRouteCube(value));return number==null?{value:String(value),type:'text'}:{value:number,type:Number.isInteger(number)?'cubeInteger':'cube'};
+            }
+            if(type==='duration'){
+                const minutes=parseRouteHOSMinutes(value);return minutes===null?{value:String(value),type:'text'}:{value:minutes/1440,type:'duration'};
+            }
             if(['integer','decimal','percent'].includes(type)){
                 const number=dataReportNumber(value);return number==null?{value:String(value),type:'text'}:{value:type==='percent'?number/100:number,type};
             }
@@ -12856,13 +13723,37 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
         const dataReportCsv = report => {
             const cell=value=>{let text=String(value??'');if(typeof value!=='number' && /^[\s\uFEFF]*[=+@-]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';};
             return '\uFEFF'+[report.columns.map(column=>column.csvLabel || column.label),...report.rows.map(row=>row.map((value,index)=>{
+                if(report.columns[index].type==='cube')return roundRouteCube(value);
+                if(report.columns[index].type==='duration')return formatRouteHOS(value);
                 if(report.percentSuffix && report.columns[index].type==='percent' && dataReportNumber(value)!=null)return String(dataReportNumber(value))+'%';
                 if(report.columns[index].type==='time' && hosEtaMinutes(value)!=null)return hosClock(hosEtaMinutes(value));
                 return value;
             }))].map(row=>row.map(cell).join(',')).join('\r\n');
         };
+        const dataReportRouteStyles = report => {
+            const original=DATA_REPORT_WORKBOOK_STYLE;
+            if(!report.columns.some(column=>['cube','duration'].includes(column.type)))return original;
+            const map=JSON.parse(JSON.stringify(original.map));let styles=original.styles;
+            const formats=[['cubeInteger','0'],['cube','0.0'],['duration','[h]:mm']];
+            const formatsTag=/<x:numFmts count="(\d+)">/.exec(styles),cellTag=/<x:cellXfs count="(\d+)">([\s\S]*?)<\/x:cellXfs>/.exec(styles);
+            if(!formatsTag||!cellTag)throw new Error('The report number styles are unavailable.');
+            const cells=cellTag[2].match(/<x:xf\b[^>]*\/>|<x:xf\b[\s\S]*?<\/x:xf>/g)||[];
+            if(cells.length!==Number(cellTag[1]))throw new Error('The report number styles do not match.');
+            const firstFormat=Math.max(163,...Array.from(styles.matchAll(/<x:numFmt numFmtId="(\d+)"/g),match=>Number(match[1])))+1;
+            const newFormats=formats.map(([type,code],index)=>'<x:numFmt numFmtId="'+(firstFormat+index)+'" formatCode="'+code+'"/>').join('');
+            styles=styles.replace(formatsTag[0],'<x:numFmts count="'+(Number(formatsTag[1])+formats.length)+'">').replace('</x:numFmts>',newFormats+'</x:numFmts>');
+            const added=[];
+            map.body.forEach((row,index)=>formats.forEach(([type],formatIndex)=>{
+                const base=cells[original.map.body[index][type==='duration'?'time':'decimal']];
+                row[type]=cells.length+added.length;
+                added.push(base.replace(/numFmtId="\d+"/,'numFmtId="'+(firstFormat+formatIndex)+'"'));
+            }));
+            styles=styles.replace(cellTag[0],'<x:cellXfs count="'+(cells.length+added.length)+'">'+cellTag[2]+added.join('')+'</x:cellXfs>');
+            return {...original,styles,map};
+        };
+
         const dataReportWorkbook = report => {
-            const x=hosEscapeXml,template=DATA_REPORT_WORKBOOK_STYLE,mapping=template.map,lastColumn=dataReportColumn(report.columns.length-1),lastRow=6+report.rows.length;
+            const x=hosEscapeXml,template=dataReportRouteStyles(report),mapping=template.map,lastColumn=dataReportColumn(report.columns.length-1),lastRow=6+report.rows.length;
             if(!report.columns.length || report.columns.length>16384 || lastRow>1048576)throw new Error('The selected report is too large for one Excel sheet. Choose a smaller date range.');
             const cell=(column,row,value,style)=>value==null?`<c r="${column}${row}" s="${style}"/>`:typeof value==='number'?`<c r="${column}${row}" s="${style}"><v>${value}</v></c>`:`<c r="${column}${row}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${x(value)}</t></is></c>`;
             let sheet=`<row r="1" ht="10" customHeight="1"/><row r="2" ht="30" customHeight="1">${cell('A',2,'Final Mile Operations',mapping.title)}</row><row r="3" ht="25" customHeight="1">${cell('A',3,report.title,mapping.subtitle)}</row><row r="4" ht="27" customHeight="1">${cell('A',4,[report.context,report.rows.length+(report.rows.length===1?' record.':' records.')+' '+locationClockLabel()+' time.'].filter(Boolean).join(' '),mapping.context)}</row><row r="5" ht="10" customHeight="1"/>`;
@@ -12898,12 +13789,13 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme :focus-visible:not
         const dataReportDates = (start,end) => start&&end?`Dates: ${start} to ${end}.`:start?`Dates: from ${start}.`:end?`Dates: through ${end}.`:'All saved dates.';
         const dataReportFilenameRange = (start,end) => start&&end?`${start}_to_${end}`:start?`from_${start}`:end?`through_${end}`:'All_Dates';
         const routeDataReport = (records,{current=false,date='',start='',end=''}={}) => {
-            const names={cnt:'Count',door:'Door',serviceUnit:'Route number',route:'Route',contractor:'Contractor',driver:'Driver',helper:'Helper',stops:'Stops',pcs:'Pieces',cube:'Cube',hos:'Recorded HOS',mileage:'Mileage',uniform:'Uniform',timeOffDock:'ETA',returned:'Returned',checkedIn:'Checked in'};
-            const numeric={cnt:'integer',stops:'integer',pcs:'integer',cube:'decimal',hos:'decimal',mileage:'decimal'};
+            const names={cnt:'Count',door:'Door',serviceUnit:'Route number',route:'Route',contractor:'Contractor',driver:'Driver',helper:'Helper',stops:'Stops',pcs:'Pieces',cube:'Cube',hos:'HOS',mileage:'Mileage',uniform:'Uniform',timeOffDock:'ETA',returned:'Returned',checkedIn:'Checked in'};
+            const numeric={cnt:'integer',stops:'integer',pcs:'integer',cube:'cube',hos:'duration',mileage:'decimal'};
             const routeColumns=ROUTE_COLUMNS.map(column=>({label:names[column.key]||column.label,csvLabel:column.label,type:column.type==='time'?'time':numeric[column.key]||'text',width:['contractor','driver','helper'].includes(column.key)?27:column.key==='route'?23:['serviceUnit','hos','timeOffDock'].includes(column.key)?18:14}));
             const columns=current?routeColumns:[{label:'Date',type:'date',width:16},...routeColumns];
-            const rows=records.flatMap(record=>(record.routeTable||[]).map(route=>{
-                const values=ROUTE_COLUMNS.map(column=>column.type==='checkbox'?(route[column.key]?'Yes':'No'):column.type==='custom_uniform'?(route.uniform?'Yes':route.uniformNote||'No'):route[column.key]??'');
+            const rows=records.flatMap(record=>(record.routeTable||[]).map((original,rowIndex)=>{
+                const route=normalizeRouteTablePrefixes([original])[0];
+                const values=ROUTE_COLUMNS.map(column=>column.key==='cnt'?String(rowIndex+1):column.type==='checkbox'?(route[column.key]?'Yes':'No'):column.type==='custom_uniform'?(route.uniform?'Yes':route.uniformNote||'No'):column.key==='cube'?roundRouteCube(route.cube)??'':column.key==='hos'?formatRouteHOS(route.hos):route[column.key]??'');
                 return current?values:[record.date,...values];
             }));
             return {title:current?'Routes':'Historical routes',sheetName:'Routes',context:current?`Route date: ${date}.`:dataReportDates(start,end),filename:'Final_Mile_Routes_'+(current?date:dataReportFilenameRange(start,end)),columns,rows,freezeColumns:current?3:4};
@@ -16240,7 +17132,7 @@ const FinalBillingCompanyFile = (()=>{
     const xml=value=>{if(/<!DOCTYPE|<!ENTITY/i.test(value))throw new Error('This workbook contains unsupported XML declarations. Export the company sheet as CSV instead.');const doc=new DOMParser().parseFromString(value,'application/xml');if(doc.getElementsByTagName('parsererror').length)throw new Error('A company workbook sheet could not be read.');return doc;};
     const elements=(doc,name)=>Array.from(doc.getElementsByTagNameNS('*',name));
     const strings=doc=>elements(doc,'si').map(si=>elements(si,'t').map(node=>node.textContent).join(''));
-    const xlsx=async buffer=>{
+    const xlsx=async (buffer,options={})=>{
         const bytes=new Uint8Array(buffer),view=new DataView(buffer);if(bytes.length<22||bytes.length>10*1024*1024)throw new Error('Choose a company workbook smaller than 10 MB.');
         let end=-1;for(let p=bytes.length-22;p>=Math.max(0,bytes.length-65557);p--)if(view.getUint32(p,true)===0x06054b50){end=p;break;}if(end<0)throw new Error('This is not a readable XLSX file.');
         if(view.getUint16(end+4,true)||view.getUint16(end+6,true))throw new Error('Split workbooks are not supported.');const count=view.getUint16(end+10,true),central=view.getUint32(end+16,true);if(count>1500||central>=end)throw new Error('This workbook is too large or has an unsupported ZIP format.');
@@ -16256,14 +17148,17 @@ const FinalBillingCompanyFile = (()=>{
             if(entry.method===8){if(typeof DecompressionStream==='undefined')throw new Error('Use an updated Chrome or Edge browser, or export the company sheet as CSV.');let stream;try{stream=new Blob([part]).stream().pipeThrough(new DecompressionStream('deflate-raw'));}catch{throw new Error('Export the company sheet as CSV for this browser.');}const reader=stream.getReader(),chunks=[];let length=0;while(true){const next=await reader.read();if(next.done)break;length+=next.value.length;if(length>entry.size||length>MAX_PART){await reader.cancel();throw new Error('A workbook part is larger than expected.');}chunks.push(next.value);}part=new Uint8Array(length);let at=0;for(const chunk of chunks){part.set(chunk,at);at+=chunk.length;}}
             if(part.length!==entry.size)throw new Error('A workbook part is incomplete.');return utf8.decode(part);
         };
+        const stylesText=options.cellDetails?await read('xl/styles.xml'):null;
+        const styleDoc=stylesText?xml(stylesText):null,customFormats=new Map(styleDoc?elements(styleDoc,'numFmt').map(node=>[node.getAttribute('numFmtId'),node.getAttribute('formatCode')||'']):[]);
+        const xfs=styleDoc?elements(styleDoc,'cellXfs')[0]:null,percentageStyles=xfs?Array.from(xfs.children).map(node=>{const id=node.getAttribute('numFmtId');return ['9','10'].includes(id)||/%/.test((customFormats.get(id)||'').replace(/"[^"]*"|\\./g,''));}):[];
         const workbookText=await read('xl/workbook.xml'),relationsText=await read('xl/_rels/workbook.xml.rels');if(!workbookText||!relationsText)throw new Error('Choose an Excel XLSX workbook, not a renamed file.');const workbook=xml(workbookText),relations=xml(relationsText),shared=await read('xl/sharedStrings.xml'),sharedStrings=shared?strings(xml(shared)):[],date1904=elements(workbook,'workbookPr').some(node=>['1','true'].includes(node.getAttribute('date1904'))),rels=new Map(elements(relations,'Relationship').filter(node=>node.getAttribute('TargetMode')!=='External').map(node=>[node.getAttribute('Id'),node.getAttribute('Target')])),tables=[];
         for(const sheet of elements(workbook,'sheet')){
-            const id=sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id')||sheet.getAttribute('r:id'),target=rels.get(id);if(!target)continue;const name=target.startsWith('/')?target.slice(1):'xl/'+target;if(!/^xl\/worksheets\/[^/]+\.xml$/.test(name))continue;const raw=await read(name);if(!raw)continue;const rows=[];let cellCount=0;
+            const id=sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id')||sheet.getAttribute('r:id'),target=rels.get(id);if(!target)continue;const name=target.startsWith('/')?target.slice(1):'xl/'+target;if(!/^xl\/worksheets\/[^/]+\.xml$/.test(name))continue;const raw=await read(name);if(!raw)continue;const rows=[],cellDetails=[];let cellCount=0;
             for(const row of elements(xml(raw),'row')){const rn=Number(row.getAttribute('r'))||rows.length+1;if(rn<1||rn>50000)throw new Error('The company sheet has too many rows. Export only the billing week.');const values=[];
-                for(const cell of elements(row,'c')){if(++cellCount>750000)throw new Error('Export only the company billing week.');const ref=cell.getAttribute('r')||'',letters=(ref.match(/^[A-Z]+/)||[])[0];if(!letters)continue;let column=0;for(const ch of letters)column=column*26+ch.charCodeAt(0)-64;if(column>256)continue;const kind=cell.getAttribute('t'),v=elements(cell,'v')[0]?.textContent;let value=v??'';if(kind==='s'){if(v==null||sharedStrings[Number(v)]==null)throw new Error('A company workbook text cell is invalid.');value=sharedStrings[Number(v)];}else if(kind==='inlineStr')value=elements(cell,'t').map(t=>t.textContent).join('');values[column-1]=value;}
+                for(const cell of elements(row,'c')){if(++cellCount>750000)throw new Error('Export only the company billing week.');const ref=cell.getAttribute('r')||'',letters=(ref.match(/^[A-Z]+/)||[])[0];if(!letters)continue;let column=0;for(const ch of letters)column=column*26+ch.charCodeAt(0)-64;if(column>256)continue;const kind=cell.getAttribute('t'),v=elements(cell,'v')[0]?.textContent;let value=v??'';if(kind==='s'){if(v==null||sharedStrings[Number(v)]==null)throw new Error('A company workbook text cell is invalid.');value=sharedStrings[Number(v)];}else if(kind==='inlineStr')value=elements(cell,'t').map(t=>t.textContent).join('');values[column-1]=value;if(options.cellDetails){if(!cellDetails[rn-1])cellDetails[rn-1]=[];cellDetails[rn-1][column-1]={percent:Boolean(percentageStyles[Number(cell.getAttribute('s')||0)]),error:kind==='e',uncachedFormula:elements(cell,'f').length>0&&v==null};}}
                 rows[rn-1]=values;
             }
-            tables.push({name:sheet.getAttribute('name')||name,date1904,rows:Array.from({length:rows.length},(_,i)=>rows[i]||[])});
+            tables.push({name:sheet.getAttribute('name')||name,date1904,...(options.cellDetails?{cellDetails,hidden:['hidden','veryHidden'].includes(sheet.getAttribute('state'))}:{}),...(options.mergedCells?{mergedCells:elements(xml(raw),'mergeCell').map(node=>node.getAttribute('ref'))}:{}),rows:Array.from({length:rows.length},(_,i)=>rows[i]||[])});
         }
         return tables;
     };
@@ -16551,7 +17446,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const count=items.filter(item=>item.status==='pending'&&(!canApprove||item.requesterUid!==account?.uid)).length;
             return {policy,items,busy,error,decide,enable,count};
         };
-        const RecentDeletionPermissions=({draft})=><fieldset className="mt-4 rounded-xl border border-slate-700 p-4"><legend className="px-1 text-xs font-bold text-slate-200">Single-record deletion</legend><p className="text-xs text-slate-400">Enabled users can delete individual routes, metrics and ordinary Shift Notes in the sections and locations they can access. Bulk deletion is unavailable. Admins can also delete Manager Notes. Locked reports remain protected.</p></fieldset>;
+        const RecentDeletionPermissions=({draft})=><fieldset className="mt-4 rounded-xl border border-slate-700 p-4"><legend className="px-1 text-xs font-bold text-slate-200">Single-record deletion</legend><p className="text-xs text-slate-400">Users and Admins can delete individual routes, metrics and Shift Notes, or clear a Routes, WTD, MTD or Feedback table, in the sections and locations they can access. Each deletion keeps a recovery copy for the dashboard owner.</p></fieldset>;
         const RecentDeletionRequests=({inbox,account,canApprove})=><div data-popover-scroll="true" className="max-h-[65dvh] overflow-y-auto p-3 space-y-3">
             {inbox.error&&<p role="alert" className="text-xs text-rose-200">{inbox.error}</p>}
             {!inbox.policy.enabled?<p className="text-xs text-slate-400">Recent deletion controls have not been enabled.</p>:!inbox.items.length?<p className="text-xs text-slate-400">No deletion requests.</p>:inbox.items.map(item=><article key={item.id} className="rounded-xl border border-slate-700 p-3 text-xs">
@@ -16564,9 +17459,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 {item.decidedBy&&<p className="mt-2 text-slate-400">Decision by {item.decidedBy}</p>}
             </article>)}
         </div>;
-        const RecentDeletionConfirmation=({pending,busy,error,onConfirm,onClose})=>!pending?null:<div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/70 p-4" data-dashboard-edit-ignore="true"><section role="dialog" aria-modal="true" aria-label="Confirm recent deletion" className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white">Delete {pending.count} {RecentDeletion.label(pending.field)} {pending.count===1?'row':'rows'}?</h2>
-            <p className="mt-2 text-sm text-slate-300">Dashboard date: {pending.date}</p><p className="mt-2 text-sm text-slate-400">Only this saved record will be deleted. All other records stay in place, and a recovery copy is kept for the dashboard owner.</p>
+        const RecentDeletionConfirmation=({pending,busy,error,onConfirm,onClose,onDeleteTable})=>!pending?null:<div className="fixed inset-0 z-[700] flex items-center justify-center bg-black/70 p-4" data-dashboard-edit-ignore="true"><section role="dialog" aria-modal="true" aria-label="Confirm recent deletion" className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white">{pending.all?'Delete entire '+RecentDeletion.label(pending.field)+' table?':'Delete '+pending.count+' '+RecentDeletion.label(pending.field)+' '+(pending.count===1?'row':'rows')+'?'}</h2>
+            <p className="mt-2 text-sm text-slate-300">Dashboard date: {pending.date}</p><p className="mt-2 text-sm text-slate-400">{pending.all?`All ${pending.count} saved ${RecentDeletion.label(pending.field)} rows for this date will be deleted. Other sections stay in place.`:'Only this saved record will be deleted. All other records stay in place.'} A recovery copy is kept for the dashboard owner.</p>
+            {!pending.all&&pending.section!=='shiftNotes'&&onDeleteTable&&<button type="button" disabled={busy} onClick={onDeleteTable} className="mt-3 text-sm font-semibold text-rose-300 underline underline-offset-4 disabled:opacity-40">Delete the entire {RecentDeletion.label(pending.field)} table instead</button>}
             {error&&<p role="alert" className="mt-3 text-sm text-rose-200">{error}</p>}
             <div className="mt-5 flex justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200">Cancel</button><button type="button" disabled={busy} onClick={onConfirm} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">{busy?'Checking…':'Confirm deletion'}</button></div>
         </section></div>;
@@ -17394,11 +18290,11 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
         };
         // BEGIN PERSONAL DASHBOARD THEME
         const DASHBOARD_COLOR_THEMES = [
-            {value:'dark',label:'Dark mode',menu:'Dark',Icon:Moon},
+            {value:'dark',label:'Deep Navy',menu:'Deep Navy',Icon:Moon},
             {value:'steel',label:'Steel',menu:'Steel',Icon:Sun},
             {value:'stone',label:'Stone',menu:'Stone',Icon:Sun},
             {value:'linen',label:'Linen',menu:'Linen',Icon:Moon},
-            {value:'grey',label:'Grey',menu:'Grey',Icon:Moon}
+            {value:'grey',label:'Dark',menu:'Dark',Icon:Moon}
         ];
         const useDashboardTheme = () => {
             const [mode,setMode]=useState(()=>window.dashboardAppearance.getMode());
@@ -17691,7 +18587,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const applyLocalRouteTableChange = nextRows => {
                 if (!user || !isEditing || activeTab !== 'routes' || routesSubTab !== 'table' || !canEditSection('routes') || isLoading) return;
                 const token = crypto.randomUUID();
-                const auditedRows = markUniformAuditChanges(data.routeTable, nextRows);
+                const auditedRows = markUniformAuditChanges(data.routeTable, normalizeRouteTablePrefixes(numberRouteRows(nextRows)));
                 setLocalRouteAssignmentEdit(previous => createLocalRouteAssignmentEdit(previous, data.routeTable, auditedRows, user.uid, activeDate, token));
                 setData(previous => ({ ...previous, routeTable: auditedRows }));
             };
@@ -17719,15 +18615,21 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const [editingMetricsRow, setEditingMetricsRow] = useState(null);
             useEffect(() => { setEditingMetricsRow(null); }, [metricsSubTab, activeDate, isEditMode, user?.uid]);
             const isMetricRowEditing = index => isEditing && editingMetricsRow?.tab === metricsSubTab && editingMetricsRow.index === index;
-            const moveMetricRow = (index, direction) => {
-                if (!isEditing || activeTab !== 'metrics' || !canEditSection('metrics')) return;
+            const moveMetricRow = (index, destination, expectedRows) => {
+                if (!isEditing || activeTab !== 'metrics' || !canEditSection('metrics')) return false;
                 const rows = data.metricsTracker?.[metricsSubTab] || [];
-                if (moveMetricsRows(rows, index, direction) === rows) return;
-                setData(previous => ({ ...previous, metricsTracker: { ...previous.metricsTracker,
-                    [metricsSubTab]: moveMetricsRows(previous.metricsTracker?.[metricsSubTab] || [], index, direction) } }));
+                if (rows !== expectedRows || moveMetricsRows(rows, index, destination) === rows) return false;
+                setData(previous => previous.metricsTracker?.[metricsSubTab] !== expectedRows ? previous : ({ ...previous, metricsTracker: { ...previous.metricsTracker,
+                    [metricsSubTab]: moveMetricsRows(expectedRows, index, destination) } }));
                 setEditingMetricsRow(previous => previous?.tab === metricsSubTab
-                    ? { ...previous, index: moveMetricsEditingIndex(previous.index, index, direction) } : previous);
+                    ? { ...previous, index: moveMetricsEditingIndex(previous.index, index, destination) } : previous);
+                return true;
             };
+            const metricsRowDrag = useMetricsRowDrag({
+                enabled:isEditing && activeTab === 'metrics' && canEditSection('metrics'),
+                scope:[metricsSubTab,activeDate,ACTIVE_LOCATION,user?.uid].join('|'),
+                rows:data.metricsTracker?.[metricsSubTab], onReorder:moveMetricRow
+            });
             const metricRowField = (row, index, field, label, options = {}) => {
                 const inputClass = 'bg-slate-950 border border-indigo-500/50 rounded px-2 py-1 text-xs text-white outline-none focus:ring-1 focus:ring-indigo-500 ';
                 const change = event => {
@@ -17738,7 +18640,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 const ariaLabel = `${metricsSubTab.toUpperCase()} ${label} row ${index + 1}`;
                 return field === 'comment'
                     ? <textarea aria-label={ariaLabel} value={row[field] ?? ''} rows={3} onChange={change} className={inputClass + 'w-full min-w-[15rem] resize-y'} />
-                    : <input aria-label={ariaLabel} type={options.numeric ? 'number' : 'text'} min={options.numeric ? 0 : undefined} max={options.max} step={options.numeric ? (field === 'surveyCnt' ? '1' : '0.01') : undefined} value={row[field] ?? ''} onChange={change} className={inputClass + (options.numeric ? 'w-20 text-center' : 'w-full min-w-[6rem]')} />;
+                    : <input aria-label={ariaLabel} type={options.numeric ? 'number' : 'text'} min={options.numeric ? 0 : undefined} max={options.max} step={options.numeric ? (field === 'surveyCnt' ? '1' : '0.01') : undefined} value={row[field] ?? (options.numeric && metricsSubTab !== 'feedback' ? 0 : '')} onChange={change} className={inputClass + (options.numeric ? 'w-20 text-center' : 'w-full min-w-[6rem]')} />;
             };
 
 
@@ -18977,10 +19879,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             };
 
             const canDeleteTodayRows = section => recentInbox.policy.enabled && RecentDeletion.validDate(activeDate)
-                && RecentDeletion.canUse(user,section,accessProfile) && (!ownerPolicyEnabled || (ownerLocksReady && !ownerIsSectionLocked(section,activeDate)));
+                && RecentDeletion.canUse(user,section,accessProfile);
             const beginRecentDeletion=(section,field,index=null,all=false)=>{
                 try{
-                    if(all)throw new Error('Delete one record at a time. Bulk deletion is not available.');
+                    if(all&&field==='shiftNotes'&&!isAdminUser)throw new Error('Delete notes one at a time.');
                     if (!canDeleteTodayRows(section)) throw new Error('You do not have deletion permission for this section.');
                     if(hasUnsavedDashboardChanges)throw new Error('Save or cancel your other dashboard edits before deleting saved rows.');
                     const selected=RecentDeletion.select(data,{section,field,index,all},user.uid);
@@ -19012,7 +19914,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 try {
                     let currentUid ="local";
                     if(auth && auth.currentUser) currentUid = auth.currentUser.uid;
-                    const dataToSave = normalizeMetricsNameData(withAutoRouteMetrics(data, { syncUniformCount: canEditSection('overview') }));
+                    const dataToSave = normalizeMetricsNameData(withAutoRouteMetrics(isEditing&&activeTab==='routes'&&routesSubTab==='table'?{...data,routeTable:normalizeRouteHOSRows(normalizeRouteCubeRows(data.routeTable),{strict:true})}:data, { syncUniformCount: canEditSection('overview') }));
                     const baseline = dailySnapshotRef.current.date === activeDate ? dailySnapshotRef.current.data : dataToSave;
                     let invalidCallNote=null;
                     const callValidationError=validateChangedDriverCalls(dataToSave.shiftNotes,baseline?.shiftNotes,note=>invalidCallNote=note);
@@ -19149,6 +20051,12 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 }
             };
 
+            const handleImportRouteFile = report => {
+                if(!isEditing||activeTab!=='routes'||routesSubTab!=='table'||!canEditSection('routes')||isLoading)throw new Error('Enter Edit mode in the Route Table before importing.');
+                const result=RouteWorkbookImport.apply(data.routeTable||[],report,activeDate);
+                if(result.imported)applyLocalRouteTableChange(result.rows);
+                return result;
+            };
             const handlePasteRoutes = (e) => {
                 e.preventDefault();
                 const text = e.clipboardData?.getData('text/plain') || '';
@@ -19186,8 +20094,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         helper: cols[6] || '',
                         stops: cols[7] || '',
                         pcs: cols[8] || '',
-                        cube: cols[9] || '',
-                        hos: cols[10] || '',
+                        cube: roundRouteCube(cols[9] || ''),
+                        hos: formatRouteHOS(cols[10] || ''),
                         mileage: cols[11] || '',
                         uniform: isUniform, 
                         uniformNote: uniformNoteText,
@@ -19210,6 +20118,12 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 setTimeout(() => setRoutePasteFeedback(''), 5000);
             };
 
+            const handleImportMetrics = report => {
+                if(!isEditing||activeTab!=='metrics'||!['wtd','mtd','feedback'].includes(metricsSubTab)||!canEditSection('metrics'))throw new Error('Enter Edit mode in Metrics to import a report.');
+                if(metricsSubTab==='feedback'&&!routeWindowHistoryLoaded)throw new Error('Saved Feedback history is still loading. Wait a moment, then import again.');
+                const result=metricsSubTab==='feedback'?FeedbackWorkbookImport.apply(data,report,{history:historyData,date:activeDate}):MetricsWorkbookImport.apply(data,metricsSubTab,report);
+                setData(result.data);setEditingMetricsRow(null);return result;
+            };
             const handlePasteMetrics = (e) => {
                 e.preventDefault();
                 const text = e.clipboardData?.getData('text/plain') || '';
@@ -19267,12 +20181,11 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     if (e.target) e.target.value ="";
 
                     if (fParsedData.length > 0) {
-                        const nd = JSON.parse(JSON.stringify(data));
-                        if (!nd.metricsTracker) nd.metricsTracker = { wtd: [], mtd: [], feedback: [] };
-                        if (!nd.metricsTracker.feedback) nd.metricsTracker.feedback = [];
-                        nd.metricsTracker.feedback = [...nd.metricsTracker.feedback, ...fParsedData];
-                        setData(nd);
-                        setPasteFeedback(`✅ Successfully extracted ${fParsedData.length} feedback reviews!`);
+                        try {
+                            if(!routeWindowHistoryLoaded)throw new Error('Saved Feedback history is still loading. Wait a moment, then paste again.');
+                            const result=FeedbackWorkbookImport.apply(data,{rows:fParsedData},{history:historyData,date:activeDate});
+                            setData(result.data);setPasteFeedback('✅ '+FeedbackWorkbookImport.message(result));
+                        } catch(error){setPasteFeedback('❌ '+error.message);}
                     } else {
                         setPasteFeedback(`❌ Could not detect feedback data.`);
                     }
@@ -22027,7 +22940,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     <button aria-label={bellNotificationCount ? `Notifications, ${bellNotificationCount} items` : 'Notifications'} onClick={() => { setIsShiftNotificationOpen(prev => !prev); setIsTeamChatOpen(false); setNotificationView(recentInbox.count?'deletions':canManageRecords && managerAlerts.length ? 'manager' : 'activity'); }} className={`relative p-1 bg-transparent border-0 transition-all active:scale-95 cursor-pointer ${bellNotificationCount > 0 ? 'text-rose-300 hover:text-rose-200' : 'text-slate-300 hover:text-white'}`} title="Notifications">
                                         <Bell className="w-4 h-4" />
                                         {bellNotificationCount > 0 && (
-                                            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-4 text-center shadow-lg shadow-rose-950/40">{bellNotificationCount > 9 ? '9+' : bellNotificationCount}</span>
+                                            <span className="dashboard-notification-badge absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-4 text-center shadow-lg shadow-rose-950/40">{bellNotificationCount > 9 ? '9+' : bellNotificationCount}</span>
                                         )}
                                     </button>
                                     {isShiftNotificationOpen && (
@@ -22703,6 +23616,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
 
                                 {isEditing && (
                                     <div className="shrink-0 mb-4 bg-slate-800/80 border border-emerald-500/30 rounded-xl p-4 shadow-inner">
+                                        <RouteFileImport key={[activeDate,ACTIVE_LOCATION,user?.uid].join('|')} date={activeDate} locationLabel={locationName} existingRows={data.routeTable||[]} onImport={handleImportRouteFile} disabled={!canEditSection('routes')||isLoading}/>
                                         <div className="flex items-center gap-2 mb-2">
                                             <ClipboardPaste className="w-4 h-4 text-emerald-400" />
                                             <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Paste Route Data From Excel Here</span>
@@ -22723,6 +23637,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                 )}
 
                                 <div ref={routesScreenshotRef} className={`bg-slate-800 rounded-xl border border-slate-700 shadow-2xl relative ${isRoutesFullscreen ? 'flex-1 overflow-hidden flex flex-col' : 'overflow-hidden'}`}>
+                                    {isEditing&&(data.routeTable||[]).length>0&&<div data-table-delete-toolbar="routes" data-panel-screenshot-ignore="true" data-dashboard-edit-ignore="true" className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 bg-slate-900/40 px-4 py-3">
+                                        <span className="text-xs font-bold text-slate-300">Route table · {(data.routeTable||[]).length} rows</span>
+                                        <button type="button" aria-label="Delete all routes" title="Delete the entire route table for this date" disabled={recentDeletionBusy||!canDeleteTodayRows('routes')} onClick={()=>beginRecentDeletion('routes','routeTable',null,true)} className="inline-flex items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 disabled:opacity-40"><Trash2 className="h-4 w-4"/>Delete table</button>
+                                    </div>}
                                     <div data-panel-screenshot-only="true" className="hidden items-center justify-between gap-4 px-5 py-4 bg-slate-900 border-b border-slate-700">
                                         <div className="flex items-center gap-3">
                                             <Route className="w-6 h-6 text-slate-100" />
@@ -22749,10 +23667,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                 {(data.routeTable || []).length === 0 ? (
                                                     <tr><td colSpan={ROUTE_COLUMNS.length + (isEditing ? 1 : 0)} className="py-12 text-center text-slate-500 text-sm font-bold uppercase tracking-widest italic">No routes added for this date.</td></tr>
                                                 ) : (
-                                                    (data.routeTable || []).map((row) => (
+                                                    (data.routeTable || []).map((row,rowIndex) => (
                                                         <tr key={row.id} className="hover:bg-slate-700/30 transition-colors group" style={{ backgroundColor: '#1e293b' }}>
                                                             {ROUTE_COLUMNS.map((col, colIdx) => {
-                                                                const val = row[col.key];
+                                                                const val = col.key==='cnt'?String(rowIndex+1):row[col.key];
                                                                 const listItems = masterLists[col.list] || [];
                                                                 const isNotInList = val && !listItems.find(i => i.name === val);
                                                                 const CellContent = col.key === 'contractor' ? RouteContractorCell : React.Fragment;
@@ -22774,10 +23692,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                             ) : col.type === 'time' ? (
                                                                                 <span className="font-medium text-slate-300">{formatTime(val) || '-'}</span>
                                                                             ) : (
-                                                                                <RouteNameDetails col={col} value={val} masterLists={masterLists} row={row} />
+                                                                                <RouteNameDetails col={col} value={col.key==='cube'?formatRouteCube(val):col.key==='hos'?formatRouteHOS(val):val} masterLists={masterLists} row={row} />
                                                                             )
                                                                         ) : (
-                                                                            col.type === 'select' ? (
+                                                                            col.key === 'cnt' ? <span title="Automatic route count">{val}</span> : col.type === 'select' ? (
                                                                                 <select className="w-full text-center bg-slate-900 border border-slate-600 text-white rounded px-1 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500 outline-none" value={val || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(data)); const rowIndex = nd.routeTable.findIndex(r => r.id === row.id); if (rowIndex >= 0) { nd.routeTable[rowIndex][col.key] = e.target.value; applyLocalRouteTableChange(nd.routeTable); } }}>
                                                                                     <option value="">- Select -</option>
                                                                                     {isNotInList && <option value={val}>⚡ {val} (Not in List)</option>}
@@ -22791,7 +23709,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                                     {!row.uniform && <input type="text" className="w-full min-w-[40px] text-[9px] bg-slate-800 text-amber-300 border border-slate-600 rounded px-1 py-1 outline-none" placeholder="Note..." value={row.uniformNote || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(data)); const r = nd.routeTable.find(r => r.id === row.id); if (r) { r.uniformNote = e.target.value; applyLocalRouteTableChange(nd.routeTable); } }} />}
                                                                                 </div>
                                                                             ) : (
-                                                                                <input type={col.type === 'time' ? 'time' : 'text'} className="w-full text-center bg-slate-900 border border-slate-600 rounded px-1 py-1 text-[10px] text-white focus:ring-1 focus:ring-indigo-500 outline-none" value={val || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(data)); const r = nd.routeTable.find(r => r.id === row.id); if (r) { r[col.key] = e.target.value; applyLocalRouteTableChange(nd.routeTable); } }} />
+                                                                                <input type={col.type === 'time' ? 'time' : 'text'} className="w-full text-center bg-slate-900 border border-slate-600 rounded px-1 py-1 text-[10px] text-white focus:ring-1 focus:ring-indigo-500 outline-none" value={val || ''} title={col.key==='hos'?'Hours:minutes; 11h 16m, 11:16, or decimal hours are accepted':undefined} onBlur={e=>{if(!['cube','hos'].includes(col.key))return;const value=col.key==='cube'?roundRouteCube(e.currentTarget.value):formatRouteHOS(e.currentTarget.value);if(value===val)return;const nd=JSON.parse(JSON.stringify(data));const r=nd.routeTable.find(item=>item.id===row.id);if(r){r[col.key]=value;applyLocalRouteTableChange(nd.routeTable);}}} onChange={(e) => { const nd = JSON.parse(JSON.stringify(data)); const r = nd.routeTable.find(r => r.id === row.id); if (r) { r[col.key] = e.target.value; applyLocalRouteTableChange(nd.routeTable); } }} />
                                                                             )
                                                                         )}
                                                                         </CellContent>
@@ -22801,7 +23719,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                             {isEditing && (
                                                                 <td data-panel-screenshot-ignore="true" className="px-2 py-1 text-center sticky right-0 bg-slate-800 border-l border-slate-700">
                                                                     {(isSameDayRoute(row) || canChoosePreloadTeam) && <button type="button" aria-haspopup="dialog" onClick={event => openRouteOptions(event, row)} aria-label={`Route options for ${row.serviceUnit || row.route || 'route'}`} title="Route options" className="p-1 text-slate-400 hover:text-emerald-300"><MoreHorizontal className="w-4 h-4" /></button>}
-                                                                    <button disabled={!canDeleteTodayRows('routes')||Boolean(row.preloadArrival)} title={row.preloadArrival?'Remove the linked preload assignment before deleting this route':'Delete this saved route'} onClick={() => beginRecentDeletion('routes','routeTable',data.routeTable.findIndex(item=>item.id===row.id))} className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                                                                    <button disabled={!canDeleteTodayRows('routes')} title="Delete this saved route" onClick={() => beginRecentDeletion('routes','routeTable',data.routeTable.findIndex(item=>item.id===row.id))} className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                                                                 </td>
                                                             )}
                                                         </tr>
@@ -22873,6 +23791,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
 
                                 {isEditing && (
                                     <div className="mb-4 bg-slate-800/80 border border-indigo-500/30 rounded-xl p-4 shadow-inner">
+                                        {['wtd','mtd','feedback'].includes(metricsSubTab)&&<MetricsExcelImport key={[metricsSubTab,activeDate,ACTIVE_LOCATION,user?.uid].join('|')} tab={metricsSubTab} locationLabel={locationName} dateLabel={displayDateString} onImport={handleImportMetrics} disabled={!canEditSection('metrics')||(metricsSubTab==='feedback'&&!routeWindowHistoryLoaded)}/>}
                                         <div className="flex items-center gap-2 mb-2">
                                             <ClipboardPaste className="w-4 h-4 text-indigo-400" />
                                             <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Paste {metricsSubTab.toUpperCase()} Excel Data Here</span>
@@ -22897,6 +23816,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                 )}
 
                                 <div ref={metricsScreenshotRef} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-2xl relative">
+                                    {isEditing&&(data.metricsTracker?.[metricsSubTab]||[]).length>0&&<div data-table-delete-toolbar="metrics" data-panel-screenshot-ignore="true" data-dashboard-edit-ignore="true" className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 bg-slate-900/40 px-4 py-3">
+                                        <span className="text-xs font-bold text-slate-300">{metricsSubTab.toUpperCase()} table · {(data.metricsTracker?.[metricsSubTab]||[]).length} rows</span>
+                                        <button type="button" aria-label={'Delete all '+metricsSubTab.toUpperCase()+' rows'} title={'Delete the entire '+metricsSubTab.toUpperCase()+' table for this date'} disabled={recentDeletionBusy||!canDeleteTodayRows('metrics')} onClick={()=>beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,null,true)} className="inline-flex items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 disabled:opacity-40"><Trash2 className="h-4 w-4"/>Delete table</button>
+                                    </div>}
                                     <div data-panel-screenshot-only="true" className="hidden items-center justify-between gap-4 px-5 py-4 bg-slate-900 border-b border-slate-700">
                                         <div className="flex items-center gap-3">
                                             <Activity className="w-6 h-6 text-slate-100" />
@@ -22909,8 +23832,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{displayDateString}</div>
                                     </div>
                                     <div className="overflow-x-auto">
+                                        <span id={metricsRowDrag.helpId} className="sr-only" data-panel-screenshot-ignore="true">While editing, hold a row to drag it up or down. With a keyboard, focus a row, press Space, use the arrow keys, then press Space again. Escape cancels. Select Save Changes to save the order.</span>
+                                        <span className="sr-only" role="status" aria-live="polite" aria-atomic="true" data-panel-screenshot-ignore="true">{metricsRowDrag.announcement}</span>
                                         {metricsSubTab === 'feedback' ? (
-                                            <table data-dashboard-feedback="true" className="w-full text-left border-collapse" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
+                                            <table {...metricsRowDrag.tableProps} data-dashboard-feedback="true" className="w-full text-left border-collapse" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
                                                 <thead>
                                                     <tr className="bg-slate-900/80">
                                                         <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-700">Date</th>
@@ -22930,7 +23855,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                             const isBad = row.score <= 8; 
                                                             const isGood = row.score >= 9 && row.comment && row.comment.length > 5;
                                                             return (
-                                                                <tr key={row.id || idx} className={`transition-colors group ${isBad ? 'bg-rose-900/10 hover:bg-rose-900/20' : (isGood ? 'bg-emerald-900/10 hover:bg-emerald-900/20' : 'hover:bg-slate-700/30')}`}>
+                                                                <tr key={row.id || idx} {...metricsRowDrag.rowProps(idx)} className={`transition-colors group ${isBad ? 'bg-rose-900/10 hover:bg-rose-900/20' : (isGood ? 'bg-emerald-900/10 hover:bg-emerald-900/20' : 'hover:bg-slate-700/30')}`}>
                                                                     <td className="px-3 py-2 text-xs font-medium text-slate-400 border-b border-slate-700/50">{isMetricRowEditing(idx) ? metricRowField(row, idx, 'date', 'date') : row.date}</td>
                                                                     <td className="px-3 py-2 text-xs font-bold text-slate-200 border-b border-slate-700/50">{isMetricRowEditing(idx) ? <div className="flex flex-col gap-1">{metricRowField(row, idx, 'firstName', 'first name')}{metricRowField(row, idx, 'lastName', 'last name')}</div> : <>{row.firstName} {row.lastName}</>}</td>
                                                                     <td className="px-3 py-2 text-xs font-medium text-slate-400 border-b border-slate-700/50">{isMetricRowEditing(idx) ? metricRowField(row, idx, 'type', 'delivery type') : row.type}</td>
@@ -22946,7 +23871,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                     </td>
                                                                     {isEditing && (
                                                                         <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center border-b border-slate-700/50">
-                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} count={data.metricsTracker[metricsSubTab].length} editing={isMetricRowEditing(idx)} onMove={direction => moveMetricRow(idx, direction)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete feedback row" disabled={!canDeleteTodayRows('metrics')} onClick={() => {setEditingMetricsRow(null);beginRecentDeletion('metrics','metricsTracker.feedback',data.metricsTracker.feedback.findIndex(item=>item.id===row.id));}} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
+                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} editing={isMetricRowEditing(idx)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete feedback row" disabled={!canDeleteTodayRows('metrics')} onClick={() => {setEditingMetricsRow(null);beginRecentDeletion('metrics','metricsTracker.feedback',data.metricsTracker.feedback.findIndex(item=>item.id===row.id));}} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
                                                                         </button></div>
                                                                         </td>
@@ -22958,7 +23883,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                 </tbody>
                                             </table>
                                         ) : (
-                                            <table className="w-full text-left border-collapse whitespace-nowrap" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
+                                            <table {...metricsRowDrag.tableProps} className="w-full text-left border-collapse whitespace-nowrap" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
                                                 <thead>
                                                     <tr className="bg-slate-900 border-b border-slate-700">
                                                         <th colSpan="2" className="px-3 py-2 text-[10px] font-black uppercase text-center text-slate-400 tracking-wider" style={{ padding: '8px 16px', borderRight: '1px solid #334155', textAlign: 'center' }}>MINIMUM TARGET ({metricsSubTab.toUpperCase()})</th>
@@ -22986,17 +23911,17 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                     ) : (
                                                         <>
                                                             {data.metricsTracker[metricsSubTab].map((row, idx) => (
-                                                                <tr key={row.id || idx} className="hover:bg-slate-700/30 transition-colors group">
+                                                                <tr key={row.id || idx} {...metricsRowDrag.rowProps(idx)} className="hover:bg-slate-700/30 transition-colors group">
                                                                     <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'firstName', 'first name') : row.firstName}</td>
                                                                     <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'lastName', 'last name') : row.lastName}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyCnt', row.surveyCnt, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyCnt', 'survey count', {numeric:true}) : row.surveyCnt}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyAvg', row.surveyAvg, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyAvg', 'survey average', {numeric:true, max:10}) : row.surveyAvg?.toFixed(2)}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('onTime', row.onTime, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'onTime', 'on-time delivery', {numeric:true, max:100}) : `${row.onTime?.toFixed(2)}%`}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('completion', row.completion, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'completion', 'completion', {numeric:true, max:100}) : `${row.completion?.toFixed(2)}%`}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('exchange', row.exchange, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'exchange', 'exchange', {numeric:true, max:100}) : `${row.exchange?.toFixed(2)}%`}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyCnt', row.surveyCnt??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyCnt', 'survey count', {numeric:true}) : (row.surveyCnt??0)}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyAvg', row.surveyAvg??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyAvg', 'survey average', {numeric:true, max:10}) : Number(row.surveyAvg??0).toFixed(2)}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('onTime', row.onTime??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'onTime', 'on-time delivery', {numeric:true, max:100}) : `${Number(row.onTime??0).toFixed(2)}%`}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('completion', row.completion??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'completion', 'completion', {numeric:true, max:100}) : `${Number(row.completion??0).toFixed(2)}%`}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('exchange', row.exchange??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'exchange', 'exchange', {numeric:true, max:100}) : `${Number(row.exchange??0).toFixed(2)}%`}</td>
                                                                     {isEditing && (
                                                                         <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>
-                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} count={data.metricsTracker[metricsSubTab].length} editing={isMetricRowEditing(idx)} onMove={direction => moveMetricRow(idx, direction)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete metric row" disabled={!canDeleteTodayRows('metrics')} onClick={() => {setEditingMetricsRow(null);beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,idx);}} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
+                                                                            <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} editing={isMetricRowEditing(idx)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete metric row" disabled={!canDeleteTodayRows('metrics')} onClick={() => {setEditingMetricsRow(null);beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,idx);}} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
                                                                             </button></div>
                                                                         </td>
@@ -23015,11 +23940,11 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                 return (
                                                                     <tr className="bg-slate-900 border-t-2 border-slate-600 shadow-inner">
                                                                         <td colSpan="2" className="px-3 py-3 text-xs font-black uppercase text-right text-slate-300 tracking-wider" style={{ padding: '12px 16px' }}>Grand Total</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('surveyCnt', totals.surveyCnt, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" className="w-14 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.surveyCnt} onChange={(e) => updateCustomTotal('surveyCnt', e.target.value)} /> : totals.surveyCnt}</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('surveyAvg', totals.surveyAvg, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.surveyAvg} onChange={(e) => updateCustomTotal('surveyAvg', e.target.value)} /> : Number(totals.surveyAvg).toFixed(2)}</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('onTime', totals.onTime, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.onTime} onChange={(e) => updateCustomTotal('onTime', e.target.value)} /> : `${Number(totals.onTime).toFixed(2)}%`}</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('completion', totals.completion, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.completion} onChange={(e) => updateCustomTotal('completion', e.target.value)} /> : `${Number(totals.completion).toFixed(2)}%`}</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('exchange', totals.exchange, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.exchange} onChange={(e) => updateCustomTotal('exchange', e.target.value)} /> : `${Number(totals.exchange).toFixed(2)}%`}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('surveyCnt', totals.surveyCnt??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" className="w-14 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.surveyCnt??0} onChange={(e) => updateCustomTotal('surveyCnt', e.target.value)} /> : (totals.surveyCnt??0)}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('surveyAvg', totals.surveyAvg??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.surveyAvg??0} onChange={(e) => updateCustomTotal('surveyAvg', e.target.value)} /> : Number(totals.surveyAvg??0).toFixed(2)}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('onTime', totals.onTime??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.onTime??0} onChange={(e) => updateCustomTotal('onTime', e.target.value)} /> : `${Number(totals.onTime??0).toFixed(2)}%`}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('completion', totals.completion??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.completion??0} onChange={(e) => updateCustomTotal('completion', e.target.value)} /> : `${Number(totals.completion??0).toFixed(2)}%`}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('exchange', totals.exchange??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.exchange??0} onChange={(e) => updateCustomTotal('exchange', e.target.value)} /> : `${Number(totals.exchange??0).toFixed(2)}%`}</td>
                                                                         {isEditing && <td data-panel-screenshot-ignore="true"></td>}
                                                                     </tr>
                                                                 );
@@ -23116,7 +24041,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                                             ) : col.type === 'time' ? (
                                                                                 <span className="text-slate-300 font-medium">{formatTime(val) || '-'}</span>
                                                                             ) : (
-                                                                                <RouteNameDetails col={col} value={val} masterLists={masterLists} row={row} />
+                                                                                <RouteNameDetails col={col} value={col.key==='cube'?formatRouteCube(val):col.key==='hos'?formatRouteHOS(val):val} masterLists={masterLists} row={row} />
                                                                             )}
                                                                         </td>
                                                                     );
@@ -23183,6 +24108,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     <div className="dashboard-mobile-toolbar px-8 py-6 bg-slate-900/50 border-b border-slate-700 flex justify-between items-center">
                                         <div className="flex items-center gap-3"><MessageSquare className="w-8 h-8 text-slate-100" /><h2 className="text-xl font-black text-white italic">Shift Notes</h2></div>
                                         {isEditing && shiftNotesView!=='issues' && <div className="flex flex-wrap items-center gap-2">
+                                            {isAdminUser&&(data.shiftNotes||[]).length>0&&<button type="button" aria-label="Delete all Shift Notes" disabled={!canDeleteTodayRows('shiftNotes')} onClick={()=>beginRecentDeletion('shiftNotes','shiftNotes',null,true)} className="px-3 py-2 text-xs font-bold text-rose-400 hover:text-rose-300">Delete all notes</button>}
                                             <button onClick={beginDriverCall} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-indigo-900/30 cursor-pointer"><Truck className="w-4 h-4" /> DRIVER CALL</button>
                                             <button type="button" onClick={beginRouteIssue} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-indigo-900/30 cursor-pointer"><Route className="w-4 h-4" /> ROUTE ISSUE</button>
                                             <button onClick={() => addShiftNote()} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black transition-all shadow-lg shadow-indigo-900/40 cursor-pointer"><PlusCircle className="w-4 h-4" /> NEW ENTRY</button>
@@ -24684,7 +25610,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         onClose={() => setInsuranceContractorId(null)}/>}
                     {driverCoachingNote && <DriverCoachingDialog key={driverCoachingTarget.token} note={driverCoachingNote} dateKey={driverCoachingTarget.date} actor={getCurrentShiftUser()} canWrite={canEditSection('notes')} onSave={saveDriverCoaching} onClose={()=>{if(!driverCoachingWriteRef.current)setDriverCoachingTarget(null);}}/>}
                     <RouteQuickProgressDialog draft={routeQuickDraft} change={setRouteQuickDraft} busy={routeQuickBusy} error={routeQuickError} onSave={saveRouteQuickUpdate} onClose={()=>{if(!routeQuickBusy)setRouteQuickDraft(null);}}/>
-                    <RecentDeletionConfirmation pending={recentDeletionPending} busy={recentDeletionBusy} error={recentDeletionError} onConfirm={commitRecentDeletion} onClose={()=>{if(!recentDeletionBusy)setRecentDeletionPending(null);}}/>
+                    <RecentDeletionConfirmation pending={recentDeletionPending} busy={recentDeletionBusy} error={recentDeletionError} onConfirm={commitRecentDeletion} onDeleteTable={()=>{if(recentDeletionPending&&!recentDeletionBusy)beginRecentDeletion(recentDeletionPending.section,recentDeletionPending.field,null,true);}} onClose={()=>{if(!recentDeletionBusy)setRecentDeletionPending(null);}}/>
                     {canManageRecords && recordToDelete && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
                             <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
