@@ -9707,7 +9707,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                     const hos=minutes!==null?Math.floor(minutes/60)+':'+String(minutes%60).padStart(2,'0'):formatRouteHOS(raw[map.hos]);
                     if(!hos||parseRouteHOSMinutes(hos)===null)throw new Error('Row '+(i+1)+' has an unreadable HOS duration.');
                     const route=map.route>=0&&!blank(raw[map.route])?text(raw[map.route]):'';
-                    routes.push({serviceUnit,date,door:map.door>=0&&!blank(raw[map.door])?text(raw[map.door]):'',route,stops:String(number(raw[map.stops],'stops',true)),pcs:String(number(raw[map.pcs],'pieces',true)),cube:roundRouteCube(String(number(raw[map.cube],'Cube'))),hos,mileage:String(number(raw[map.mileage],'miles'))});
+                    routes.push({serviceUnit,date,door:'',route,stops:String(number(raw[map.stops],'stops',true)),pcs:String(number(raw[map.pcs],'pieces',true)),cube:roundRouteCube(String(number(raw[map.cube],'Cube'))),hos,mileage:String(number(raw[map.mileage],'miles'))});
                 }
                 if(!routes.length)throw new Error('No route detail rows were found.');
                 return {name:table.name,rows:routes};
@@ -9739,13 +9739,14 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 if(!report?.rows?.length)throw new Error('Choose the route report first.');
                 const dates=[...new Set(report.rows.map(r=>r.date).filter(Boolean))];
                 if(dates.some(d=>d!==date))throw new Error('This report is for '+dates.join(', ')+'. Select that dashboard date before importing.');
-                const byUnit=new Map((assignments?.rows||[]).map(r=>[unit(r.serviceUnit),r])),rows=report.rows.map(r=>{const a=byUnit.get(unit(r.serviceUnit));return {...r,door:a?a.door:r.door,route:a?.route||r.route};});
-                return {rows,warnings:[...(!dates.length?['The report has no date. Check the selected dashboard date.']:[]),...(assignments?.missing?.length?['Screenshot did not match: '+assignments.missing.join(', ')+'. Fill these doors and route names in the preview.']:[]),...(rows.some(r=>!r.door)?[rows.filter(r=>!r.door).length+' route(s) have no door. Leave blank or complete them in the preview.']:[]),...(rows.some(r=>!r.route)?[rows.filter(r=>!r.route).length+' route(s) have no route name. Add a routing screenshot or fill them in the preview.']:[]),...(assignments?.image?['Check the doors and names read from the screenshot before adding the routes.']:[])]};
+                const byUnit=new Map((assignments?.rows||[]).map(r=>[unit(r.serviceUnit),r])),rows=report.rows.map(r=>{const a=byUnit.get(unit(r.serviceUnit)),doorCheck=a?.doorCheck||(assignments?.image?{status:'review',reason:'No matching screenshot row.',crop:''}:null);return {...r,door:a?a.door:r.door,route:a?.route||r.route,...(doorCheck?{doorCheck}:{})};});
+                const unreadable=rows.filter(r=>r.doorCheck?.status==='review').map(r=>r.serviceUnit);
+                return {rows,warnings:[...(!dates.length?['The report has no date. Check the selected dashboard date.']:[]),...(unreadable.length?['Unreadable screenshot doors will stay blank: '+unreadable.join(', ')+'. Other routes will import normally.']:[]),...(rows.some(r=>!r.door)?[rows.filter(r=>!r.door).length+' route(s) have no door number in this preview.']:[]),...(rows.some(r=>!r.route)?[rows.filter(r=>!r.route).length+' route(s) have no route name. Add a routing screenshot or fill them in the preview.']:[])]};
             };
             const apply=(existing,report,date)=>{
-                const prepared=combine(report,null,date),seen=new Set((existing||[]).map(r=>unit(r.serviceUnit)).filter(Boolean)),added=[];let skipped=0;
-                for(const r of prepared.rows){if(seen.has(unit(r.serviceUnit))){skipped++;continue;}if(parseRouteHOSMinutes(r.hos)===null)throw new Error('Check HOS for '+r.serviceUnit+'. Use hours:minutes.');seen.add(unit(r.serviceUnit));added.push({id:crypto.randomUUID(),cnt:'',door:text(r.door),serviceUnit:unit(r.serviceUnit),route:text(r.route),contractor:'',driver:'',helper:'',stops:String(number(r.stops,'stops',true)),pcs:String(number(r.pcs,'pieces',true)),cube:roundRouteCube(String(number(r.cube,'Cube'))),hos:formatRouteHOS(r.hos),mileage:String(number(r.mileage,'miles')),uniform:false,uniformNote:'',timeOffDock:'',returned:'',checkedIn:false});}
-                return {rows:numberRouteRows([...(existing||[]),...added]),imported:added.length,skipped};
+                const prepared=combine(report,null,date),existingUnits=new Set((existing||[]).map(r=>unit(r.serviceUnit)).filter(Boolean)),seen=new Set(existingUnits),added=[];let skipped=0;
+                for(const r of prepared.rows){if(seen.has(unit(r.serviceUnit))){skipped++;continue;}if(parseRouteHOSMinutes(r.hos)===null)throw new Error('Check HOS for '+r.serviceUnit+'. Use hours:minutes.');seen.add(unit(r.serviceUnit));added.push({id:crypto.randomUUID(),cnt:'',door:r.doorCheck?.status==='review'?'':text(r.door),serviceUnit:unit(r.serviceUnit),route:text(r.route),contractor:'',driver:'',helper:'',stops:String(number(r.stops,'stops',true)),pcs:String(number(r.pcs,'pieces',true)),cube:roundRouteCube(String(number(r.cube,'Cube'))),hos:formatRouteHOS(r.hos),mileage:String(number(r.mileage,'miles')),uniform:false,uniformNote:'',timeOffDock:'',returned:'',checkedIn:false});}
+                return {rows:numberRouteRows([...(existing||[]),...added]),imported:added.length,skipped,unreadableDoors:prepared.rows.filter(r=>r.doorCheck?.status==='review'&&!existingUnits.has(unit(r.serviceUnit))).map(r=>r.serviceUnit)};
             };
             return {read,readAssignments,parse,parseAssignments,combine,apply,unit};
         })();
@@ -9784,10 +9785,39 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                     const cy=(anchor.y0+anchor.y1)/2,top=[...layout.horizontal].reverse().find(y=>y<cy)??0,bottom=layout.horizontal.find(y=>y>cy)??layout.height;
                     const cell=col=>words.filter(w=>{const x=(w.x0+w.x1)/2,y=(w.y0+w.y1)/2;return x>col.left&&x<col.right&&y>top&&y<bottom;}).sort((a,b)=>Math.abs(a.y0-b.y0)>6?a.y0-b.y0:a.x0-b.x0);
                     const city=cell(cityCol).map(w=>w.text).join(' ').replace(/\s+/g,' ').trim(),doorWords=cell(doorCol),door=doorWords.map(w=>w.text).join('').trim();
-                    rows.push({serviceUnit,route:city,door:/^\d{1,4}$/.test(door)?door:''});
+                    rows.push({serviceUnit,route:city,door:'',doorCell:{left:doorCol.left,top,right:doorCol.right,bottom},doorCheck:{status:'review',reason:'Door cell has not been verified.'}});
                 }
                 if(!rows.length)throw new Error('No screenshot service units matched the route report. Check that both files are for the same location and date.');
                 return {rows,image:true,matched:rows.length,missing:knownUnits.filter(u=>!seen.has(u))};
+            };
+            const doorDecision=(first,second,ink,third=null)=>{
+                const clean=reading=>String(reading?.text||'').trim().replace(/\s/g,''),a=clean(first),b=clean(second);
+                if(ink===0&&!a&&!b)return {door:'',status:'blank',reason:''};
+                const clear=[first,second,third].filter(r=>r&&/^\d{1,4}$/.test(clean(r))&&Number(r.confidence)>=90),values=new Set(clear.map(clean));
+                if(clear.length>=2&&values.size===1)return {door:clean(clear[0]),status:'read',reason:''};
+                return {door:'',status:'review',reason:!a&&!b?'The door could not be read clearly.':'Door readings did not agree clearly. Check the original cell.'};
+            };
+            const verifyDoors=async(file,result,worker,{check,onProgress})=>{
+                const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas');
+                try{
+                    for(let index=0;index<result.rows.length;index++){
+                        check();const row=result.rows[index],r=row.doorCell;if(!r)continue;
+                        const left=Math.ceil(r.left)+2,top=Math.ceil(r.top)+2,width=Math.max(1,Math.floor(r.right)-left-2),height=Math.max(1,Math.floor(r.bottom)-top-2),scale=5;
+                        canvas.width=width*scale;canvas.height=height*scale;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,left,top,width,height,0,0,canvas.width,canvas.height);
+                        const crop=canvas.toDataURL('image/png'),pixels=ctx.getImageData(0,0,canvas.width,canvas.height);let ink=0,minX=canvas.width,minY=canvas.height,maxX=0,maxY=0;
+                        for(let at=0;at<pixels.data.length;at+=4){const value=Math.max(pixels.data[at],pixels.data[at+1],pixels.data[at+2])<140?0:255;if(!value){ink++;const p=at/4,x=p%canvas.width,y=Math.floor(p/canvas.width);minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);}pixels.data[at]=pixels.data[at+1]=pixels.data[at+2]=value;pixels.data[at+3]=255;}
+                        onProgress('Checking door '+(index+1)+' of '+result.rows.length+'…');let decision;
+                        if(!ink)decision=doorDecision({text:''},{text:''},0);
+                        else{
+                            await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789',preserve_interword_spaces:'0'});
+                            const first=await worker.recognize(crop,{}, {text:true});check();ctx.putImageData(pixels,0,0);
+                            await worker.setParameters({tessedit_pageseg_mode:'7'});const second=await worker.recognize(canvas,{}, {text:true});check();decision=doorDecision(first.data,second.data,ink);
+                            const tight=document.createElement('canvas'),padding=20;tight.width=maxX-minX+1+padding*2;tight.height=maxY-minY+1+padding*2;const tctx=tight.getContext('2d');tctx.fillStyle='white';tctx.fillRect(0,0,tight.width,tight.height);tctx.drawImage(canvas,minX,minY,maxX-minX+1,maxY-minY+1,padding,padding,maxX-minX+1,maxY-minY+1);const third=await worker.recognize(tight,{}, {text:true});tight.width=tight.height=0;check();decision=doorDecision(first.data,second.data,ink,third.data);
+                        }
+                        row.door=decision.door;row.doorCheck={status:decision.status,reason:decision.reason,crop};delete row.doorCell;
+                    }
+                    return result;
+                }finally{bitmap.close();canvas.width=canvas.height=0;}
             };
             const read=async(file,knownUnits,{signal,onProgress=()=>{}}={})=>{
                 let worker=null;const check=()=>{if(signal?.aborted)throw new Error('The screenshot import was canceled.');},cancel=()=>worker?.terminate();signal?.addEventListener('abort',cancel,{once:true});
@@ -9804,10 +9834,10 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                             const retained=words.filter(w=>w.bbox.y0<top||(w.bbox.x0+w.bbox.x1)/2<left*prepared.scale||(w.bbox.x0+w.bbox.x1)/2>right*prepared.scale),merged={blocks:[{paragraphs:[{lines:[{words:[...retained,...flatten(reread.data)]}]}]}]},second=parse(merged,prepared,knownUnits);if(second.matched>=result.matched)result=second;
                         }
                     }
-                    return result;
+                    return await verifyDoors(file,result,worker,{check,onProgress});
                 }finally{signal?.removeEventListener('abort',cancel);if(worker)await worker.terminate().catch(()=>{});}
             };
-            return {read,parse};
+            return {read,parse,doorDecision};
         })();
 
         const RouteFileImport = ({date,locationLabel,existingRows,onImport,disabled=false})=>{
@@ -9831,7 +9861,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             const drop=kind=>event=>{event.preventDefault();event.stopPropagation();if(!busy&&!disabled)load(kind,getDroppedMetricsFiles(event.dataTransfer));};
             const drag=event=>{if(isMetricsFileDrag(event.dataTransfer)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect=disabled||busy?'none':'copy';}};
             const edit=(unit,field,value)=>setDraft(rows.map(row=>row.serviceUnit===unit?{...row,[field]:value}:row));
-            const add=()=>{try{if(disabled||busy||prepared?.error)return;const result=latest.current.onImport({name:report.name,rows});setNotice(result.imported+' route(s) added. '+result.skipped+' already in this table were skipped. Select Save Changes to save.');setReport(null);setAssignments(null);setDraft(null);setError('');}catch(e){setError(e.message);}};
+            const add=()=>{try{if(disabled||busy||prepared?.error)return;const result=latest.current.onImport({name:report.name,rows});setNotice(result.imported+' route(s) added. '+result.skipped+' already in this table were skipped. '+(result.unreadableDoors.length?'Unreadable screenshot doors left blank: '+result.unreadableDoors.join(', ')+'. ':'')+'Select Save Changes to save.');setReport(null);setAssignments(null);setDraft(null);setError('');}catch(e){setError(e.message);}};
             const button='px-3 py-2 rounded-lg border border-indigo-500/40 text-indigo-300 text-xs font-bold hover:bg-indigo-500/10 disabled:opacity-50';
             return <section ref={card} aria-label="Route file import" className="mb-4 pb-4 border-b border-slate-700">
                 <div className="flex flex-wrap items-center justify-between gap-2"><div className="text-xs font-bold uppercase tracking-wider text-indigo-300">Import route files</div><button type="button" aria-expanded={open} onClick={()=>setOpen(v=>!v)} className={button}>{open?'Hide import':'Import routes'}</button></div>
@@ -9854,6 +9884,63 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 {notice&&<p role="status" className="text-xs text-emerald-300 mt-2">{notice}</p>}
                 {error&&<p role="alert" className="text-xs text-rose-300 mt-2">{error}</p>}
             </section>;
+        };
+
+        const MetricsSort = (()=>{
+            const fields=[{key:'surveyCnt',label:'Survey Count'},{key:'surveyAvg',label:'Survey Average'},{key:'onTime',label:'On-Time %'},{key:'completion',label:'Completion %'},{key:'exchange',label:'Exchange %'},{key:'firstName',label:'First Name',text:true},{key:'lastName',label:'Last Name',text:true}];
+            const defaults=()=>fields.slice(0,5).map(field=>({field:field.key,direction:field.key==='exchange'?'asc':'desc'}));
+            const validate=rules=>{
+                if(!Array.isArray(rules)||!rules.length||rules.length>fields.length)throw new Error('Choose at least one sorting column.');
+                const used=new Set();return rules.map(rule=>{if(!fields.some(field=>field.key===rule.field)||!['asc','desc'].includes(rule.direction)||used.has(rule.field))throw new Error('Choose each sorting column once and select its order.');used.add(rule.field);return {field:rule.field,direction:rule.direction};});
+            };
+            const numeric=value=>{if(value===null||value===undefined||String(value).trim()==='')return null;const number=Number(String(value).replace(/,/g,'').replace(/%$/,'').trim());return Number.isFinite(number)?number:null;};
+            const collator=new Intl.Collator('en',{sensitivity:'base',numeric:true});
+            const sort=(rows,rules)=>{
+                const checked=validate(rules);return (rows||[]).map((row,index)=>({row,index})).sort((a,b)=>{
+                    for(const rule of checked){const field=fields.find(f=>f.key===rule.field),av=field.text?String(a.row[rule.field]??'').trim()||null:numeric(a.row[rule.field]),bv=field.text?String(b.row[rule.field]??'').trim()||null:numeric(b.row[rule.field]);if(av===null&&bv===null)continue;if(av===null)return 1;if(bv===null)return -1;const order=field.text?collator.compare(av,bv):av-bv;if(order)return rule.direction==='asc'?order:-order;}
+                    return a.index-b.index;
+                }).map(item=>item.row);
+            };
+            const key=(uid,tab)=>{if(!uid||!['wtd','mtd'].includes(tab))throw new Error('Sign in and choose WTD or MTD before sorting.');return 'fmo_metrics_sort_v1:'+encodeURIComponent(uid)+':'+tab;};
+            const read=(storage,uid,tab)=>{try{const saved=JSON.parse(storage.getItem(key(uid,tab))||'null');return saved?.version===1?validate(saved.rules):defaults();}catch{return defaults();}};
+            const save=(storage,uid,tab,rules)=>{const checked=validate(rules),name=key(uid,tab),value=JSON.stringify({version:1,rules:checked});try{storage.setItem(name,value);if(storage.getItem(name)!==value)throw new Error();}catch{throw new Error('Your sorting choice could not be remembered. No table changes were made.');}return checked;};
+            return {fields,defaults,validate,sort,read,save,key};
+        })();
+        const MetricsSortControl = ({tab,uid,scope,enabled,onSave})=>{
+            const [open,setOpen]=useState(false),[rules,setRules]=useState(MetricsSort.defaults),[error,setError]=useState(''),[notice,setNotice]=useState('');
+            const trigger=useRef(null),panel=useRef(null),latest=useRef(null);latest.current={onSave,enabled};
+            useEffect(()=>{setOpen(false);setError('');setNotice('');},[scope,enabled]);
+            useEffect(()=>{
+                if(!open)return;const node=panel.current;node?.querySelector('select,button')?.focus();
+                const keys=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setOpen(false);}else if(event.key==='Tab'){const controls=Array.from(node?.querySelectorAll('button:not([disabled]),select:not([disabled])')||[]),first=controls[0],last=controls.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}};
+                document.addEventListener('keydown',keys,true);return()=>{document.removeEventListener('keydown',keys,true);if(trigger.current?.isConnected)trigger.current.focus();};
+            },[open]);
+            if(!enabled||!['wtd','mtd'].includes(tab))return null;
+            const start=()=>{setRules(MetricsSort.read(window.localStorage,uid,tab));setError('');setOpen(true);};
+            const change=(index,field,value)=>setRules(previous=>previous.map((rule,i)=>i===index?{...rule,[field]:value}:rule));
+            const move=(index,offset)=>setRules(previous=>{const next=[...previous],target=index+offset;if(target<0||target>=next.length)return previous;[next[index],next[target]]=[next[target],next[index]];return next;});
+            const add=()=>{const field=MetricsSort.fields.find(field=>!rules.some(rule=>rule.field===field.key));if(field)setRules(previous=>[...previous,{field:field.key,direction:field.key==='exchange'||field.text?'asc':'desc'}]);};
+            const save=()=>{try{if(!latest.current.enabled)return;latest.current.onSave(MetricsSort.validate(rules));setOpen(false);setNotice('Sorting applied. Select Save Changes to save the row order.');}catch(e){setError(e.message||'Sorting could not be applied.');}};
+            const button='rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-40';
+            return <>
+                <button ref={trigger} type="button" aria-label={'Sort '+tab.toUpperCase()+' metrics'} aria-haspopup="dialog" aria-expanded={open} title="Sort metrics" data-panel-screenshot-ignore="true" data-dashboard-edit-ignore="true" onClick={start} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 cursor-pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M8 3v18m-4-4 4 4 4-4M16 21V3m-4 4 4-4 4 4"/></svg></button>
+                <span role="status" className="sr-only" data-panel-screenshot-ignore="true">{notice}</span>
+                {open&&<div data-dashboard-edit-ignore="true" data-panel-screenshot-ignore="true" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4" onClick={event=>{event.stopPropagation();if(event.target===event.currentTarget)setOpen(false);}}>
+                    <section ref={panel} role="dialog" aria-modal="true" aria-label={'Sort '+tab.toUpperCase()+' metrics'} className="w-full max-w-2xl max-h-[90vh] overflow-auto rounded-2xl border border-slate-600 bg-slate-800 p-5 text-slate-100 shadow-xl">
+                        <h2 className="text-lg font-bold">Sort {tab.toUpperCase()} metrics</h2>
+                        <p className="mt-1 text-xs text-slate-400">Choose which columns control the order. Removing a sorting rule keeps the column and its numbers in the table.</p>
+                        <div className="my-4 space-y-3">{rules.map((rule,index)=>{const field=MetricsSort.fields.find(field=>field.key===rule.field);return <div key={index} className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-600 bg-slate-900/40 p-3">
+                            <label className="min-w-[11rem] flex-1 text-xs text-slate-300">{index===0?'Sort by':'Then by'}<select aria-label={'Sort column '+(index+1)} value={rule.field} className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-900 p-2 text-sm text-slate-100" onChange={e=>change(index,'field',e.target.value)}>{MetricsSort.fields.map(option=><option key={option.key} value={option.key} disabled={rules.some((r,i)=>i!==index&&r.field===option.key)}>{option.label}</option>)}</select></label>
+                            <label className="min-w-[11rem] flex-1 text-xs text-slate-300">Order<select aria-label={'Sort order '+(index+1)} value={rule.direction} className="mt-1 block w-full rounded-lg border border-slate-600 bg-slate-900 p-2 text-sm text-slate-100" onChange={e=>change(index,'direction',e.target.value)}><option value="desc">{field?.text?'Z to A':'Largest to smallest'}</option><option value="asc">{field?.text?'A to Z':'Smallest to largest'}</option></select></label>
+                            <div className="flex gap-1"><button type="button" className={button} aria-label={'Move sorting rule '+(index+1)+' up'} disabled={index===0} onClick={()=>move(index,-1)}>↑</button><button type="button" className={button} aria-label={'Move sorting rule '+(index+1)+' down'} disabled={index===rules.length-1} onClick={()=>move(index,1)}>↓</button><button type="button" className={button} aria-label={'Remove '+field?.label+' sorting rule'} onClick={()=>setRules(previous=>previous.filter((_,i)=>i!==index))}>Remove</button></div>
+                        </div>;})}</div>
+                        <div className="flex flex-wrap gap-2"><button type="button" className={button} disabled={rules.length>=MetricsSort.fields.length} onClick={add}>Add sorting rule</button><button type="button" className={button} onClick={()=>setRules(MetricsSort.defaults())}>Use default sort</button></div>
+                        <p className="mt-4 text-xs text-slate-400">Save sort remembers your choice. New Excel imports still use the original default sort. Select Save Changes afterward to save the table’s row order.</p>
+                        {error&&<p role="alert" className="mt-3 text-sm text-rose-300">{error}</p>}
+                        <div className="mt-4 flex justify-end gap-2"><button type="button" className={button} onClick={()=>setOpen(false)}>Cancel</button><button type="button" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-40" disabled={!rules.length} onClick={save}>Save sort</button></div>
+                    </section>
+                </div>}
+            </>;
         };
 
         const getDroppedMetricsFiles = transfer => {
@@ -18615,6 +18702,13 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const [editingMetricsRow, setEditingMetricsRow] = useState(null);
             useEffect(() => { setEditingMetricsRow(null); }, [metricsSubTab, activeDate, isEditMode, user?.uid]);
             const isMetricRowEditing = index => isEditing && editingMetricsRow?.tab === metricsSubTab && editingMetricsRow.index === index;
+            const saveMetricsSort = rules => {
+                if(!user?.uid||!isEditing||activeTab!=='metrics'||!['wtd','mtd'].includes(metricsSubTab)||!canEditSection('metrics'))throw new Error('Enter Edit mode in WTD or MTD to sort.');
+                const checked=MetricsSort.validate(rules),tab=metricsSubTab;
+                MetricsSort.save(window.localStorage,user.uid,tab,checked);
+                setData(previous=>({...previous,metricsTracker:{...previous.metricsTracker,[tab]:MetricsSort.sort(previous.metricsTracker?.[tab]||[],checked)}}));
+                setEditingMetricsRow(null);
+            };
             const moveMetricRow = (index, destination, expectedRows) => {
                 if (!isEditing || activeTab !== 'metrics' || !canEditSection('metrics')) return false;
                 const rows = data.metricsTracker?.[metricsSubTab] || [];
@@ -23778,6 +23872,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     </div>
                                      <div className="flex items-center gap-2">
                                         
+                                        <MetricsSortControl tab={metricsSubTab} uid={user?.uid} scope={[metricsSubTab,activeDate,ACTIVE_LOCATION,user?.uid].join('|')} enabled={isEditing&&['wtd','mtd'].includes(metricsSubTab)&&canEditSection('metrics')} onSave={saveMetricsSort}/>
                                         <button onClick={handleDownloadMetricsScreenshot} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white border border-slate-600 transition-colors cursor-pointer" title="Download Metrics Screenshot">
                                             <Camera className="w-4 h-4" />
                                         </button>
