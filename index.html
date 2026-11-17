@@ -16912,32 +16912,95 @@ const WeeklyBilling = (() => {
         for(let i=0;i<8;i++){const key=Object.keys(mappings).find(k=>identity(k)===identity(value));if(!key || visited.has(identity(value)))break;visited.add(identity(value));value=String(mappings[key] || value).trim();}
         return value;
     };
-    const build = ({week,reportDate,records,metrics,bonuses,ready,area='Pflugerville'}) => {
-        const saved=bonuses || {}, people={}, hidden=new Set((saved.hiddenDrivers || []).map(n=>identity(canonicalPerson(n,saved))));
-        const metricNames=new Set((metrics || []).map(m=>identity(canonicalPerson(`${m.firstName || ''} ${m.lastName || ''}`,saved))));
-        const extraNames=[...Object.keys(saved.drivers || {}),...(saved.manualDrivers || []).map(m=>`${m.firstName || ''} ${m.lastName || ''}`)].filter(n=>!metricNames.has(identity(canonicalPerson(n,saved))));
-        for(const m of [...(metrics || []),...extraNames.map(name=>({firstName:name,lastName:'',surveyCnt:0,surveyAvg:0,onTime:0,completion:0}))]){const name=canonicalPerson(`${m.firstName || ''} ${m.lastName || ''}`,saved),key=identity(name);if(key && !hidden.has(key))people[key]={...m,key,name,surveyBonus:number(m.surveyCnt)>=10?20:0,payments:{}};}
+    const personNameWords = value => String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim().split(/\s+/).filter(Boolean);
+    const personNameKey = value => personNameWords(value).sort().join(' ');
+    const onePersonNameEdit = (a,b) => {
+        if(a===b)return true;
+        if(Math.min(a.length,b.length)<4 || Math.abs(a.length-b.length)>1)return false;
+        if(a.length===b.length){const different=[];for(let i=0;i<a.length;i++)if(a[i]!==b[i])different.push(i);return different.length===1 || (different.length===2 && different[1]===different[0]+1 && a[different[0]]===b[different[1]] && a[different[1]]===b[different[0]]);}
+        const short=a.length<b.length?a:b,long=a.length<b.length?b:a;let i=0,j=0,skipped=false;
+        while(i<short.length&&j<long.length){if(short[i]===long[j]){i++;j++;}else{if(skipped)return false;skipped=true;j++;}}return true;
+    };
+    const closePersonNames = (a,b) => {
+        const left=personNameWords(a),right=personNameWords(b);
+        if(left.length<2 || left.length!==right.length)return false;
+        const rest=[...right],unmatched=[];
+        for(const word of left){const i=rest.indexOf(word);if(i<0)unmatched.push(word);else rest.splice(i,1);}
+        return unmatched.length===1 && rest.length===1 && onePersonNameEdit(unmatched[0],rest[0]);
+    };
+    const personNameChoices = (value,names) => {
+        const exact=names.filter(name=>identity(name)===identity(value));if(exact.length)return exact;
+        const reordered=names.filter(name=>personNameKey(name)===personNameKey(value));if(reordered.length)return reordered;
+        return names.filter(name=>closePersonNames(name,value));
+    };
+    const build = ({week,reportDate,records,metrics,bonuses,masterLists={},ready,area='Pflugerville'}) => {
+        const saved=bonuses || {},people={},personMatchErrors=[],personNameMatches=[];
+        const unique=names=>[...new Map(names.filter(Boolean).map(name=>[identity(name),String(name).trim()])).values()];
         const relevant=(records || []).filter(r=>r.date>=week.mondayStr && r.date<=week.sundayStr).sort((a,b)=>a.date.localeCompare(b.date));
+        const metricNames=unique((metrics || []).map(m=>canonicalPerson(`${m.firstName || ''} ${m.lastName || ''}`,saved)));
+        const routeNames=unique(relevant.flatMap(record=>(record.routeTable || []).flatMap(row=>[row?.driver,row?.helper]).filter(Boolean).map(name=>canonicalPerson(name,saved))));
+        const contacts=[...(masterLists.drivers || []),...(masterLists.helpers || [])].filter(person=>person?.name);
+        const preferred=name=>{
+            if(Object.values(saved.nameMappings || {}).some(target=>identity(canonicalPerson(target,saved))===identity(name)))return name;
+            const aliases=person=>[person.name,...(Array.isArray(person.nameAliases)?person.nameAliases:[])];
+            const contactMatches=contacts.filter(person=>aliases(person).some(alias=>personNameKey(alias)===personNameKey(name)));
+            const exact=unique(contactMatches.map(person=>canonicalPerson(person.name,saved)));
+            if(exact.length===1)return exact[0];
+            if(exact.length>1)return name;
+            const close=unique(contacts.filter(person=>aliases(person).some(alias=>closePersonNames(alias,name))).map(person=>canonicalPerson(person.name,saved)));
+            if(close.length===1 && personNameChoices(close[0],metricNames).length===1)return close[0];
+            if(close.length>1)return name;
+            const routes=personNameChoices(name,routeNames);
+            return routes.length===1 && personNameChoices(routes[0],metricNames).length===1?routes[0]:name;
+        };
+        const anchors=metricNames.map(name=>({name,canonical:preferred(name)}));
+        for(const anchor of anchors){
+            const collisions=anchors.filter(other=>personNameKey(other.canonical)===personNameKey(anchor.canonical));
+            if(collisions.length>1){personMatchErrors.push(anchor.name+': more than one metrics name matches the same person. Correct the duplicate names before billing.');anchor.canonical=anchor.name;}
+        }
+        const resolvePerson=name=>{
+            const mapped=canonicalPerson(name,saved),choices=personNameChoices(mapped,anchors.map(anchor=>anchor.name));
+            if(choices.length===1){const match=anchors.find(anchor=>anchor.name===choices[0]);if(identity(mapped)!==identity(match.canonical))personNameMatches.push({source:String(name).trim(),name:match.canonical});return match.canonical;}
+            if(choices.length>1){personMatchErrors.push(String(name).trim()+': matches more than one person. Correct the name before billing.');return mapped;}
+            const canonical=unique(anchors.map(anchor=>anchor.canonical)),matches=personNameChoices(mapped,canonical);
+            if(matches.length===1)return matches[0];
+            if(matches.length>1){personMatchErrors.push(String(name).trim()+': matches more than one person. Correct the name before billing.');return mapped;}
+            return mapped;
+        };
+        const hidden=new Set((saved.hiddenDrivers || []).map(name=>identity(resolvePerson(name))));
+        const metricKeys=new Set(metricNames.map(name=>identity(resolvePerson(name))));
+        const extraNames=unique([...Object.keys(saved.drivers || {}),...(saved.manualDrivers || []).map(m=>`${m.firstName || ''} ${m.lastName || ''}`)]).filter(name=>!metricKeys.has(identity(resolvePerson(name))));
+        for(const m of [...(metrics || []),...extraNames.map(name=>({firstName:name,lastName:'',surveyCnt:0,surveyAvg:0,onTime:0,completion:0}))]){
+            const name=resolvePerson(`${m.firstName || ''} ${m.lastName || ''}`),key=identity(name);
+            if(!key || hidden.has(key))continue;
+            if(people[key]){
+                if(['surveyCnt','surveyAvg','onTime','completion'].some(field=>number(people[key][field])!==number(m[field])))personMatchErrors.push(name+': duplicate metrics have different values. Correct them before billing.');
+                continue;
+            }
+            people[key]={...m,key,name,surveyBonus:number(m.surveyCnt)>=10?20:0,payments:{}};
+        }
         const allRoutes=[];
         for(const record of relevant){for(const [index,r] of (record.routeTable || []).entries()){
             if(!r || !['serviceUnit','route','contractor','driver','helper'].some(k=>String(r[k]??'').trim()))continue;
             const routeNumber=String(r.serviceUnit || '').trim().toUpperCase();
-            allRoutes.push({id:record.date+'|'+String(r.id ?? index),date:record.date,routeNumber,routeLabel:String(r.route || '').trim(),originalContractor:String(r.contractor || '').trim(),billingContractor:billingName(r.contractor),type:typeFor(routeNumber,r.route,number(r.mileage)),stops:number(r.stops),mileage:number(r.mileage),exportRoute:'',include:true,payee:'',survey:null,onTime:null,completion:null,costAdjustment:null,internalNotes:'',notes:'',crew:[...new Set([r.driver,r.helper].filter(Boolean).map(n=>identity(canonicalPerson(n,saved))))],uniform:r.uniform,candidates:[]});
+            allRoutes.push({id:record.date+'|'+String(r.id ?? index),date:record.date,routeNumber,routeLabel:String(r.route || '').trim(),originalContractor:String(r.contractor || '').trim(),billingContractor:billingName(r.contractor),type:typeFor(routeNumber,r.route,number(r.mileage)),stops:number(r.stops),mileage:number(r.mileage),exportRoute:'',include:true,payee:'',survey:null,onTime:null,completion:null,costAdjustment:null,internalNotes:'',notes:'',crew:[...new Set([r.driver,r.helper].filter(Boolean).map(name=>identity(resolvePerson(name))))],uniform:r.uniform,candidates:[]});
         }}
         allRoutes.sort((a,b)=>a.date.localeCompare(b.date)||a.routeNumber.localeCompare(b.routeNumber,undefined,{numeric:true}));
         for(const person of Object.values(people)){
-            const savedKey=Object.keys(saved.drivers || {}).find(k=>identity(canonicalPerson(k,saved))===person.key);
+            const savedKeys=Object.keys(saved.drivers || {}).filter(key=>identity(resolvePerson(key))===person.key);
             for(let day=0;day<7;day++){
                 const date=move(week.mondayStr,day),routes=allRoutes.filter(r=>r.date===date && r.crew.includes(person.key));
-                const manual=savedKey?saved.drivers[savedKey]?.[day]:undefined;
-                const manualPresent=manual!==undefined && String(manual).trim()!=='';
+                const entries=savedKeys.map(key=>saved.drivers[key]?.[day]).filter(value=>value!==undefined && String(value).trim()!=='');
+                const manual=entries[0],manualPresent=entries.length>0;
+                const conflict=entries.some(value=>(number(value)??identity(value))!==(number(manual)??identity(manual)));
+                if(conflict)personMatchErrors.push(`${person.name}, ${dateText(date)}: saved payouts use different values for matching names. Correct the conflict before billing.`);
                 const amount=manualPresent?number(manual):!routes.length || routes.some(r=>r.uniform===false)?null:rate(person);
-                const eligible=routes.length>0 && (manualPresent ? amount!=null && amount>=0 : !routes.some(r=>r.uniform===false));
+                const eligible=!conflict && routes.length>0 && (manualPresent ? amount!=null && amount>=0 : !routes.some(r=>r.uniform===false));
                 person.payments[date]={amount:eligible?amount:null,eligible,recordedAmount:manualPresent?number(manual):null,manual:manualPresent?String(manual):'',routeIds:routes.map(r=>r.id)};
             }
         }
         for(const row of allRoutes){row.candidates=row.crew.filter(k=>people[k] && people[k].payments[row.date]?.eligible && ((people[k].payments[row.date].amount || 0)>0 || people[k].surveyBonus>0));}
-        const draft={week:{...week},reportDate,rows:allRoutes,people,ready:Boolean(ready),area,surveyNote:'Survey intake',surveyAllocations:{},skippedPayments:{},deductions:[],deductionImport:null,createdAt:new Date().toISOString()};
+        const draft={week:{...week},reportDate,rows:allRoutes,people,ready:Boolean(ready),area,surveyNote:'Survey intake',surveyAllocations:{},skippedPayments:{},deductions:[],deductionImport:null,createdAt:new Date().toISOString(),personMatchErrors:[...new Set(personMatchErrors)],personNameMatches:[...new Map(personNameMatches.map(match=>[identity(match.source)+'|'+identity(match.name),match])).values()]};
         for(const row of allRoutes){if(row.candidates.length===1){const key=row.candidates[0],matches=allRoutes.filter(r=>r.date===row.date && r.candidates.includes(key));if(matches.length===1)assign(draft,row.id,key);}}
         for(const person of Object.values(people).filter(p=>p.surveyBonus>0)){
             const candidates=allRoutes.filter(r=>r.payee===person.key);
@@ -17056,7 +17119,7 @@ const WeeklyBilling = (() => {
         return v;
     };
     const validate = draft => {
-        const errors=[],warnings=[],rows=draft.rows.filter(r=>r.include),used=new Map(),routes=new Set();
+        const errors=[...(draft.personMatchErrors || [])],warnings=[],rows=draft.rows.filter(r=>r.include),used=new Map(),routes=new Set();
         if(!draft.ready)errors.push('Save the final Sunday metrics on Monday before downloading this week.');
         if(draft.billingNameStorageError)errors.push('Saved billing-name links could not be loaded. Reopen billing after browser storage is available.');
         if(draft.billingCompanyCatalogError)errors.push(draft.billingCompanyCatalogError);
@@ -20869,7 +20932,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     const ready = Boolean(getChicagoDateKey() >= reportDate && finalReport?.lastUpdatedAt && metrics.some(row => String(row.firstName || row.lastName || '').trim()));
                     const records = dates.map((date,i) => ({...(snapshots[i+2].exists() ? snapshots[i+2].data() : {}),date}));
                     const bonuses = snapshots[1].exists() ? snapshots[1].data() : {drivers:{},hiddenDrivers:[],nameMappings:{},manualDrivers:[]};
-                    const draft=WeeklyBilling.build({week,reportDate,records,metrics,bonuses,ready,area:ACTIVE_LOCATION === 'austin' ? 'Pflugerville' : locationName});
+                    const draft=WeeklyBilling.build({week,reportDate,records,metrics,bonuses,masterLists,ready,area:ACTIVE_LOCATION === 'austin' ? 'Pflugerville' : locationName});
                     draft.billingNameStorageKey=WeeklyBilling.nameLinkStorageKey(appId,user.uid);
                     setBillingDraft(draft);
                 } catch(error) {
