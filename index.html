@@ -17112,7 +17112,10 @@ const WeeklyBilling = (() => {
         v[0]=index+1;v[1]=dateText(row.date);v[3]=row.routeNumber;v[4]=number(row.stops);v[5]=String(serial(row.date))+row.routeNumber;v[6]=1;v[7]=number(row.stops);v[8]=row.type;v[9]=row.exportRoute || null;v[10]=draft.area;v[11]=row.billingContractor;
         v[13]=extra || deductions.length || number(row.costAdjustment)!=null ? Math.round(((number(row.costAdjustment)||0)+extra+deduct)*100)/100 : null;
         v[15]=deductions.length || number(row.rateAdjustment)!=null ? Math.round(((number(row.rateAdjustment)||0)+deduct)*100)/100 : null;
-        if(row.payee){v[16]=number(row.survey);v[17]=number(row.onTime);v[18]=number(row.completion);}
+        if(row.payee){
+            const exportScore=value=>{const score=number(value);return score==null?null:Number(score.toLocaleString('en-US',{useGrouping:false,maximumFractionDigits:2}));};
+            v[16]=exportScore(row.survey);v[17]=exportScore(row.onTime);v[18]=exportScore(row.completion);
+        }
         v[20]=number(row.mileage);
         const withNote=s=>[String(s || '').trim(),extra?String(draft.surveyNote || '').trim():'',...deductions.map(deductionNote)].filter(Boolean).filter((x,i,a)=>!a.slice(0,i).some(previous=>previous===x || previous.includes(x))).join('; ') || null;
         v[26]=withNote(row.internalNotes);v[27]=withNote(row.notes);
