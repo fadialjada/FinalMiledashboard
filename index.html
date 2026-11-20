@@ -1677,6 +1677,34 @@
         .overview-route-email-countdown b { display:block; margin-right:0; white-space:nowrap; font-variant-numeric:tabular-nums; }
         .overview-route-email-countdown:not([data-countdown-state="countdown"]) b { font-size:18px; line-height:36px; }
         .overview-route-email-countdown[data-countdown-state="sent"], .overview-route-email-countdown[data-countdown-state="received"] { color:#34d399; }
+
+/* Leadership access settings */
+.la-access,.la-page{color:var(--fmo-theme-ink,#e7edf6);font:14px/1.6 system-ui,sans-serif;overflow-wrap:anywhere}
+.la-access *,.la-page *{box-sizing:border-box}
+.la-access{display:grid;gap:20px;min-width:0}
+.la-access h3,.la-access h4,.la-access p,.la-page h1,.la-page p{margin:0}
+.la-access h3{font-size:20px;font-weight:700}.la-access h4{font-size:16px;font-weight:600}
+.la-access .la-heading,.la-access .la-person,.la-page-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.la-access .la-heading>div{max-width:650px}
+.la-access .la-heading p,.la-access .la-note,.la-access .la-person p,.la-page-header p{color:var(--fmo-theme-muted,#abb9ca)}
+.la-access .la-form{display:grid;gap:16px;background:var(--fmo-theme-deep,#111d2a);border:1px solid var(--fmo-theme-line,#37485a);padding:20px;border-radius:12px}
+.la-access label{display:grid;gap:6px;font-size:14px;color:inherit;min-width:0}
+.la-access .la-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.la-access input:not([type=checkbox]),.la-access select{width:100%;min-width:0;min-height:44px;font:inherit;font-size:16px;padding:9px 12px;border:1px solid var(--fmo-theme-line,#37485a);border-radius:8px;background:var(--fmo-theme-card,#192430);color:inherit}
+.la-access .la-check{display:flex;align-items:flex-start;gap:10px;min-height:44px}
+.la-access .la-check input{margin-top:6px;width:18px;height:18px;flex-shrink:0}
+.la-access small{display:block;font-size:12px;color:var(--fmo-theme-muted,#abb9ca)}
+.la-access button,.la-page a{font:inherit;font-size:14px;border:1px solid var(--fmo-theme-line,#37485a);border-radius:8px;background:var(--fmo-theme-card,#192430);color:inherit;padding:8px 13px;min-height:40px;text-decoration:none}
+.la-access button{cursor:pointer}.la-access button:disabled{cursor:default;opacity:.5}
+.la-access .la-form>button{justify-self:start}
+.la-buttons{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.la-access .la-members{display:grid;gap:16px}.la-access .la-person{border-top:1px solid var(--fmo-theme-line,#37485a);padding-top:16px}
+.la-access .la-error{color:var(--fmo-theme-warn,#ffd291)}.la-access .la-message{color:var(--fmo-theme-ink,#e7edf6)}
+.la-access summary{cursor:pointer;padding:12px 0}.la-access details>p{margin-bottom:12px}
+.la-page{max-width:1000px;margin:24px auto;padding:24px;background:var(--fmo-theme-card,#192430);border:1px solid var(--fmo-theme-line,#37485a);border-radius:16px;display:grid;gap:24px}
+.la-page-header{padding-bottom:18px;border-bottom:1px solid var(--fmo-theme-line,#37485a)}.la-page h1{font-size:26px;font-weight:700}
+@media(max-width:640px){.la-access .la-fields{grid-template-columns:1fr}.la-access .la-form{padding:14px}.la-page{margin:0;border-radius:0;padding:18px}.la-access button,.la-page a{min-height:44px}}
+
     </style>
     <script>
         (() => {
@@ -8492,7 +8520,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
         import { createRoot } from 'react-dom/client';
         import { createPortal } from 'react-dom';
         import { initializeApp, deleteApp } from 'firebase/app';
-        import { getAuth, initializeAuth, inMemoryPersistence, validatePassword, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+        import { getAuth, initializeAuth, updateProfile, inMemoryPersistence, validatePassword, createUserWithEmailAndPassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
         import { getFirestore, doc, setDoc as firebaseSetDoc, getDoc, getDocFromServer, getDocs, onSnapshot, collection, query, where, orderBy, limit, deleteDoc as firebaseDeleteDoc, runTransaction as firebaseRunTransaction, arrayUnion, serverTimestamp } from 'firebase/firestore';
         import { 
             Truck, Package, Clock, CheckCircle2, AlertCircle, Navigation, ShieldCheck, Shield, 
@@ -15644,6 +15672,45 @@ const hasMorningReportOutlookRequest = (data, dateKey) => {
             17:"LSF PFL 5 PM Route Update Has Been Sent",
             19:"LSF PFL EOD Route Update Has Been Sent"
         };
+        // The shared daily record is the source of truth for every account at this location.
+        // Older clients already saved these system notes even when the checkbox later became stale.
+        const hasSharedComplianceAcknowledgement = (recap,dateKey,alertId,label) =>
+            routeUpdateComplianceLabels[alertId] === label
+            && Array.isArray(recap?.shiftNotes)
+            && recap.shiftNotes.some(note => note?.system === true
+                && note.complianceDate === dateKey
+                && String(note.complianceAlertId) === String(alertId));
+        const isSharedComplianceReminderResolved = ({recap,savedRecap,dateKey,alertId,label,localDismissed=false}) => {
+            if (!Object.hasOwn(routeUpdateComplianceLabels,alertId) || routeUpdateComplianceLabels[alertId] !== label) return false;
+            const compliant = record => Array.isArray(record?.loadout?.compliance)
+                && record.loadout.compliance.some(item => item?.label === label && item.status === true);
+            return localDismissed === true || compliant(recap) || compliant(savedRecap)
+                || hasSharedComplianceAcknowledgement(recap,dateKey,alertId,label)
+                || hasSharedComplianceAcknowledgement(savedRecap,dateKey,alertId,label);
+        };
+        const makeComplianceAcknowledgementDraft = (baseline,{dateKey,alertId,label,timeStr,name,timestamp}) => {
+            if (!Object.hasOwn(routeUpdateComplianceLabels,alertId) || routeUpdateComplianceLabels[alertId] !== label)
+                throw new Error('This compliance reminder is unavailable.');
+            const before = baseline || {};
+            if (before.shiftNotes != null && !Array.isArray(before.shiftNotes)) throw new Error('Shift Notes could not load. Refresh before acknowledging.');
+            if (before.loadout?.compliance != null && !Array.isArray(before.loadout.compliance)) throw new Error('The compliance checklist could not load. Refresh before acknowledging.');
+            const acknowledgedAt = new Date(timestamp);
+            if (!Number.isFinite(+acknowledgedAt)) throw new Error('The acknowledgment time is unavailable. Please try again.');
+            const author = cleanFirstName(name), notes = before.shiftNotes || [];
+            const alreadyLogged = hasSharedComplianceAcknowledgement(before,dateKey,alertId,label);
+            const note = alreadyLogged ? null : {
+                id:notes.length ? Math.max(...notes.map(item=>Number(item.id)||0))+1 : 1,
+                text:`Compliance ${timeStr} was acknowledged by ${author} at ${acknowledgedAt.toLocaleTimeString('en-US',{timeZone:ACTIVE_LOCATION_TIME_ZONE,hour:'numeric',minute:'2-digit'})}.`,
+                category:'General',author,timestamp:acknowledgedAt.toISOString(),system:true,
+                complianceAlertId:alertId,complianceDate:dateKey,replies:[]
+            };
+            return {...before,
+                loadout:{...before.loadout,compliance:completeComplianceItem(before.loadout?.compliance || [],label)},
+                shiftNotes:note ? [...notes,note] : notes,
+                lastUpdatedBy:name,lastUpdatedAt:acknowledgedAt.toISOString()
+            };
+        };
+
         const resetStartupCompliance = (recap,dateKey) => {
             if (ACTIVE_LOCATION==='austin' || dateKey!=='2026-11-07' || !recap?.loadout?.compliance || recap.routeTable?.length) return recap;
             const notes=recap.shiftNotes || [];
@@ -18658,10 +18725,87 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
         };
         // END PERSONAL DASHBOARD THEME
 
+// Embedded in the existing dashboard module; permissions are enforced by the callable service.
+let leadershipFunctionsPromise;
+async function leadershipAccessRequest(input){
+    if(!auth.currentUser)throw new Error('Sign in first.');
+    if(!leadershipFunctionsPromise)leadershipFunctionsPromise=import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js').catch(error=>{leadershipFunctionsPromise=null;throw error;});
+    const sdk=await leadershipFunctionsPromise;
+    return (await sdk.httpsCallable(sdk.getFunctions(app,'us-central1'),'leadershipAccess')(input)).data;
+}
+function leadershipAccessError(error){
+    if(['functions/not-found','functions/unavailable','functions/internal'].includes(error?.code))return 'Leadership access controls are not active yet. The updated Leadership service needs to be published.';
+    if(['functions/permission-denied','permission-denied'].includes(error?.code))return 'You do not have permission to manage Leadership access. Ask the dashboard owner.';
+    return error?.message||'Leadership access could not load. Please try again.';
+}
+function useLeadershipCapability(account){
+    const [rights,setRights]=useState({uid:'',canView:false,canManageAccess:false});
+    useEffect(()=>{
+        let active=true,busy=false;
+        if(!account?.uid){setRights({uid:'',canView:false,canManageAccess:false});return;}
+        if(isOwnerAccount(account)){setRights({uid:account.uid,canView:true,canManageAccess:true});return;}
+        setRights({uid:account.uid,canView:false,canManageAccess:false});
+        const refresh=async()=>{if(busy||document.visibilityState==='hidden')return;busy=true;try{const next=await leadershipAccessRequest({action:'capabilities'});if(active&&auth.currentUser?.uid===account.uid)setRights({uid:account.uid,canView:next.canView===true,canManageAccess:next.canManageAccess===true});}catch(_){if(active)setRights({uid:account.uid,canView:false,canManageAccess:false});}finally{busy=false;}};
+        refresh();window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);const timer=setInterval(refresh,300000);
+        return()=>{active=false;clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);};
+    },[account?.uid,account?.email]);
+    return isOwnerAccount(account)?{canView:true,canManageAccess:true}:rights.uid===account?.uid?rights:{canView:false,canManageAccess:false};
+}
+function LeadershipAccessSettings({account,accounts=[],request=leadershipAccessRequest}){
+    const h=React.createElement,isOwner=isOwnerAccount(account),empty={uid:'',name:'',email:'',canView:true,canManageAccess:false};
+    const [viewers,setViewers]=useState([]),[directory,setDirectory]=useState([]),[loaded,setLoaded]=useState(false),[canManage,setCanManage]=useState(isOwner),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[draft,setDraft]=useState(empty),[createDraft,setCreateDraft]=useState({name:'',email:'',password:''});
+    const active=useRef(false),pending=useRef(false);
+    const current=()=>active.current&&auth.currentUser?.uid===account?.uid;
+    const load=async()=>{const result=await request({action:'list'});if(result.capabilities?.canManageAccess!==true)throw new Error('These Leadership access controls need the updated service to be published.');if(current()){setViewers(result.viewers||[]);setDirectory(result.people||[]);setCanManage(true);setLoaded(true);}return result;};
+    useEffect(()=>{active.current=true;setLoaded(false);setViewers([]);setDirectory([]);setDraft(empty);setCreateDraft({name:'',email:'',password:''});setError('');setMessage('');load().catch(error=>{if(current()){setCanManage(false);setError(leadershipAccessError(error));}});return()=>{active.current=false;};},[account?.uid]);
+    const mutate=async(callback)=>{if(!current()||!loaded||!canManage||pending.current)return;pending.current=true;setBusy(true);setError('');setMessage('');try{await callback();}catch(error){if(current())setError(leadershipAccessError(error));}finally{pending.current=false;if(current())setBusy(false);}};
+    const people=new Map();
+    for(const person of [...accounts,...directory])if(person.enabled!==false&&person.uid&&person.email&&!isOwnerAccount({uid:person.uid,email:person.email}))people.set(person.uid,{...person,name:person.name||person.email});
+    for(const person of viewers)people.set(person.uid,{...people.get(person.uid),...person,name:person.name||person.email});
+    const choices=[...people.values()].sort((a,b)=>a.name.localeCompare(b.name));
+    const edit=person=>{const saved=viewers.find(row=>row.uid===person.uid);setDraft({uid:person.uid,name:person.name||'',email:person.email||'',canView:saved?saved.enabled!==false:true,canManageAccess:saved?.canManageAccess===true});setError('');setMessage('');};
+    const field=(label,name,type='text')=>h('label',null,label,h('input',{name,type,value:draft[name],required:true,maxLength:name==='email'?254:100,disabled:busy,onChange:event=>setDraft(previous=>({...previous,uid:name==='email'?'':previous.uid,[name]:event.target.value}))}));
+    const save=event=>{event.preventDefault();mutate(async()=>{
+        const email=draft.email.trim().toLowerCase(),existing=viewers.find(row=>row.email?.toLowerCase()===email);
+        if(!draft.canView){if(!existing?.enabled)throw new Error('This person does not currently have Leadership access.');await request({action:'revoke',uid:existing.uid});}
+        else await request({action:'grant',email,name:draft.name.trim(),...(isOwner?{canManageAccess:draft.canManageAccess}:{} )});
+        await load();if(current()){setDraft(empty);setMessage(draft.canView?'Leadership access saved.':'Leadership access removed.');}
+    });};
+    const remove=person=>mutate(async()=>{await request({action:'revoke',uid:person.uid});await load();if(current())setMessage('Leadership access removed.');});
+    const create=event=>{event.preventDefault();if(!isOwner)return;mutate(async()=>{
+        await request({action:'list'});let secondary;
+        try{secondary=initializeApp(firebaseConfig,'leadership-viewer-'+Date.now());const secondaryAuth=initializeAuth(secondary,{persistence:inMemoryPersistence});const credential=await createUserWithEmailAndPassword(secondaryAuth,createDraft.email.trim(),createDraft.password);await updateProfile(credential.user,{displayName:createDraft.name.trim()});await signOut(secondaryAuth);if(current()){setDraft({...empty,name:createDraft.name.trim(),email:createDraft.email.trim()});setCreateDraft({name:'',email:'',password:''});setMessage('Sign-in created. Save Leadership access above. Share the temporary password privately.');}}
+        finally{if(secondary)await deleteApp(secondary).catch(()=>{});}
+    });};
+    return h('section',{className:'la-access','aria-labelledby':'leadership-settings-heading'},
+        h('div',{className:'la-heading'},h('div',null,h('h3',{id:'leadership-settings-heading'},'Leadership access'),h('p',null,'Choose who can view all locations, surveys and exports. Viewing access does not allow editing operational records.')),h('button',{type:'button',disabled:busy,onClick:()=>{setError('');load().catch(error=>{if(current())setError(leadershipAccessError(error));});}},'Refresh access')),
+        error&&h('p',{role:'alert',className:'la-error'},error),message&&h('p',{role:'status',className:'la-message'},message),
+        !loaded&&!error&&h('p',{role:'status'},'Loading Leadership access…'),
+        loaded&&canManage&&h(React.Fragment,null,
+            h('form',{onSubmit:save,className:'la-form'},
+                h('label',null,'Choose a user',h('select',{value:draft.uid,disabled:busy,onChange:event=>{const person=choices.find(row=>row.uid===event.target.value);person?edit(person):setDraft(empty);}},h('option',{value:''},'Choose a user or enter an email'),choices.map(person=>h('option',{key:person.uid,value:person.uid,disabled:!isOwner&&person.canManageAccess},person.name+' — '+person.email)))),
+                h('div',{className:'la-fields'},field('Name','name'),field('Sign-in email','email','email')),
+                h('label',{className:'la-check'},h('input',{type:'checkbox',checked:draft.canView,disabled:busy,onChange:event=>setDraft(previous=>({...previous,canView:event.target.checked,canManageAccess:event.target.checked&&previous.canManageAccess}))}),h('span',null,'View Leadership')),
+                isOwner?h('label',{className:'la-check'},h('input',{type:'checkbox',checked:draft.canManageAccess,disabled:busy||!draft.canView,onChange:event=>setDraft(previous=>({...previous,canManageAccess:event.target.checked}))}),h('span',null,'Manage Leadership access',h('small',null,'Can add or remove viewers. Only you can appoint or change access managers.'))):h('p',{className:'la-note'},'You can manage viewers. Only the dashboard owner can appoint access managers.'),
+                h('button',{type:'submit',disabled:busy},busy?'Saving…':'Save Leadership access')),
+            h('div',{className:'la-members'},h('h4',null,'People with Leadership access'),viewers.filter(person=>person.enabled).length?viewers.filter(person=>person.enabled).map(person=>h('div',{key:person.uid,className:'la-person'},h('div',null,h('strong',null,person.name||person.email),h('p',null,person.email),h('small',null,person.canManageAccess?'Can view and manage access':'Can view Leadership')),(!isOwner&&person.canManageAccess)?h('span',{className:'la-note'},'Managed by owner'):h('div',{className:'la-buttons'},h('button',{type:'button',disabled:busy,onClick:()=>edit(person),'aria-label':'Edit Leadership access for '+(person.name||person.email)},'Edit'),h('button',{type:'button',disabled:busy,onClick:()=>remove(person),'aria-label':'Remove Leadership access for '+(person.name||person.email)},'Remove access')))):h('p',null,'No viewers have been granted access yet.')),
+            isOwner&&h('details',null,h('summary',null,'Create a Leadership-only sign-in'),h('p',{className:'la-note'},'For a viewer who does not already have a dashboard sign-in.'),h('form',{onSubmit:create,className:'la-form'},h('label',null,'Viewer name',h('input',{required:true,maxLength:100,value:createDraft.name,disabled:busy,onChange:event=>setCreateDraft(previous=>({...previous,name:event.target.value}))})),h('label',null,'Email',h('input',{type:'email',required:true,value:createDraft.email,disabled:busy,onChange:event=>setCreateDraft(previous=>({...previous,email:event.target.value}))})),h('label',null,'Temporary password',h('input',{type:'password',minLength:8,required:true,autoComplete:'new-password',value:createDraft.password,disabled:busy,onChange:event=>setCreateDraft(previous=>({...previous,password:event.target.value}))})),h('button',{type:'submit',disabled:busy},'Create sign-in'))),
+            h('button',{type:'button',onClick:async()=>{setError('');if(window.location.protocol==='file:'){setMessage('Open the published dashboard to copy a Leadership link for viewers.');return;}const link=new URL('leadership.html',window.location.href);try{await navigator.clipboard.writeText(link.toString());if(current())setMessage('Leadership link copied.');}catch(_){if(current())setMessage(link.toString());}}},'Copy Leadership link')
+        )
+    );
+}
+function LeadershipAccessPage(){
+    const h=React.createElement,[account,setAccount]=useState(null),[ready,setReady]=useState(false);
+    useEffect(()=>onAuthStateChanged(auth,user=>{window.dashboardAppearance?.useAccount(user?.uid);setAccount(user);setReady(true);}),[]);
+    return h('main',{className:'la-page'},h('header',{className:'la-page-header'},h('div',null,h('h1',null,'Settings'),h('p',null,'Leadership access')),h('div',{className:'la-buttons'},h('a',{href:'./index.html?location='+encodeURIComponent(ACTIVE_LOCATION)},'Dashboard'),h('a',{href:'./leadership.html?location='+encodeURIComponent(ACTIVE_LOCATION)},'Leadership'))),!ready?h('p',null,'Checking your sign-in…'):account?h(LeadershipAccessSettings,{key:account.uid,account}):h('p',null,'Sign in to Leadership, then open Settings to manage access.'));
+}
+
+
         const App = () => {
             const [user, setUser] = useState(null);
             const [dashboardTheme,setDashboardTheme] = useDashboardTheme();
             const isAdminUser = isOwnerAccount(user);
+            const leadershipAccess = useLeadershipCapability(user);
             const [locationContext,setLocationContext] = useState(null);
             const locationName = locationContext?.registry.names[ACTIVE_LOCATION] || 'Local';
             const routeHeading = ACTIVE_LOCATION === 'austin' ? 'Pflugerville Route' : locationName + ' Routes';
@@ -18679,7 +18823,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             const [accessProfile, setAccessProfile] = useState(null);
             const [adminGrant,setAdminGrant]=useState(null),[administratorRoles,setAdministratorRoles]=useState({}),[adminRolesAvailable,setAdminRolesAvailable]=useState(false),[adminFeatureEnabled,setAdminFeatureEnabled]=useState(false);
             const canManageUserAccounts=ACTIVE_LOCATION === 'austin' && (isAdminUser||Boolean(user?.uid&&accessProfile?.enabled&&locationContext?.registry.locationRolesVersion!==1&&adminFeatureEnabled&&adminGrant?.enabled===true));
-            const canOpenSettings = canManageUserAccounts || Boolean(locationEnabled && allowLocationAppearance);
+            const canOpenSettings = isAdminUser || leadershipAccess.canManageAccess || canManageUserAccounts || Boolean(locationEnabled && allowLocationAppearance);
             const canApproveDeletion=canManageUserAccounts||isLocationAdmin;
             const recentInbox=useRecentDeletionInbox(user,canApproveDeletion,accessProfile,locationContext?.registry.locationRolesVersion===1);
             const [settingsReady, setSettingsReady] = useState(false);
@@ -19134,6 +19278,18 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     19: locationLocalStorage.getItem(getComplianceAckKey(19, todayKey)) === 'true'
                 };
             });
+            const complianceAckPendingRef=useRef(new Set());
+            const complianceAckContextRef=useRef('');
+            complianceAckContextRef.current=(user?.uid || '')+':'+activeDate;
+            const [complianceAckBusy,setComplianceAckBusy]=useState({});
+            const [complianceAckError,setComplianceAckError]=useState(null);
+            const isComplianceReminderResolved=(alertId,label)=>isSharedComplianceReminderResolved({
+                recap:data,
+                savedRecap:dailySnapshotRef.current.date===activeDate ? dailySnapshotRef.current.data : null,
+                dateKey:activeDate,alertId,label,
+                localDismissed:activeDate===getChicagoDateKey() && dismissedAlerts[alertId]===true
+            });
+            useEffect(()=>{setComplianceAckError(null);},[user?.uid,activeDate]);
             const [acknowledgedAssignmentAlerts, setAcknowledgedAssignmentAlerts] = useState(() => {
                 try {
                     return JSON.parse(locationLocalStorage.getItem('geodis_assignment_acknowledged_alerts') || '{}');
@@ -19507,49 +19663,41 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 }
             };
 
-            const acknowledgeComplianceReminder = async (alertId, label, timeStr) => {
-                const todayKey = getChicagoDateKey();
-                if (activeDate !== todayKey || !canRemindForLocation) return;
-                locationLocalStorage.setItem(getComplianceAckKey(alertId, todayKey), 'true');
-                setDismissedAlerts(prev => ({ ...prev, [alertId]: true }));
-
-                const nd = JSON.parse(JSON.stringify(data));
-                if (!nd.loadout) nd.loadout = {};
-                if (!nd.loadout.compliance) nd.loadout.compliance = [];
-                if (!nd.shiftNotes) nd.shiftNotes = [];
-                const acknowledgedBy = cleanFirstName(userName || getDefaultUserName(auth?.currentUser));
-                const acknowledgedAt = new Date();
-                const idx = nd.loadout.compliance.findIndex(c => c.label === label);
-                if (idx >= 0) {
-                    nd.loadout.compliance[idx].status = true;
-                } else {
-                    nd.loadout.compliance.push({ label, status: true });
-                }
-
-                const alreadyLogged = nd.shiftNotes.some(n => n.system && n.complianceAlertId === alertId && n.complianceDate === todayKey);
-                if (!alreadyLogged) {
-                    const newId = nd.shiftNotes.length > 0 ? Math.max(...nd.shiftNotes.map(n => Number(n.id) || 0)) + 1 : 1;
-                    nd.shiftNotes.push({
-                        id: newId,
-                        text: `Compliance ${timeStr} was acknowledged by ${acknowledgedBy} at ${acknowledgedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}.`,
-                        category: 'General',
-                        author: acknowledgedBy,
-                        timestamp: acknowledgedAt.toISOString(),
-                        system: true,
-                        complianceAlertId: alertId,
-                        complianceDate: todayKey,
-                        replies: []
-                    });
-                }
-                setData(nd);
-
-                if (!db) return;
-                let currentUid ="local";
-                if(auth && auth.currentUser) currentUid = auth.currentUser.uid;
+            const acknowledgeComplianceReminder = async (alertId,label,timeStr) => {
+                const todayKey=getChicagoDateKey(),uid=user?.uid,context=uid+':'+todayKey;
+                if (!db || !uid || auth.currentUser?.uid!==uid || activeDate!==todayKey || isLoading || !canRemindForLocation
+                    || dailySnapshotRef.current.date!==todayKey || !dailySnapshotRef.current.data) return false;
+                const pendingKey=context+':'+alertId;
+                if (complianceAckPendingRef.current.has(pendingKey)) return false;
+                complianceAckPendingRef.current.add(pendingKey);
+                setComplianceAckBusy(previous=>({...previous,[pendingKey]:true}));
+                setComplianceAckError(null);
+                const stillHere=()=>auth.currentUser?.uid===uid && complianceAckContextRef.current===context;
                 try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'dailyRecaps', todayKey);
-                    await saveDailyRecapDocument(docRef, { ...nd, lastUpdatedBy: userName || currentUid, lastUpdatedAt: new Date().toISOString() }, dailySnapshotRef.current.data);
-                } catch(e) { console.error("Failed to sync compliance acknowledgement:", e); }
+                    // Save only this action against the last shared snapshot, never unrelated unsaved edits.
+                    const baseline=dailySnapshotRef.current.data;
+                    const name=userName || getDefaultUserName(auth.currentUser);
+                    const draft=makeComplianceAcknowledgementDraft(baseline,{
+                        dateKey:todayKey,alertId,label,timeStr,name,timestamp:new Date().toISOString()
+                    });
+                    const docRef=doc(db,'artifacts',appId,'public','data','dailyRecaps',todayKey);
+                    await saveDailyRecapDocument(docRef,draft,baseline);
+                    if (!stillHere()) return true;
+                    // A local dismissal is recorded only after the shared save succeeds.
+                    try { locationLocalStorage.setItem(getComplianceAckKey(alertId,todayKey),'true'); } catch (_) {}
+                    setDismissedAlerts(previous=>({...previous,[alertId]:true}));
+                    setData(local=>dailySnapshotRef.current.date===todayKey
+                        ? mergeDailyRecapEdits(baseline,local,draft,todayKey) : local);
+                    return true;
+                } catch (error) {
+                    console.error('Failed to sync compliance acknowledgement:',error);
+                    if (stillHere()) setComplianceAckError({date:todayKey,uid,alertId,label,timeStr,
+                        message:'This acknowledgment could not finish syncing. Check your connection and try again.'});
+                    return false;
+                } finally {
+                    complianceAckPendingRef.current.delete(pendingKey);
+                    setComplianceAckBusy(previous=>{const next={...previous};delete next[pendingKey];return next;});
+                }
             };
 
             useEffect(() => {
@@ -19612,7 +19760,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     [19, 'compliance19', timeAlerts.show19, 'LSF PFL EOD Route Update Has Been Sent']
                 ];
                 compliance.forEach(([id, eventKey, due, label]) => {
-                    const completed = dismissedAlerts[id] || data.loadout?.compliance?.some(item => item.label === label && item.status === true);
+                    const completed = isComplianceReminderResolved(id,label);
+                    if (!isViewingToday || completed) stopDashboardSounds(eventKey);
                     if (canRemindForLocation && isViewingToday && due && !completed && !playedAlerts.current[id] && playDashboardSound(eventKey)) playedAlerts.current[id] = true;
                 });
                 if (isViewingToday && morningReportReminder && morningReportReminderSoundDate.current !== today && playDashboardSound('morningReportCompliance')) morningReportReminderSoundDate.current = today;
@@ -21074,7 +21223,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 setIsTeamTasksOpen(false);
                 setIsShiftNotificationOpen(false); setIsTeamChatOpen(false); setIsHeaderCalendarOpen(false);
                 setUserToDelete(null); setShowDeletedUsers(false); setPasswordResetDraft(null); setShowEnteredPasswords(false);
-                setSettingsError(''); setSettingsMessage(''); setSettingsTab(canManageUserAccounts || isLocationAdmin ? 'users' : isAdminUser ? 'locations' : 'sounds'); setIsSettingsOpen(true);
+                setSettingsError(''); setSettingsMessage(''); setSettingsTab(canManageUserAccounts || isLocationAdmin ? 'users' : isAdminUser ? 'locations' : leadershipAccess.canManageAccess ? 'leadership' : 'sounds'); setIsSettingsOpen(true);
             };
             const openPersonalSettings=()=>{if(canOpenSettings){openSettings();setSettingsTab('personal');}else setProfilePhotoOpen(true);};
             const savePersonalProfile=(uid,photo,title,name)=>{setProfilePhotos(previous=>({...previous,[uid]:photo}));setProfileTitles(previous=>({...previous,[uid]:title}));if(uid===user?.uid&&name){setUserName(name);currentAuditName=name;}};
@@ -22940,7 +23089,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 const today=getChicagoDateKey(),items=[];
                 if(activeDate!==today){desktopReminderKnownRef.current=null;return;}
                 for(const [id,due,label] of [[12,timeAlerts.show12,'LSF PFL 12 PM Route Update Has Been Sent'],[17,timeAlerts.show17,'LSF PFL 5 PM Route Update Has Been Sent'],[19,timeAlerts.show19,'LSF PFL EOD Route Update Has Been Sent']]){
-                    if(canRemindForLocation && due && !dismissedAlerts[id] && !data.loadout?.compliance?.some(item=>item.label===label && item.status===true))items.push({key:'compliance:'+today+':'+id,title:'Compliance reminder',body:displayComplianceLabel(label),target:{kind:'overview'}});
+                    if(canRemindForLocation && due && !isComplianceReminderResolved(id,label))items.push({key:'compliance:'+today+':'+id,title:'Compliance reminder',body:displayComplianceLabel(label),target:{kind:'overview'}});
                 }
                 if(morningReportReminder)items.push({key:'morning-report:'+today,title:'Morning Report compliance reminder',body:morningReportReminder.overdue?'Morning Report is overdue. Send it to the audit team now.':'Send the Morning Report to the audit team by 11:45 AM ' + locationClockLabel() + '.',target:{kind:'morning-report'}});
                 const arrived=isPreloadArrivedStatus(allPreloadSchedules[today]?.status),notes=data.shiftNotes || [];
@@ -23243,6 +23392,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                             </div>
                             <div className="dashboard-nav-wrap min-w-0 flex justify-center">
                                 <nav aria-label="Dashboard sections" className="dashboard-top-nav max-w-full min-w-0 flex items-center overflow-x-auto whitespace-nowrap [&>button]:shrink-0 bg-slate-900/50 p-1 rounded-xl border border-slate-700">
+                                    {(isAdminUser || leadershipAccess.canView) && <button type="button" onClick={() => { if (isEditing) { window.alert('Save or cancel your current edits before opening Leadership.'); return; } const url = new URL('leadership.html', window.location.href); url.searchParams.set('location', ACTIVE_LOCATION); window.location.assign(url.toString()); }} className="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white shrink-0 cursor-pointer" title="Compare all locations in the leadership workspace"><span className="dashboard-nav-label">LEADERSHIP</span></button>}
                                     {accountCanAction(user,ownerPermissionKey('overview'),'view',accessProfile)&&<button onClick={() => setActiveTab('overview')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'overview' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white cursor-pointer'}`}><span className="dashboard-nav-label">OVERVIEW</span></button>}
                                     {routesEnabled&&accountCanAction(user,ownerPermissionKey('routes'),'view',accessProfile)&&<button onClick={() => setActiveTab('routes')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'routes' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white cursor-pointer'}`}><Route className="w-3 h-3" /> <span className="dashboard-nav-label">ROUTES</span></button>}
                                     {accountCanAction(user,ownerPermissionKey('driver-hub'),'view',accessProfile)&&<button onClick={() => setActiveTab('driver-hub')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === 'driver-hub' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white cursor-pointer'}`}><Truck className="w-3 h-3" /> <span className="dashboard-nav-label">DRIVER HUB</span></button>}
@@ -23457,14 +23607,19 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         {isLoading ? <div className="h-[50vh] flex flex-col items-center justify-center text-slate-500"><Loader2 className="w-10 h-10 animate-spin mb-4 text-indigo-500" /><p className="font-bold uppercase text-[10px]">Syncing Logistics Database...</p></div> : !accountCanAction(user,ownerPermissionKey(activeTab),'view',accessProfile) ? <div className="rounded-xl border border-slate-700 p-6 text-sm text-slate-300">This section is not included in your account permissions. Choose another section or contact Fadi.</div> : activeTab === 'overview' ? (
                             
                             <div className="animate-in fade-in duration-500">
+                                {complianceAckError?.date===activeDate && complianceAckError.uid===user?.uid && <div role="alert" className="dashboard-reminder mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-rose-500/50 bg-rose-500/15 p-4 text-sm text-rose-200">
+                                    <span>{complianceAckError.message}</span>
+                                    <button type="button" disabled={Boolean(complianceAckBusy[(user?.uid || '')+':'+activeDate+':'+complianceAckError.alertId])} onClick={()=>acknowledgeComplianceReminder(complianceAckError.alertId,complianceAckError.label,complianceAckError.timeStr)} className="ml-auto shrink-0 rounded-lg border border-rose-400/40 px-3 py-1.5 text-xs font-bold disabled:opacity-50">Try again</button>
+                                </div>}
                                 {/* Time Alerts */}
                                 {[
                                     { id: 12, timeStr:"12:00 PM", label:"LSF PFL 12 PM Route Update Has Been Sent", show: timeAlerts.show12 },
                                     { id: 17, timeStr:"5:00 PM", label:"LSF PFL 5 PM Route Update Has Been Sent", show: timeAlerts.show17 },
                                     { id: 19, timeStr:"7:00 PM", label:"LSF PFL EOD Route Update Has Been Sent", show: timeAlerts.show19 }
                                 ].map(alert => {
-                                    const isCompliant = data.loadout?.compliance?.find(c => c.label === alert.label)?.status === true;
-                                    if (!canRemindForLocation || activeDate !== getChicagoDateKey() || !alert.show || dismissedAlerts[alert.id] || isCompliant) return null;
+                                    const isCompliant = isComplianceReminderResolved(alert.id,alert.label);
+                                    const ackBusy=Boolean(complianceAckBusy[(user?.uid || '')+':'+activeDate+':'+alert.id]);
+                                    if (!canRemindForLocation || activeDate !== getChicagoDateKey() || !alert.show || isCompliant) return null;
                                     
                                     return (
                                         <div key={`alert-${alert.id}`} className="dashboard-reminder mb-4 bg-sky-500/20 border border-sky-500/50 text-sky-400 p-4 rounded-xl flex items-center gap-4 shadow-[0_0_15px_rgba(14,165,233,0.2)] animate-in slide-in-from-top-2 relative">
@@ -23473,7 +23628,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                                 <h3 className="font-black tracking-widest text-xs uppercase mb-0.5">Compliance Reminder: {alert.timeStr}</h3>
                                                 <span className="font-medium text-sm">Please ensure the <strong>{displayComplianceLabel(alert.label)}</strong> compliance check is completed.</span>
                                             </div>
-                                            <button onClick={() => acknowledgeComplianceReminder(alert.id, alert.label, alert.timeStr)} className="ml-auto shrink-0 self-center px-3 py-1.5 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-100 hover:bg-sky-500/30 transition-colors text-[10px] font-black uppercase tracking-widest cursor-pointer">Acknowledge</button>
+                                            <button type="button" disabled={ackBusy || isLoading} aria-busy={ackBusy} onClick={() => acknowledgeComplianceReminder(alert.id, alert.label, alert.timeStr)} className="ml-auto shrink-0 self-center px-3 py-1.5 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-100 hover:bg-sky-500/30 transition-colors text-[10px] font-black uppercase tracking-widest cursor-pointer disabled:opacity-50 disabled:cursor-wait">{ackBusy ? 'Saving…' : 'Acknowledge'}</button>
                                         </div>
                                     );
                                 })}
@@ -25216,7 +25371,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     const userIsAway = isPresenceAway(u);
                                     return (
                                         <div key={u.uid} title={profileTitles[u.uid]||undefined} className={`footer-user-badge flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium whitespace-nowrap ${userIsAway ? 'bg-slate-900/60 border-slate-600 text-slate-400' : userIsIdle ? 'bg-amber-900/20 border-amber-500/25 text-amber-200/80' : 'bg-slate-800/60 border-slate-700 text-slate-400'}`}>
-                                            <div className={`w-1.5 h-1.5 rounded-full ${userIsAway ? 'bg-slate-500/80' : userIsIdle ? 'bg-amber-400/80' : 'bg-emerald-500/60'}`} />
+                                            <div className={`w-1.5 h-1.5 rounded-full ${userIsAway ? 'bg-slate-500/80' : userIsIdle ? 'bg-amber-400/80' : 'bg-emerald-500'}`} />
                                             {isAdminUser && editingOnlineUserId === u.uid ? (
                                                 <div className="flex items-center gap-1">
                                                     <input autoFocus className="bg-slate-950 border border-indigo-500/50 rounded px-2 py-0.5 text-[10px] text-white outline-none w-20" value={onlineNameDraft} onChange={(e) => setOnlineNameDraft(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') saveOnlineNameOverride(u.uid); }} />
@@ -25263,8 +25418,8 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     <button type="button" data-settings-close aria-label="Close Settings" disabled={settingsBusy} onClick={() => setIsSettingsOpen(false)} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-40"><X className="w-5 h-5" /></button>
                                 </div>
                                 <nav aria-label="Settings sections" className="dashboard-modal-tabs flex gap-1 px-3 border-b border-slate-700 bg-slate-800/40 shrink-0 overflow-x-auto">
-                                    {[['personal','My Settings'], ['users', 'Users & Permissions'], ['history', 'Activity History'], ['dataManagement', 'Data Management'], ['backup', 'Backup & Restore'], ['sounds', 'Sounds & Alerts'], ['managerAlerts', 'Manager Alerts'], ['rings', 'Rings'], ['locations','Locations']].filter(([key])=>
-                                        key==='personal' ? true : key==='locations' ? isAdminUser && (locationEnabled || showLocationPreview || canActivateLocations)
+                                    {[['personal','My Settings'], ['users', 'Users & Permissions'], ['leadership','Leadership Access'], ['history', 'Activity History'], ['dataManagement', 'Data Management'], ['backup', 'Backup & Restore'], ['sounds', 'Sounds & Alerts'], ['managerAlerts', 'Manager Alerts'], ['rings', 'Rings'], ['locations','Locations']].filter(([key])=>
+                                        key==='personal' ? true : key==='leadership' ? isAdminUser || leadershipAccess.canManageAccess : key==='locations' ? isAdminUser && (locationEnabled || showLocationPreview || canActivateLocations)
                                         : key==='users' ? canManageUserAccounts || isLocationAdmin
                                         : ['history','backup'].includes(key) ? canManageRecords
                                         : ['sounds','managerAlerts','rings'].includes(key) ? allowLocationAppearance
@@ -25273,9 +25428,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                                     ))}
                                 </nav>
                                 <div className="dashboard-scroll-area settings-content min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 space-y-4">
-                                    {!settingsReady && isAdminUser && !['sounds','personal'].includes(settingsTab) && <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-200">The administrator controls are ready in this page and are waiting for the updated access rules to be activated. Your existing dashboard and sound preferences are available.</div>}
+                                    {!settingsReady && isAdminUser && !['sounds','personal','leadership'].includes(settingsTab) && <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-200">The administrator controls are ready in this page and are waiting for the updated access rules to be activated. Your existing dashboard and sound preferences are available.</div>}
                                     {settingsError && <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-3 text-sm text-rose-200 break-words">{settingsError}</div>}
                                     {settingsMessage && <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3 text-sm text-emerald-200 break-words">{settingsMessage}</div>}
+                                    {settingsTab==='leadership'&&(isAdminUser||leadershipAccess.canManageAccess)&&<LeadershipAccessSettings key={user.uid} account={user} accounts={managedAccounts} />}
                                     {settingsTab==='personal'&&user&&<ProfilePhotoEditor embedded key={user.uid} user={user} name={accessProfile?.name||getSavedDisplayName(user)} photos={profilePhotos} titles={profileTitles} mode={dashboardTheme} onThemeChange={setDashboardTheme} onView={viewUserProfile} onClose={()=>setIsSettingsOpen(false)} onSaved={savePersonalProfile}/>}
                                     {locationEnabled && isAdminUser && settingsTab === 'locations' && (
                                         <LocationAdministration context={locationContext} account={user} accounts={managedAccounts}
@@ -25947,7 +26103,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
         };
 
         const root = createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(new URL(window.location.href).searchParams.get('settings')==='leadership' ? <LeadershipAccessPage /> : <App />);
     </script>
 </body>
 </html>
