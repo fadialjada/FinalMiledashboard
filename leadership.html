@@ -1,0 +1,470 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="same-origin"><title>Leadership | Final Mile Operations</title><script>(()=>{try{let mode=localStorage.getItem('fmo_dashboard_theme')||'dark';if(mode==='white'||mode==='soft')mode='steel';document.documentElement.dataset.leadershipTheme=['dark','steel','stone','linen','grey'].includes(mode)?mode:'dark';}catch(_){}})();</script><style>
+    #location-leadership-preview{--lp-bg:light-dark(#f2f5f9,#101821);--lp-surface:light-dark(#ffffff,#192430);--lp-inset:light-dark(#f3f6fb,#111c28);--lp-ink:light-dark(#152235,#edf2f8);--lp-muted:light-dark(#596a7c,#a5b5c7);--lp-line:light-dark(#dce3ec,#344353);--lp-accent:light-dark(#235ecb,#9abaff);--lp-accent-soft:light-dark(#eaf0fd,#253b5a);--lp-attn:light-dark(#825304,#f0c877);--lp-attn-bg:light-dark(#fff5df,#3b3020);--lp-shadow:light-dark(0 5px 18px #15223509,0 5px 18px #00000012);color-scheme:light dark;color:var(--lp-ink);font-family:"Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.45;position:relative;isolation:isolate}
+    #location-leadership-preview *{box-sizing:border-box}
+    #location-leadership-preview button,#location-leadership-preview select{font:inherit;color:inherit;cursor:inherit}
+    #location-leadership-preview button{cursor:pointer}
+    #location-leadership-preview button:focus-visible{outline:3px solid var(--lp-accent);outline-offset:3px}
+    #location-leadership-preview h1,#location-leadership-preview h2,#location-leadership-preview h3,#location-leadership-preview p{margin:0}
+    #location-leadership-preview [hidden]{display:none!important}
+    #location-leadership-preview .lp-app{background:var(--lp-bg);border:1px solid var(--lp-line);border-radius:22px;overflow:hidden}
+    #location-leadership-preview .lp-chrome{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 110px 16px 23px;background:var(--lp-surface);border-bottom:1px solid var(--lp-line)}
+    #location-leadership-preview .lp-brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.25px}
+    #location-leadership-preview .lp-brandmark{display:grid;place-items:center;width:34px;height:34px;background:var(--lp-accent-soft);color:var(--lp-accent);border-radius:10px;flex:none}
+    #location-leadership-preview svg{width:17px;height:17px;vertical-align:middle;flex:none}
+    #location-leadership-preview .lp-brand small{display:block;font-weight:400;color:var(--lp-muted);font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-top:1px}
+    #location-leadership-preview .lp-account{display:flex;align-items:center;gap:10px;white-space:nowrap}
+    #location-leadership-preview .lp-avatar{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--lp-line);border-radius:50%;font-size:12px;font-weight:600;background:var(--lp-inset)}
+    #location-leadership-preview .lp-role{font-size:12px;color:var(--lp-muted)}
+    #location-leadership-preview .lp-main{padding:23px;display:grid;grid-template-columns:minmax(0,1fr);gap:19px}
+    #location-leadership-preview .lp-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+    #location-leadership-preview .lp-heading h1{font-size:29px;font-weight:650;letter-spacing:-1px;line-height:1.18}
+    #location-leadership-preview .lp-subtitle{color:var(--lp-muted);font-size:12px;margin-top:7px}
+    #location-leadership-preview .lp-tag{font-size:11px;letter-spacing:.3px;color:var(--lp-accent);background:var(--lp-accent-soft);border:1px solid var(--lp-line);padding:4px 8px;border-radius:6px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+    #location-leadership-preview .lp-actions{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    #location-leadership-preview .lp-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--lp-line);border-radius:9px;background:var(--lp-surface);padding:8px 11px;font-size:12px;font-weight:500;min-height:35px}
+    #location-leadership-preview .lp-button:hover{background:var(--lp-accent-soft)}
+    #location-leadership-preview .lp-network{display:grid;grid-template-columns:1.1fr 1.1fr .9fr .9fr;gap:1px;background:var(--lp-line);border:1px solid var(--lp-line);border-radius:16px;overflow:hidden}
+    #location-leadership-preview .lp-network-stat{padding:16px 18px;background:var(--lp-surface);min-width:0}
+    #location-leadership-preview .lp-network-stat.lp-volume{background:var(--lp-inset)}
+    #location-leadership-preview .lp-label{font-size:12px;color:var(--lp-muted)}
+    #location-leadership-preview .lp-number{font-size:34px;letter-spacing:-1px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.2;margin:5px 0}
+    #location-leadership-preview .lp-network-stat:not(.lp-volume) .lp-number{font-size:29px;margin-top:9px}
+    #location-leadership-preview .lp-small{font-size:11px;color:var(--lp-muted)}
+    #location-leadership-preview .lp-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    #location-leadership-preview .lp-toolbar h2{font-size:16px;font-weight:650;letter-spacing:-.3px}
+    #location-leadership-preview .lp-toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    #location-leadership-preview .lp-segment{display:inline-flex;gap:3px;padding:3px;border:1px solid var(--lp-line);border-radius:10px;background:var(--lp-surface)}
+    #location-leadership-preview .lp-segment button{border:0;background:transparent;border-radius:7px;padding:6px 10px;font-size:12px;color:var(--lp-muted);display:inline-flex;align-items:center;gap:6px;min-height:31px;white-space:nowrap}
+    #location-leadership-preview .lp-segment button[aria-pressed="true"]{color:var(--lp-ink);background:var(--lp-accent-soft);font-weight:600}
+    #location-leadership-preview .lp-location-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    #location-leadership-preview .lp-location{background:var(--lp-surface);border:1px solid var(--lp-line);border-radius:17px;box-shadow:var(--lp-shadow);overflow:hidden;min-width:0}
+    #location-leadership-preview .lp-location[data-selected="true"]{border-color:var(--lp-accent)}
+    #location-leadership-preview .lp-location-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 17px 10px}
+    #location-leadership-preview .lp-city{display:flex;gap:10px;align-items:center;min-width:0}
+    #location-leadership-preview .lp-code{background:var(--lp-inset);border:1px solid var(--lp-line);border-radius:10px;width:37px;height:37px;display:grid;place-items:center;font-size:11px;color:var(--lp-muted);font-weight:650;letter-spacing:.5px;flex:none}
+    #location-leadership-preview .lp-city h3{font-size:17px;font-weight:650;letter-spacing:-.35px}
+    #location-leadership-preview .lp-coverage{font-size:11px;color:var(--lp-muted);margin-top:2px}
+    #location-leadership-preview .lp-detail-button{border:0;background:transparent;color:var(--lp-accent);padding:6px 0 6px 6px;font-size:12px;white-space:nowrap;min-height:32px}
+    #location-leadership-preview .lp-route-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:0 17px 12px}
+    #location-leadership-preview .lp-route-cell{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+    #location-leadership-preview .lp-route-cell strong{font-size:28px;font-weight:650;letter-spacing:-.7px;font-variant-numeric:tabular-nums}
+    #location-leadership-preview .lp-route-cell span{font-size:11px;color:var(--lp-muted)}
+    #location-leadership-preview .lp-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 17px;background:var(--lp-inset);border-top:1px solid var(--lp-line);border-bottom:1px solid var(--lp-line)}
+    #location-leadership-preview .lp-metric{min-width:0}
+    #location-leadership-preview .lp-metric strong{display:block;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.3px;white-space:nowrap;margin-top:3px}
+    #location-leadership-preview .lp-metric small{font-size:11px;color:var(--lp-muted);display:block;margin-top:1px}
+    #location-leadership-preview .lp-metric-label{font-size:11px;color:var(--lp-muted);white-space:nowrap}
+    #location-leadership-preview .lp-location-foot{padding:10px 17px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--lp-muted)}
+    #location-leadership-preview .lp-change{color:var(--lp-ink);font-variant-numeric:tabular-nums}
+    #location-leadership-preview .lp-attention{display:flex;align-items:center;gap:7px;background:var(--lp-attn-bg);color:var(--lp-attn);border-radius:10px;padding:11px 13px;font-size:12px}
+    #location-leadership-preview .lp-attention strong{font-weight:650}
+    #location-leadership-preview .lp-detail{display:grid;gap:13px;border:1px solid var(--lp-line);border-radius:15px;background:var(--lp-surface);padding:16px 17px}
+    #location-leadership-preview .lp-detail-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    #location-leadership-preview .lp-detail h3{font-size:15px;font-weight:650}
+    #location-leadership-preview .lp-detail-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+    #location-leadership-preview .lp-detail-stats strong{display:block;font-size:19px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+    #location-leadership-preview .lp-note{font-size:11px;color:var(--lp-muted)}
+    #location-leadership-preview .lp-compare-wrap{max-width:100%;overflow-x:auto;border:1px solid var(--lp-line);border-radius:14px;background:var(--lp-surface)}
+    #location-leadership-preview .lp-compare{width:100%;border-collapse:collapse;font-size:12px;min-width:660px}
+    #location-leadership-preview .lp-compare th{font-weight:500;color:var(--lp-muted);text-align:right;background:var(--lp-inset)}
+    #location-leadership-preview .lp-compare td,#location-leadership-preview .lp-compare th{padding:12px 11px;border-bottom:1px solid var(--lp-line);white-space:nowrap;font-variant-numeric:tabular-nums}
+    #location-leadership-preview .lp-compare tr:last-child td{border-bottom:0}
+    #location-leadership-preview .lp-compare th:first-child,#location-leadership-preview .lp-compare td:first-child{text-align:left}
+    #location-leadership-preview .lp-compare td{text-align:right}
+    #location-leadership-preview .lp-compare th button{border:0;padding:0;background:none;color:inherit;font-size:inherit;text-align:inherit;min-height:26px}
+    #location-leadership-preview .lp-row-location{border:0;padding:0;background:none;color:var(--lp-accent);font-weight:600;text-align:left;font-size:12px;min-height:28px}
+    #location-leadership-preview .lp-compare tr[data-selected="true"] td{background:var(--lp-accent-soft)}
+    #location-leadership-preview .lp-total td{font-weight:650;background:var(--lp-inset)}
+    #location-leadership-preview .lp-access{position:absolute;z-index:4;top:44px;right:0;width:320px;max-width:calc(100vw - 68px);background:var(--lp-surface);border:1px solid var(--lp-line);border-radius:14px;padding:17px;box-shadow:var(--lp-shadow);display:grid;gap:14px;text-align:left}
+    #location-leadership-preview .lp-access h3{font-size:15px;font-weight:650}
+    #location-leadership-preview .lp-access-row{display:flex;justify-content:space-between;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--lp-line);font-size:12px}
+    #location-leadership-preview .lp-access-row span{color:var(--lp-muted);font-size:11px}
+    #location-leadership-preview .lp-persona{display:flex;gap:7px;flex-wrap:wrap}
+    #location-leadership-preview .lp-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--lp-muted);padding:1px 1px 0}
+    #location-leadership-preview[data-density="compact"] .lp-location-top{padding-top:11px}
+    #location-leadership-preview[data-density="compact"] .lp-metrics{padding-top:9px;padding-bottom:9px}
+    @media(max-width:760px){#location-leadership-preview .lp-chrome{padding:15px 100px 15px 17px}#location-leadership-preview .lp-main{padding:17px;gap:16px}#location-leadership-preview .lp-heading{flex-wrap:wrap}#location-leadership-preview .lp-heading h1{font-size:25px}#location-leadership-preview .lp-network{grid-template-columns:1fr 1fr}#location-leadership-preview .lp-account{display:none}#location-leadership-preview .lp-location-grid{grid-template-columns:1fr}#location-leadership-preview .lp-detail-stats{grid-template-columns:repeat(3,minmax(0,1fr))}#location-leadership-preview .lp-toolbar-right{width:100%;justify-content:space-between}#location-leadership-preview .lp-actions{justify-content:flex-start}#location-leadership-preview .lp-access{right:auto;left:0}}
+    @media(max-width:390px){#location-leadership-preview .lp-main{padding:13px}#location-leadership-preview .lp-chrome{padding-left:13px}#location-leadership-preview .lp-brand{font-size:12px}#location-leadership-preview .lp-brandmark{width:29px;height:29px}#location-leadership-preview .lp-network-stat{padding:13px}#location-leadership-preview .lp-number{font-size:29px}#location-leadership-preview .lp-network-stat:not(.lp-volume) .lp-number{font-size:25px}#location-leadership-preview .lp-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}#location-leadership-preview .lp-detail-stats{grid-template-columns:1fr 1fr}#location-leadership-preview .lp-location-top,#location-leadership-preview .lp-route-pair,#location-leadership-preview .lp-metrics,#location-leadership-preview .lp-location-foot{padding-left:13px;padding-right:13px}#location-leadership-preview .lp-city h3{font-size:16px}}
+    @media(pointer:coarse){#location-leadership-preview button{min-height:44px}}
+  
+
+html,body{margin:0;min-height:100%;background:var(--leadership-page,#101821)}body{padding:24px 0}#location-leadership-preview{max-width:1400px;margin:auto;color-scheme:dark}#location-leadership-preview .lp-chrome{padding:16px 23px}#location-leadership-preview .lp-main{gap:22px}#leadership-content{display:grid;gap:20px}#location-leadership-preview button{cursor:pointer}#location-leadership-preview button:disabled{opacity:.5;cursor:wait}#location-leadership-preview input{display:block;font:inherit;color:var(--lp-ink);background:var(--lp-inset);border:1px solid var(--lp-line);padding:10px;border-radius:8px;min-width:0;box-sizing:border-box;max-width:100%}#location-leadership-preview label{display:grid;gap:6px;font-size:12px;color:var(--lp-muted)}#location-leadership-preview .lp-toolbar-right label{display:flex;align-items:center}#location-leadership-preview .lp-toolbar-right input{padding:6px}#location-leadership-preview form{display:grid;gap:14px;margin:18px 0}#location-leadership-preview .lp-login{max-width:420px;width:100%;justify-self:center}#location-leadership-preview .lp-primary{background:var(--lp-accent-soft);color:var(--lp-accent);font-weight:600}#location-leadership-preview #leadership-status[data-error=true]{color:#ffb7b7;background:#482727}#location-leadership-preview .lp-error{padding:0 17px 17px;color:var(--lp-attn)}#location-leadership-preview .lp-compare th[scope=row]{background:transparent;font-weight:500}#location-leadership-preview .lp-metric-label{white-space:normal}#location-leadership-preview .lp-foot{flex-wrap:wrap}#location-leadership-preview .lp-foot p:first-child{max-width:820px}#location-leadership-preview dialog{box-sizing:border-box;background:var(--lp-surface);color:var(--lp-ink);border:1px solid var(--lp-line);border-radius:18px;padding:24px;width:540px;max-width:calc(100vw - 32px);max-height:90vh;overflow-y:auto}#location-leadership-preview dialog::backdrop{background:#0009}#location-leadership-preview dialog p{margin:12px 0;font-size:12px;line-height:1.6}#location-leadership-preview .lp-access-row{align-items:center;padding:14px 0}#location-leadership-preview details{border-block:1px solid var(--lp-line);padding:14px 0;margin:12px 0}#location-leadership-preview summary{cursor:pointer;font-size:12px}#location-leadership-preview .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+html[data-leadership-theme=steel] #location-leadership-preview{color-scheme:light;--lp-bg:#e5ebf3;--lp-surface:#f7f9fc;--lp-inset:#edf1f7}html[data-leadership-theme=stone] #location-leadership-preview{color-scheme:light;--lp-bg:#eee9e1;--lp-surface:#fffdf8;--lp-inset:#f5f0e7}html[data-leadership-theme=linen] #location-leadership-preview{--lp-bg:#42525a;--lp-surface:#4e5e66;--lp-inset:#384850}html[data-leadership-theme=grey] #location-leadership-preview{--lp-bg:#202020;--lp-surface:#2a2a2a;--lp-inset:#252525;--lp-line:#505050}
+@media(max-width:740px){body{padding:0}#location-leadership-preview .lp-app{border-radius:0}#location-leadership-preview .lp-chrome{padding:14px;align-items:flex-start}#location-leadership-preview .lp-account{display:flex;flex-wrap:wrap;justify-content:flex-end;font-size:11px;max-width:46%;white-space:normal;overflow-wrap:anywhere}#location-leadership-preview .lp-main{padding:18px 14px}#location-leadership-preview .lp-heading{flex-wrap:wrap}#location-leadership-preview .lp-heading h1{font-size:26px}#location-leadership-preview .lp-network{grid-template-columns:1fr 1fr}#location-leadership-preview .lp-detail-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#location-leadership-preview .lp-metrics{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:15px}#location-leadership-preview .lp-location-grid{grid-template-columns:1fr}}
+
+html[data-leadership-theme=steel]{--leadership-page:#c5ced9;background:#c5ced9;color-scheme:light}html[data-leadership-theme=steel] #location-leadership-preview{color-scheme:light;--lp-bg:#c5d4e4;--lp-surface:#c5d4e4;--lp-inset:#c5d4e4;--lp-header:#e5ebf3;--lp-ink:#192e45;--lp-muted:#34495f;--lp-line:#98afc8;--lp-accent:#294a66;--lp-accent-soft:#b6c8dc;--lp-attn:#694206;--lp-attn-bg:#f0dfb8;}
+html[data-leadership-theme=stone]{--leadership-page:#b59d84;background:#b59d84;color-scheme:light}html[data-leadership-theme=stone] #location-leadership-preview{color-scheme:light;--lp-bg:#d6c9b7;--lp-surface:#d6c9b7;--lp-inset:#d6c9b7;--lp-header:#eee9e1;--lp-ink:#332d27;--lp-muted:#40362c;--lp-line:#ad9679;--lp-accent:#294a66;--lp-accent-soft:#cbbba4;--lp-attn:#694206;--lp-attn-bg:#edddbb;}
+html[data-leadership-theme=linen]{--leadership-page:#39474e;background:#39474e;color-scheme:dark}html[data-leadership-theme=linen] #location-leadership-preview{color-scheme:dark;--lp-bg:#4b5961;--lp-surface:#526169;--lp-inset:#4b5961;--lp-header:#42525a;--lp-ink:#f1f5f7;--lp-muted:#d7e1e5;--lp-line:#788b95;--lp-accent:#c6e8fc;--lp-accent-soft:#60717a;--lp-attn:#ffe0a1;--lp-attn-bg:#624d2b;}
+html[data-leadership-theme=grey]{--leadership-page:#202020;background:#202020;color-scheme:dark}html[data-leadership-theme=grey] #location-leadership-preview{color-scheme:dark;--lp-bg:#262626;--lp-surface:#2b2b2b;--lp-inset:#262626;--lp-header:#252525;--lp-ink:#f2f2f2;--lp-muted:#c2c2c2;--lp-line:#535353;--lp-accent:#a7d9ff;--lp-accent-soft:#363636;--lp-attn:#efc56c;--lp-attn-bg:#4b3b22;--lp-shadow:none;}
+#location-leadership-preview .lp-route-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}#location-leadership-preview .lp-route-summary .lp-network-stat{border:1px solid var(--lp-line);border-radius:16px;padding:20px 22px;background:var(--lp-inset)}#location-leadership-preview .lp-network{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;background:transparent;border:0;border-radius:0;overflow:visible}#location-leadership-preview .lp-network>.lp-network-stat{border:1px solid var(--lp-line);border-radius:16px}#location-leadership-preview .lp-chrome{background:var(--lp-header,var(--lp-surface))}#location-leadership-preview .lp-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}@media(max-width:1100px){#location-leadership-preview .lp-network{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:1000px){#location-leadership-preview .lp-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:740px){#location-leadership-preview .lp-route-summary .lp-network-stat{padding:16px}#location-leadership-preview .lp-network{grid-template-columns:repeat(2,minmax(0,1fr))}#location-leadership-preview .lp-network>.lp-network-stat:last-child{grid-column:1/-1}#location-leadership-preview .lp-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#location-leadership-preview .lp-metrics .lp-metric:last-child{grid-column:1/-1}}@media(max-width:360px){#location-leadership-preview .lp-route-summary{grid-template-columns:1fr}}
+#location-leadership-preview .lp-surveys{display:grid;gap:18px;min-width:0}
+#location-leadership-preview .lp-survey-heading{flex-wrap:wrap;gap:12px}
+#location-leadership-preview .lp-survey-actions{display:flex;flex-wrap:wrap;gap:8px}
+#location-leadership-preview .lp-survey-filters{display:grid;grid-template-columns:repeat(2,minmax(0,250px));gap:16px}
+#location-leadership-preview .lp-survey-filters label{font-size:14px}
+#location-leadership-preview .lp-survey-filters select{font:inherit;font-size:16px;color:var(--lp-ink);background:var(--lp-inset);border:1px solid var(--lp-line);border-radius:9px;padding:10px 12px;width:100%;min-width:0;min-height:44px;color-scheme:inherit}
+#location-leadership-preview .lp-survey-filters option{background:var(--lp-surface);color:var(--lp-ink)}
+#location-leadership-preview .lp-survey-summary{font-size:14px;color:var(--lp-ink);margin:0}
+#location-leadership-preview .lp-survey-reviews{display:grid;gap:16px;min-width:0}
+#location-leadership-preview .lp-survey-review{display:grid;gap:16px;min-width:0;background:var(--lp-inset);border:1px solid var(--lp-line);border-radius:12px;padding:18px;overflow-wrap:anywhere}
+#location-leadership-preview .lp-survey-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+#location-leadership-preview .lp-survey-header h3{font-size:16px;font-weight:600;margin:3px 0 0}
+#location-leadership-preview .lp-survey-header p{margin:0}
+#location-leadership-preview .lp-survey-score{white-space:nowrap;background:var(--lp-surface);border:1px solid var(--lp-line);border-radius:8px;padding:5px 10px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+#location-leadership-preview .lp-survey-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0;padding-bottom:14px;border-bottom:1px solid var(--lp-line)}
+#location-leadership-preview .lp-survey-review dt{font-size:14px;color:var(--lp-muted);margin-bottom:4px}
+#location-leadership-preview .lp-survey-review dd{font-size:16px;line-height:1.6;margin:0;white-space:pre-wrap}
+#location-leadership-preview .lp-survey-body{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;margin:0}
+@media(max-width:740px){
+ #location-leadership-preview .lp-survey-filters{grid-template-columns:1fr}
+ #location-leadership-preview .lp-survey-body{grid-template-columns:1fr;gap:16px}
+ #location-leadership-preview .lp-survey-meta{grid-template-columns:1fr 1fr}
+ #location-leadership-preview .lp-survey-meta>div:last-child{grid-column:1/-1}
+ #location-leadership-preview .lp-survey-review{padding:14px}
+}
+</style></head><body><div id="location-leadership-preview">
+ <div class="lp-app">
+  <header class="lp-chrome">
+   <a class="lp-brand" href="./index.html" style="color:inherit;text-decoration:none"><span class="lp-brandmark">↗</span><span>Final Mile Operations<small>Leadership workspace</small></span></a>
+   <div class="lp-account"><span id="leadership-name">Secure access</span><span id="leadership-role" class="lp-tag">Read only</span><button id="leadership-signout" class="lp-button" hidden>Sign out</button></div>
+  </header>
+  <main class="lp-main">
+   <section class="lp-heading"><div><h1>Every location. One view.</h1><p class="lp-subtitle">A clear view of volume, service and reporting across your operation.</p></div><div class="lp-actions"><a id="leadership-settings" class="lp-button" href="./index.html?settings=leadership" style="text-decoration:none" hidden>Settings</a><button id="leadership-refresh" class="lp-button" hidden>↻ Refresh</button></div></section>
+   <div id="leadership-status" class="lp-attention" role="status" aria-live="polite">Checking your sign-in…</div>
+   <section id="leadership-login" class="lp-detail lp-login" hidden>
+    <h2>Leadership sign-in</h2><p class="lp-note">Use your dashboard sign-in. Leadership access is granted by Fadi.</p>
+    <form id="leadership-login-form"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" required></label><button class="lp-button lp-primary" type="submit">Sign in</button><button id="leadership-reset" class="lp-button" type="button">Reset password</button></form>
+   </section>
+   <div id="leadership-content" hidden>
+    <section class="lp-route-summary" id="leadership-route-summary" aria-label="Network route totals"></section>
+    <section class="lp-network" id="leadership-network" aria-label="Network performance summary"></section>
+    <div class="lp-toolbar"><div><h2>Location performance</h2><p id="leadership-asof" class="lp-small"></p></div><div class="lp-toolbar-right"><label class="lp-note">As of <input id="leadership-date" type="date" aria-label="Reporting date"></label><div class="lp-segment" aria-label="Reporting period"><button data-period="week" aria-pressed="true">Week to date</button><button data-period="month" aria-pressed="false">Month to date</button></div><div class="lp-segment" aria-label="Display"><button data-layout="cards" aria-pressed="true">▦ Cards</button><button data-layout="compare" aria-pressed="false">≡ Compare</button><button data-layout="surveys" aria-pressed="false">Surveys</button></div></div></div>
+    <div id="leadership-focus" class="lp-attention" hidden></div>
+    <section class="lp-location-grid" id="leadership-cards" aria-label="Location cards"></section>
+    <div id="leadership-compare" class="lp-compare-wrap" hidden></div>
+    <section id="leadership-surveys" class="lp-detail lp-surveys" aria-labelledby="leadership-surveys-heading" hidden>
+     <div class="lp-detail-header lp-survey-heading"><h2 id="leadership-surveys-heading">Survey feedback</h2><div class="lp-survey-actions"><button id="leadership-survey-excel" type="button" class="lp-button" disabled>Export Excel</button><button id="leadership-survey-csv" type="button" class="lp-button" disabled>Export CSV</button></div></div>
+     <div class="lp-survey-filters"><label>Location<select id="leadership-survey-location"><option value="all">All locations</option></select></label><label>Survey score<select id="leadership-survey-score"><option value="10">10 and below</option><option value="9">9 and below</option><option value="8" selected>8 and below</option><option value="7">7 and below</option><option value="6">6 and below</option><option value="5">5 and below</option><option value="4">4 and below</option><option value="3">3 and below</option><option value="2">2 and below</option><option value="1">1 and below</option><option value="0">0 and below</option></select></label></div>
+     <p id="leadership-survey-summary" class="lp-survey-summary" role="status" aria-live="polite"></p>
+     <p id="leadership-survey-warning" class="lp-note" hidden></p>
+     <p id="leadership-survey-export-status" class="lp-note" role="status" aria-live="polite" hidden></p>
+     <div id="leadership-survey-reviews" class="lp-survey-reviews"></div>
+    </section>
+    <section id="leadership-detail" class="lp-detail" aria-label="Selected location details" hidden></section>
+    <footer class="lp-foot"><p>Routes come from saved Route Tables. Metrics use each location’s saved report totals and cover the preceding workday.</p><p id="leadership-updated"></p></footer>
+   </div>
+  </main>
+ </div>
+</div>
+<script>/* Shared, read-only reporting calculations and explicitly selected Feedback fields. */
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.LeadershipCore=factory();})(typeof globalThis!=='undefined'?globalThis:this,()=>{
+  'use strict';
+  const validDate=x=>typeof x==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&Number.isFinite(Date.parse(x+'T12:00:00Z'))&&new Date(x+'T12:00:00Z').toISOString().slice(0,10)===x;
+  const addDays=(x,n)=>{const d=new Date(x+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+  const days=(a,b)=>{const out=[];for(let d=a;d<=b;d=addDays(d,1))out.push(d);return out;};
+  const monday=x=>addDays(x,-((new Date(x+'T12:00:00Z').getUTCDay()+6)%7));
+  const number=x=>{if(x===null||x===undefined||typeof x==='boolean'||String(x).trim()==='')return null;const s=String(x).trim().replace(/,/g,'').replace(/%$/,'');if(!/^\d+(?:\.\d+)?$/.test(s))return null;const n=Number(s);return Number.isFinite(n)&&n>=0?n:null;};
+  const hos=x=>{const s=String(x??'').trim().toLowerCase();let m=/^(\d+):([0-5]?\d)(?::([0-5]\d))?$/.exec(s);if(m)return Math.round(+m[1]*60 + +m[2] + +(m[3]||0)/60);m=/^(?:(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h))?\s*(?:(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m))?$/.exec(s);if(m&&(m[1]!==undefined||m[2]!==undefined))return Math.round(+(m[1]||0)*60 + +(m[2]||0));const n=number(x);return n===null?null:Math.round(n*60);};
+  const zoneFor=(site,registry)=>{const z=registry?.zones?.[site];try{if(z){new Intl.DateTimeFormat('en',{timeZone:z});return z;}}catch(_){}return site==='sacramento'?'America/Los_Angeles':'America/Chicago';};
+  const dateInZone=(now,zone)=>new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now));
+  const bounds=today=>{
+    if(!validDate(today))throw new Error('Invalid reporting date.');
+    const week=monday(today),month=today.slice(0,8)+'01',lastMonthEnd=addDays(month,-1),lastMonthStart=lastMonthEnd.slice(0,8)+'01';
+    // Compare equal calendar-day spans. A shorter prior month is explicitly marked.
+    const requested=addDays(lastMonthStart,Number(today.slice(8))-1),priorMonthEnd=requested>lastMonthEnd?lastMonthEnd:requested;
+    const weekStartPrior=addDays(week,-7),weekEndPrior=addDays(today,-7);
+    return {today,week:{start:week,end:today,previousStart:weekStartPrior,previousEnd:weekEndPrior},month:{start:month,end:today,previousStart:lastMonthStart,previousEnd:priorMonthEnd,previousShorter:priorMonthEnd!==requested},queryStart:lastMonthStart<weekStartPrior?lastMonthStart:weekStartPrior};
+  };
+  const locations=registry=>{
+    const names=registry?.enabled===true?registry.names||{}:{austin:registry?.names?.austin||'Pflugerville'};
+    return Object.entries(names).filter(([id,name])=>/^[a-z][a-z0-9-]{0,39}$/.test(id)&&typeof name==='string'&&name.trim()&&!registry?.archived?.[id]?.deletedAt).map(([id,name])=>({id,name:name.trim(),zone:zoneFor(id,registry),workspace:id==='austin'?'geodis-recap-v1':id}));
+  };
+  const routePresent=r=>r&&typeof r==='object'&&['serviceUnit','route','driver','stops','pcs','cube','mileage','hos'].some(k=>r[k]!==null&&r[k]!==undefined&&String(r[k]).trim()!=='');
+  function routesFor(records,start,end){
+    const expected=days(start,end),reported=expected.filter(date=>Object.hasOwn(records,date)&&Array.isArray(records[date]?.routeTable));
+    const rows=reported.flatMap(date=>records[date].routeTable.filter(routePresent));
+    const sum=key=>{const ns=rows.map(r=>key==='hos'?hos(r.hos):number(r[key]));return {value:ns.some(x=>x!==null)?ns.reduce((a,b)=>a+(b??0),0):rows.length?null:reported.length?0:null,known:ns.filter(x=>x!==null).length};};
+    return {routes:reported.length?rows.length:null,reportDays:reported.length,expectedDays:expected.length,missingDays:expected.filter(d=>!reported.includes(d)),stops:sum('stops'),pieces:sum('pcs'),cube:sum('cube'),miles:sum('mileage'),hosMinutes:sum('hos')};
+  }
+  function metricsFor(records,scope,start,end){
+    const candidates=Object.keys(records).filter(validDate).filter(date=>date<=end&&addDays(date,-1)>=start).sort().reverse();
+    for(const reportDate of candidates){
+      const tracker=records[reportDate]?.metricsTracker,rows=tracker?.[scope];
+      const raw=tracker?.[scope+'Totals'];
+      if(!raw&&(!Array.isArray(rows)||!rows.length))continue;
+      // A saved report covers the preceding workday. Never reuse a prior week's/month's cumulative report.
+      const through=addDays(reportDate,-1);
+      if((scope==='wtd'?monday(through):through.slice(0,8)+'01')!==start)continue;
+      const metric=(key,max)=>{const n=number(raw?.[key]);return n!==null&&n<=max?n:null;};
+      const totals={surveyCnt:metric('surveyCnt',Number.MAX_SAFE_INTEGER),surveyAvg:metric('surveyAvg',10),onTime:metric('onTime',100),completion:metric('completion',100),exchange:metric('exchange',100)};
+      // Survey weights exist; percentage denominators do not. Never average driver percentages.
+      if(!raw){const entries=rows.map(r=>({cnt:number(r.surveyCnt),avg:number(r.surveyAvg)}));if(entries.every(r=>r.cnt!==null&&(r.cnt===0||(r.avg!==null&&r.avg<=10)))){totals.surveyCnt=entries.reduce((s,r)=>s+r.cnt,0);totals.surveyAvg=totals.surveyCnt?entries.reduce((s,r)=>s+r.cnt*(r.avg||0),0)/totals.surveyCnt:null;}}
+      if(Object.values(totals).every(value=>value===null))continue;
+      return {...totals,reportDate,start,through,fromTotalRow:Boolean(raw),stale:through<addDays(end,-1)};
+    }
+    return null;
+  }
+  // Feedback uses its original survey date, independently of the cumulative metrics report date.
+  const feedbackText=x=>typeof x==='string'||typeof x==='number'?String(x).replace(/\u00a0/g,' ').trim():'';
+  function feedbackDate(value){
+    const raw=feedbackText(value);let y,m,d,match;
+    if((match=/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(raw)))[,y,m,d]=match;
+    else if((match=/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2}|\d{4})(?:\s+.*)?$/.exec(raw))){[,m,d,y]=match;if(y.length===2)y=Number(y)+(Number(y)<70?2000:1900);}
+    else if((match=/^([a-z]+)\s+(\d{1,2}),?\s+(\d{4})(?:\s+.*)?$/i.exec(raw))){m=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(match[1].slice(0,3).toLowerCase())+1;d=match[2];y=match[3];}
+    else if(/^\d+(?:\.\d+)?$/.test(raw)&&Number(raw)>20000&&Number(raw)<80000)return new Date(Date.UTC(1899,11,30)+Math.floor(Number(raw))*86400000).toISOString().slice(0,10);
+    else return '';
+    const key=String(y).padStart(4,'0')+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');return validDate(key)?key:'';
+  }
+  function feedbackFor(records,start,end){
+    const unique=new Map();let duplicates=0,invalid=0,reportDays=0;
+    for(const savedDate of Object.keys(records).filter(validDate).filter(d=>d<=end).sort()){
+      const rows=records[savedDate]?.metricsTracker?.feedback;if(!Array.isArray(rows))continue;reportDays++;
+      for(const row of rows){
+        if(!row||typeof row!=='object'){invalid++;continue;}
+        const date=feedbackDate(row.date);if(!date){invalid++;continue;}if(date<start||date>end)continue;
+        const review={date,firstName:feedbackText(row.firstName),lastName:feedbackText(row.lastName),type:feedbackText(row.type),score:number(row.score),orderNum:feedbackText(row.orderNum),comment:feedbackText(row.comment),action:feedbackText(row.action)};
+        const order=review.orderNum.normalize('NFKC').toUpperCase(),type=review.type.normalize('NFKC').toLowerCase().replace(/\s+/g,' ');
+        const key=order?JSON.stringify([date,order,type]):JSON.stringify([date,order,type,review.firstName.toLowerCase(),review.lastName.toLowerCase(),review.score,review.comment.replace(/\r\n/g,'\n')]);
+        if(unique.has(key))duplicates++;
+        // A later saved copy wins, including corrections to score, comment and action.
+        unique.set(key,review);
+      }
+    }
+    const reviews=[...unique.values()].filter(review=>{if(review.score===null||review.score>10){invalid++;return false;}return true;}).sort((a,b)=>b.date.localeCompare(a.date));
+    return {reviews,duplicates,invalid,reportDays,start,end};
+  }
+  function locationReport(location,records,now,asOf){
+    const localToday=dateInZone(now,location.zone),today=asOf&&asOf<localToday?asOf:localToday,b=bounds(today);
+    const period=(range,scope)=>{
+      const current=routesFor(records,range.start,range.end),previous=routesFor(records,range.previousStart,range.previousEnd);
+      const comparable=current.reportDays===current.expectedDays&&previous.reportDays===previous.expectedDays&&!range.previousShorter;
+      return {...range,...current,previousRoutes:previous.routes,comparable,change:comparable&&previous.routes>0?(current.routes-previous.routes)/previous.routes*100:null,metrics:metricsFor(records,scope,range.start,range.end),feedback:feedbackFor(records,range.start,range.end)};
+    };
+    return {id:location.id,name:location.name,zone:location.zone,today,week:period(b.week,'wtd'),month:period(b.month,'mtd')};
+  }
+  function averageLocationRate(reports,period,key){
+    const rows=reports.filter(r=>!r.error&&r[period]?.metrics).map(r=>r[period].metrics)
+      .map(metrics=>({metrics,value:number(metrics[key])})).filter(row=>row.value!==null&&row.value<=100);
+    return {
+      value:rows.length?rows.reduce((sum,row)=>sum+row.value,0)/rows.length:null,
+      reporting:rows.length,method:'equal-location-average',
+      datesDiffer:new Set(rows.map(row=>row.metrics.through)).size>1
+    };
+  }
+  function network(reports,period){
+    const good=reports.filter(r=>!r.error),withRoutes=good.filter(r=>r[period].routes!==null),withMetrics=good.filter(r=>r[period].metrics);
+    const surveyReports=withMetrics.filter(r=>r[period].metrics.surveyCnt!==null&&r[period].metrics.surveyCnt!==undefined);
+    const surveyCount=surveyReports.length?surveyReports.reduce((sum,r)=>sum+r[period].metrics.surveyCnt,0):null;
+    const completeAverages=surveyReports.every(r=>r[period].metrics.surveyCnt===0||(r[period].metrics.surveyAvg!==null&&r[period].metrics.surveyAvg!==undefined));
+    const surveyAverage=surveyCount>0&&completeAverages?surveyReports.reduce((sum,r)=>sum+r[period].metrics.surveyCnt*(r[period].metrics.surveyAvg||0),0)/surveyCount:null;
+    const surveyDatesDiffer=new Set(surveyReports.map(r=>r[period].metrics.through)).size>1;
+    const total=key=>{const items=good.map(r=>r[key]);const known=items.filter(r=>r.routes!==null);return {routes:known.length?known.reduce((s,r)=>s+r.routes,0):null,locations:known.length,complete:good.length===reports.length&&known.length===reports.length&&items.every(r=>r.reportDays===r.expectedDays)};};
+    return {week:total('week'),month:total('month'),surveyCount,surveyAverage,surveyCountReporting:surveyReports.length,surveyDatesDiffer,companyRates:{onTime:averageLocationRate(reports,period,'onTime'),completion:averageLocationRate(reports,period,'completion'),exchange:averageLocationRate(reports,period,'exchange')},locations:reports.length,reporting:withRoutes.length,metricsReporting:withMetrics.length,onTimeReporting:withMetrics.filter(r=>r[period].metrics.onTime!==null).length,onTimeTarget:withMetrics.filter(r=>r[period].metrics.onTime!==null&&r[period].metrics.onTime>=97.5).length,completionReporting:withMetrics.filter(r=>r[period].metrics.completion!==null).length,completionTarget:withMetrics.filter(r=>r[period].metrics.completion!==null&&r[period].metrics.completion>=98.05).length,exchangeReporting:withMetrics.filter(r=>r[period].metrics.exchange!=null).length,exchangeTarget:withMetrics.filter(r=>r[period].metrics.exchange!=null&&r[period].metrics.exchange<=1.7).length};
+  }
+  return {validDate,addDays,days,monday,number,hos,dateInZone,zoneFor,bounds,locations,routePresent,routesFor,metricsFor,feedbackDate,feedbackFor,locationReport,averageLocationRate,network};
+});
+</script><script>/* Browser-local exports of the exact selected read-only Feedback records. */
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.LeadershipSurveyExport=factory();})(typeof globalThis!=='undefined'?globalThis:this,()=>{
+ 'use strict';
+ const headers=['Survey date','Location','Driver','Type','Score','Order number','Customer feedback','Action'];
+ const values=items=>items.map(({review:r,location})=>[r.date,location,[r.firstName,r.lastName].filter(Boolean).join(' '),r.type,r.score,r.orderNum,r.comment,r.action]);
+ const text=value=>String(value??'');
+ function csv(items){
+  const quote=value=>{let raw=text(value);if(typeof value!=='number'&&/^[\s\u0000-\u001f]*[=+\-@]/.test(raw))raw="'"+raw;return '"'+raw.replace(/"/g,'""')+'"';};
+  return '\ufeff'+[headers,...values(items)].map(row=>row.map(quote).join(',')).join('\r\n')+'\r\n';
+ }
+ const xml=value=>text(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c])).replace(/\r/g,'&#13;');
+ function zip(files){
+  // Same uncompressed ZIP approach used by the dashboard's existing Excel exports.
+  const encoder=new TextEncoder(),parts=[],directory=[];let offset=0;
+  const crc32=bytes=>{let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let bit=0;bit<8;bit++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}return (crc^0xffffffff)>>>0;};
+  for(const [path,content] of Object.entries(files)){
+   const name=encoder.encode(path),data=encoder.encode(content),crc=crc32(data),local=new Uint8Array(30),lv=new DataView(local.buffer);
+   lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint16(6,0x800,true);lv.setUint16(12,33,true);lv.setUint32(14,crc,true);lv.setUint32(18,data.length,true);lv.setUint32(22,data.length,true);lv.setUint16(26,name.length,true);parts.push(local,name,data);
+   const central=new Uint8Array(46),cv=new DataView(central.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x800,true);cv.setUint16(14,33,true);cv.setUint32(16,crc,true);cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,name.length,true);cv.setUint32(42,offset,true);directory.push(central,name);offset+=local.length+name.length+data.length;
+  }
+  const size=directory.reduce((n,part)=>n+part.length,0),end=new Uint8Array(22),ev=new DataView(end.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(8,Object.keys(files).length,true);ev.setUint16(10,Object.keys(files).length,true);ev.setUint32(12,size,true);ev.setUint32(16,offset,true);
+  const bytes=new Uint8Array(offset+size+22);let cursor=0;for(const part of [...parts,...directory,end]){bytes.set(part,cursor);cursor+=part.length;}return bytes;
+ }
+ function xlsx(items,context){
+  if(items.length>1048571)throw new Error('There are too many reviews for one Excel sheet. Choose a location or use CSV.');
+  const rows=values(items),x=xml,cell=(column,row,value,style=0)=>{if(text(value).length>32767)throw new Error('A comment is too long for an Excel cell. Use Export CSV to keep the full text.');return typeof value==='number'?`<c r="${column}${row}" s="${style}"><v>${value}</v></c>`:`<c r="${column}${row}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${x(value)}</t></is></c>`;};
+  const metadata=[context.period,context.location,context.cutoff+' and below',context.dates].filter(Boolean).join(' · ');
+  const coverage=`${items.length} matching reviews. Source: saved Metrics Feedback.${context.warning?' '+context.warning:''}`;
+  let sheet=`<row r="1" ht="28" customHeight="1">${cell('A',1,'Survey feedback',1)}</row><row r="2" ht="36" customHeight="1">${cell('A',2,metadata,4)}</row><row r="3" ht="36" customHeight="1">${cell('A',3,coverage,4)}</row><row r="5" ht="26" customHeight="1">${headers.map((label,i)=>cell(String.fromCharCode(65+i),5,label,2)).join('')}</row>`;
+  rows.forEach((row,index)=>{
+   const n=index+6,height=Math.min(409,Math.max(32,...row.map((value,i)=>Math.max(...text(value).split(/\r?\n/).map(line=>Math.ceil(line.length/[14,22,26,18,10,24,65,55][i])))*16+12)));
+   sheet+=`<row r="${n}" ht="${height}" customHeight="1">`+row.map((value,i)=>{const col=String.fromCharCode(65+i);if(i===0){const serial=(Date.parse(value+'T00:00:00Z')-Date.UTC(1899,11,30))/86400000;return cell(col,n,serial,5);}return cell(col,n,value,i===4?3:0);}).join('')+'</row>';
+  });
+  const prefix='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  return zip({
+   '[Content_Types].xml':prefix+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+   '_rels/.rels':prefix+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+   'xl/workbook.xml':prefix+'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Survey feedback" sheetId="1" r:id="rId1"/></sheets></workbook>',
+   'xl/_rels/workbook.xml.rels':prefix+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+   'xl/styles.xml':prefix+'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="mm/dd/yyyy"/><numFmt numFmtId="165" formatCode="0.##########"/></numFmts><fonts count="3"><font><sz val="11"/><color rgb="FF202020"/><name val="Calibri"/></font><font><b/><sz val="18"/><color rgb="FF20364A"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF20364A"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment vertical="top"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>',
+   'xl/worksheets/sheet1.xml':prefix+`<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:H${rows.length+5}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="30"/><cols>${[16,24,28,20,12,26,68,58].map((width,i)=>`<col min="${i+1}" max="${i+1}" width="${width}" customWidth="1"/>`).join('')}</cols><sheetData>${sheet}</sheetData><autoFilter ref="A5:H${rows.length+5}"/><mergeCells count="3"><mergeCell ref="A1:H1"/><mergeCell ref="A2:H2"/><mergeCell ref="A3:H3"/></mergeCells><pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0"/></worksheet>`
+  });
+ }
+ return {headers,values,csv,xlsx};
+});
+</script><script type="module">import {initializeApp} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import {getFirestore,doc,getDocFromServer,getDocsFromServer,collection,query,where,documentId} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+import {getFunctions,httpsCallable} from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js';
+const firebaseConfig={
+            apiKey:"AIzaSyCwjaKFJDF-VBt4qj2AOU_ftxxlw8W7N88",
+            authDomain:"geodisfmpflu.firebaseapp.com",
+            projectId:"geodisfmpflu",
+            storageBucket:"geodisfmpflu.firebasestorage.app",
+            messagingSenderId:"702267156117",
+            appId:"1:702267156117:web:f483b24ed92e9f567b5d9c"
+        };
+const ownerAccounts=new Map([['9BdsuIRx3nNG3QrhEi8hjdgXGXz2','fadi.aljada@geodis.com'],['6Pzcze63B8PxQOgwUqNk08VAt6f2','fadi.aljada@gmail.com']]);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),functions=getFunctions(app,'us-central1');
+const callOverview=httpsCallable(functions,'leadershipOverview',{timeout:120000}),callAccess=httpsCallable(functions,'leadershipAccess');
+const C=LeadershipCore,$=id=>document.getElementById('leadership-'+id),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const returnLocation=new URL(window.location.href).searchParams.get('location');
+if(returnLocation&&/^[a-z][a-z0-9-]{0,39}$/.test(returnLocation)){const back=new URL('index.html',window.location.href);back.searchParams.set('location',returnLocation);document.querySelector('.lp-brand').href=back.toString();}
+const settingsURL=new URL('index.html',window.location.href);settingsURL.searchParams.set('settings','leadership');if(returnLocation&&/^[a-z][a-z0-9-]{0,39}$/.test(returnLocation))settingsURL.searchParams.set('location',returnLocation);$('settings').href=settingsURL.toString();
+const number=x=>x===null||x===undefined?'—':new Intl.NumberFormat('en-US',{maximumFractionDigits:1}).format(x);
+const pct=x=>x===null||x===undefined?'—':Number(x).toFixed(2)+'%';
+const date=x=>x?new Date(x+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric'}):'—';
+const duration=x=>x===null||x===undefined?'—':Math.floor(Math.round(x)/60)+':'+String(Math.round(x)%60).padStart(2,'0');
+const owner=u=>Boolean(u?.uid&&ownerAccounts.get(u.uid)===String(u.email||'').toLowerCase());
+function applyTheme(account=auth.currentUser){
+ let mode='dark';try{mode=(account?.uid?localStorage.getItem('fmo_dashboard_theme_'+account.uid):null)||localStorage.getItem('fmo_dashboard_theme')||'dark';}catch(_){}
+ if(mode==='white'||mode==='soft')mode='steel';
+ document.documentElement.dataset.leadershipTheme=['dark','steel','stone','linen','grey'].includes(mode)?mode:'dark';
+}
+window.addEventListener('storage',event=>{if(event.key==='fmo_dashboard_theme'||event.key==='fmo_dashboard_theme_'+auth.currentUser?.uid||event.key===null)applyTheme();});
+let user=null,response=null,period='week',layout='cards',selected='',sortKey='name',sortDirection=1,generation=0,accessSession=0,refreshTimer=null,busy=false,surveyLocation='all',surveyScore=8;
+const status=(message,error=false)=>{$('status').hidden=!message;$('status').textContent=message;$('status').dataset.error=String(error);};
+async function readOwnerOverview(account,asOf){
+ const registry=(await getDocFromServer(doc(db,'dashboardLocations','registry'))).data()||{},now=new Date(),sites=C.locations(registry),reports=[];
+ for(let i=0;i<sites.length;i+=4){reports.push(...await Promise.all(sites.slice(i,i+4).map(async site=>{
+  const localToday=C.dateInZone(now,site.zone),through=asOf&&asOf<localToday?asOf:localToday,b=C.bounds(through);
+  try{const result=await getDocsFromServer(query(collection(db,'artifacts',site.workspace,'public','data','dailyRecaps'),where(documentId(),'>=',b.queryStart),where(documentId(),'<=',b.today)));
+   if(auth.currentUser?.uid!==account.uid)throw new Error('Account changed');
+   return C.locationReport(site,Object.fromEntries(result.docs.filter(d=>C.validDate(d.id)).map(d=>[d.id,d.data()])),now,asOf);
+  }catch(error){return {id:site.id,name:site.name,zone:site.zone,error:'This location could not load. Try Refresh.'};}
+ })));}
+ return {generatedAt:now.toISOString(),role:'owner',reports};
+}
+async function load(){
+ if(!user)return;const token=++generation,account=user;busy=true;$('refresh').disabled=true;status('Loading saved location reports…');
+ // Clear old data before a reporting-date change or refresh. A failed read must never masquerade as a fresh report.
+ response=null;$('content').hidden=true;$('survey-reviews').textContent='';$('survey-summary').textContent='';clearSurveyExport();
+ try{const asOf=$('date').value;if(asOf&&!C.validDate(asOf))throw new Error('Choose a valid reporting date.');
+  const next=owner(account)?await readOwnerOverview(account,asOf):(await callOverview({asOf:asOf||null})).data;
+  if(token!==generation||auth.currentUser?.uid!==account.uid)return;
+  response=next;if(!response.reports.some(r=>r.id===selected))selected=response.reports.find(r=>!r.error)?.id||'';
+  status(next.reports.length?'':'No active locations are configured.');$('content').hidden=false;render();
+ }catch(error){if(token===generation){status(errorMessage(error),true);$('content').hidden=true;}}
+ finally{if(token===generation){busy=false;$('refresh').disabled=false;}}
+}
+function errorMessage(error){
+ if(error.code==='functions/permission-denied'||error.code==='permission-denied')return 'Leadership access is not available for this account. Ask Fadi to grant access.';
+ if(['functions/not-found','functions/unavailable','functions/internal'].includes(error.code))return 'Leadership sharing is not active yet, or the service is unavailable. Try again later or contact Fadi.';
+ if(error.code==='auth/invalid-credential'||error.code==='auth/wrong-password'||error.code==='auth/user-not-found')return 'The email or password was not accepted.';
+ if(error.code==='auth/too-many-requests')return 'Too many sign-in attempts. Please wait and try again.';
+ if(error.code==='auth/network-request-failed')return 'Could not connect. Check your connection and try again.';
+ return error.message||'Could not load the leadership page. Try again.';
+}
+const cell=(label,value,note='')=>`<div class="lp-metric"><span class="lp-metric-label">${esc(label)}</span><strong>${esc(value)}</strong>${note?`<small>${esc(note)}</small>`:''}</div>`;
+function reportNote(p){const m=p.metrics;if(!m)return 'Metrics not reported for this period';return `${date(m.start)}–${date(m.through)} · Report ${date(m.reportDate)}${m.stale?' · Update needed':''}${!m.fromTotalRow?' · Some totals unavailable':''}`;}
+function render(){
+ if(!response)return;const n=C.network(response.reports,period),title=period==='week'?'Week to date':'Month to date';
+ const tile=(label,value,note,volume=false,detail='')=>`<div class="lp-network-stat ${volume?'lp-volume':''}"><div class="lp-label">${esc(label)}</div><div class="lp-number">${esc(value)}</div><div class="lp-small">${esc(note)}</div>${detail?`<div class="lp-small" style="margin-top:5px">${esc(detail)}</div>`:''}</div>`;
+ const surveyCoverage=`${title} · ${n.surveyCountReporting} of ${n.locations} locations${n.surveyDatesDiffer?' · Report dates differ':''}`;
+ const surveyAverageNote=n.surveyAverage!==null?`Weighted by ${number(n.surveyCount)} responses${n.surveyDatesDiffer?' · Latest reports':''}`:n.surveyCount===0?'No survey responses reported':'Complete survey figures needed';
+ $('route-summary').innerHTML=tile('Routes this week',number(n.week.routes),n.week.complete?'All location days reported':'Saved routes · reporting incomplete',true)+tile('Routes this month',number(n.month.routes),n.month.complete?'All location days reported':'Saved routes · reporting incomplete',true);
+ const rateNote=key=>{
+  const rate=n.companyRates[key];
+  return rate.reporting?`Equal average of ${rate.reporting} reporting locations${rate.datesDiffer?' · Report dates differ':''}`:'No location figures reported';
+ };
+ const targetNote=(met,reported,goal)=>reported?`${met} of ${reported} locations meet ${goal} target`:'';
+ $('network').innerHTML=tile('Combined Survey Count',number(n.surveyCount),surveyCoverage)+tile('Combined Survey Average',n.surveyAverage===null?'—':n.surveyAverage.toFixed(2),surveyAverageNote)+tile('On-Time Delivery',pct(n.companyRates.onTime.value),rateNote('onTime'),false,targetNote(n.onTimeTarget,n.onTimeReporting,'97.50% or higher'))+tile('Completion Rate',pct(n.companyRates.completion.value),rateNote('completion'),false,targetNote(n.completionTarget,n.completionReporting,'98.05% or higher'))+tile('Exchange Rate',pct(n.companyRates.exchange.value),rateNote('exchange'),false,targetNote(n.exchangeTarget,n.exchangeReporting,'1.70% or lower'));
+ $('asof').textContent=`${title} · ${n.reporting} of ${n.locations} locations with route reports · ${n.metricsReporting} with metrics`;
+ $('updated').textContent='Loaded '+new Date(response.generatedAt).toLocaleString('en-US');
+ document.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.period===period)));
+ document.querySelectorAll('[data-layout]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layout===layout)));
+ const reports=response.reports;
+ $('cards').hidden=layout!=='cards';$('compare').hidden=layout!=='compare';$('surveys').hidden=layout!=='surveys';
+ $('cards').innerHTML=reports.map(r=>{
+  if(r.error)return `<article class="lp-location"><div class="lp-location-top"><h3>${esc(r.name)}</h3></div><p class="lp-error">${esc(r.error)}</p></article>`;
+  const p=r[period],m=p.metrics;
+  return `<article class="lp-location" data-selected="${r.id===selected}"><div class="lp-location-top"><div class="lp-city"><span class="lp-code">${esc(r.name.slice(0,3).toUpperCase())}</span><div><h3>${esc(r.name)}</h3><p class="lp-coverage">${esc(r.zone.replace('America/','').replace(/_/g,' '))} · ${p.reportDays}/${p.expectedDays} days with route tables</p></div></div><button class="lp-detail-button" data-detail="${esc(r.id)}" aria-label="Details for ${esc(r.name)}">Details ↗</button></div><div class="lp-route-pair"><div class="lp-route-cell"><strong>${number(r.week.routes)}</strong><span>routes this week</span></div><div class="lp-route-cell"><strong>${number(r.month.routes)}</strong><span>routes this month</span></div></div><div class="lp-metrics">${cell('Survey Count',number(m?.surveyCnt))}${cell('Survey Average',m?.surveyAvg==null?'—':Number(m.surveyAvg).toFixed(2))}${cell('On-time',pct(m?.onTime))}${cell('Completion',pct(m?.completion))}${cell('Exchange % ($)',pct(m?.exchange))}</div><div class="lp-location-foot"><span>${esc(reportNote(p))}</span><span class="lp-change">${p.change===null?(p.previousShorter?'Prior month has fewer days':'Change unavailable'):(p.change>=0?'+':'')+p.change.toFixed(1)+'% routes vs prior period'}</span></div></article>`;
+ }).join('');
+ const columns=[['name','Location'],['routes','Routes'],['surveyCnt','Survey Count'],['surveyAvg','Survey Average'],['onTime','On-time'],['completion','Completion'],['exchange','Exchange % ($)'],['coverage','Coverage']];
+ const value=(r,k)=>r.error?null:k==='name'?r.name:k==='routes'?r[period].routes:k==='coverage'?r[period].reportDays/r[period].expectedDays:r[period].metrics?.[k]??null;
+ const sorted=reports.slice().sort((a,b)=>{const x=value(a,sortKey),y=value(b,sortKey);if(x===null)return y===null?0:1;if(y===null)return -1;return (typeof x==='string'?x.localeCompare(y):x-y)*sortDirection;});
+ $('compare').innerHTML=`<table class="lp-compare"><caption class="sr-only">${title} location comparison</caption><thead><tr>${columns.map(([key,label])=>`<th scope="col" aria-sort="${sortKey===key?(sortDirection===1?'ascending':'descending'):'none'}"><button data-sort="${key}">${esc(label)} ${sortKey===key?(sortDirection===1?'↑':'↓'):''}</button></th>`).join('')}</tr></thead><tbody>${sorted.map(r=>`<tr data-selected="${r.id===selected}"><th scope="row"><button class="lp-row-location" data-detail="${esc(r.id)}">${esc(r.name)}</button></th>${r.error?'<td colspan="7">Could not load</td>':`<td>${number(r[period].routes)}</td><td>${number(r[period].metrics?.surveyCnt)}</td><td>${r[period].metrics?.surveyAvg==null?'—':Number(r[period].metrics.surveyAvg).toFixed(2)}</td><td>${pct(r[period].metrics?.onTime)}</td><td>${pct(r[period].metrics?.completion)}</td><td>${pct(r[period].metrics?.exchange)}</td><td>${r[period].reportDays}/${r[period].expectedDays} days</td>`}</tr>`).join('')}</tbody></table>`;
+ const attention=reports.filter(r=>!r.error&&r[period].metrics?.onTime!==null&&r[period].metrics?.onTime!==undefined&&r[period].metrics.onTime<97.5);
+ $('focus').hidden=!attention.length;$('focus').textContent=attention.length?'Focus on service: '+attention.map(r=>r.name+' '+pct(r[period].metrics.onTime)).join(' · ')+' on-time.':'';
+ renderSurveys();renderDetail();
+}
+function selectedSurveyFeedback(){
+ if(!response)return {reports:[],available:[],reviews:[],total:0,invalid:0,unavailable:0};
+ const reports=response.reports.filter(r=>surveyLocation==='all'||r.id===surveyLocation),available=reports.filter(r=>!r.error&&Array.isArray(r[period]?.feedback?.reviews));
+ const reviews=available.flatMap(r=>r[period].feedback.reviews.filter(review=>typeof review.score==='number'&&Number.isFinite(review.score)&&review.score>=0&&review.score<=surveyScore).map(review=>({review,location:r.name})));
+ reviews.sort((a,b)=>b.review.date.localeCompare(a.review.date)||a.location.localeCompare(b.location));
+ const total=available.reduce((sum,r)=>sum+r[period].feedback.reviews.length,0),invalid=available.reduce((sum,r)=>sum+(r[period].feedback.invalid||0),0),unavailable=reports.length-available.length;
+ return {reports,available,reviews,total,invalid,unavailable};
+}
+function clearSurveyExport(){
+ $('survey-excel').disabled=true;$('survey-csv').disabled=true;$('survey-export-status').textContent='';$('survey-export-status').hidden=true;
+}
+function renderSurveys(){
+ if(!response)return;
+ if(surveyLocation!=='all'&&!response.reports.some(r=>r.id===surveyLocation))surveyLocation='all';
+ $('survey-location').innerHTML='<option value="all">All locations</option>'+response.reports.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
+ $('survey-location').value=surveyLocation;$('survey-score').value=String(surveyScore);
+ const {reports,available,reviews,total,invalid,unavailable}=selectedSurveyFeedback();
+ clearSurveyExport();$('survey-excel').disabled=!reviews.length;$('survey-csv').disabled=!reviews.length;
+ $('survey-summary').textContent=`${reviews.length} matching ${reviews.length===1?'survey':'surveys'} · ${total} saved reviews · ${period==='week'?'Week to date':'Month to date'} · Original survey dates`;
+ const warnings=[];
+ if(unavailable)warnings.push(`${unavailable} ${unavailable===1?'location is':'locations are'} unavailable. Try Refresh; shared viewing may need the updated Leadership service.`);
+ if(invalid)warnings.push(`${invalid} saved ${invalid===1?'review has':'reviews have'} an unreadable date or score and could not be included.`);
+ $('survey-warning').hidden=!warnings.length;$('survey-warning').textContent=warnings.join(' ');
+ $('survey-reviews').innerHTML=reviews.length?reviews.map(({review:r,location})=>`<article class="lp-survey-review"><header class="lp-survey-header"><div><p class="lp-small">${esc(location)}</p><h3>${esc([r.firstName,r.lastName].filter(Boolean).join(' ')||'Driver not recorded')}</h3></div><span class="lp-survey-score">${esc(r.score)} / 10</span></header><dl class="lp-survey-meta"><div><dt>Survey date</dt><dd><time datetime="${esc(r.date)}">${esc(date(r.date))}, ${esc(r.date.slice(0,4))}</time></dd></div><div><dt>Type</dt><dd>${esc(r.type||'Not recorded')}</dd></div><div><dt>Order number</dt><dd>${esc(r.orderNum||'Not recorded')}</dd></div></dl><dl class="lp-survey-body"><div><dt>Customer feedback</dt><dd>${esc(r.comment||'No customer comment recorded.')}</dd></div><div><dt>Action</dt><dd>${esc(r.action||'No action recorded.')}</dd></div></dl></article>`).join(''):`<p class="lp-note">${available.length?'No saved surveys match this location and score for the selected period.':'Survey feedback is not available for these locations.'}</p>`;
+}
+function exportSurveys(format){
+ if(!user||auth.currentUser?.uid!==user.uid||busy||!response)return;
+ const {reviews,available,reports}=selectedSurveyFeedback();if(!reviews.length)return;
+ try{
+  const context={period:period==='week'?'Week to date':'Month to date',location:surveyLocation==='all'?'All locations':reports[0].name,cutoff:surveyScore,dates:[...new Set(available.map(r=>r[period].start+' to '+r[period].end))].sort().join('; '),warning:$('survey-warning').hidden?'':$('survey-warning').textContent};
+  const lastDate=available.map(r=>r[period].end).sort().at(-1),location=surveyLocation==='all'?'all-locations':surveyLocation;
+  const content=format==='xlsx'?LeadershipSurveyExport.xlsx(reviews,context):LeadershipSurveyExport.csv(reviews);
+  const blob=new Blob([content],{type:format==='xlsx'?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),anchor=document.createElement('a');
+  anchor.href=url;anchor.download=`survey-feedback-${location}-${period==='week'?'WTD':'MTD'}-${surveyScore}-and-below-${lastDate}.${format}`;
+  document.body.append(anchor);try{anchor.click();}finally{anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  $('survey-export-status').hidden=false;$('survey-export-status').textContent=`${reviews.length} matching ${reviews.length===1?'review':'reviews'} exported to ${format==='xlsx'?'Excel':'CSV'}.`;
+ }catch(error){$('survey-export-status').hidden=false;$('survey-export-status').textContent=error.message||'The export could not be created. Please try again.';}
+}
+function renderDetail(){
+ const r=response?.reports.find(r=>r.id===selected&&!r.error);$('detail').hidden=!r||layout==='surveys';if(!r)return;
+ const p=r[period],complete=field=>p.routes!==null&&field.known===p.routes;
+ const detail=(label,value)=>`<div><span class="lp-label">${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+ $('detail').innerHTML=`<div class="lp-detail-header"><h3>${esc(r.name)} · Operations detail</h3><span class="lp-tag">${date(p.start)}–${date(p.end)}</span></div><div class="lp-detail-stats">${detail('Scheduled stops',number(p.stops.value)+(complete(p.stops)?'':' *'))}${detail('Pieces',number(p.pieces.value)+(complete(p.pieces)?'':' *'))}${detail('Cube',number(p.cube.value)+(complete(p.cube)?'':' *'))}${detail('Avg miles / route',complete(p.miles)&&p.routes>0?number(p.miles.value/p.routes):'—')}${detail('Avg HOS / route',complete(p.hosMinutes)&&p.routes>0?duration(p.hosMinutes.value/p.routes):'—')}</div><p class="lp-note">${p.missingDays.length?'No saved Route Table: '+p.missingDays.map(date).join(', ')+'.':'All days in this period have a saved Route Table.'} ${['stops','pieces','cube','miles','hosMinutes'].some(k=>!complete(p[k]))?'* Some route values are missing. Partial sums are marked; averages require every route.':''}</p><p class="lp-note">${esc(reportNote(p))}. Exchange is the percentage of order value, not the percentage of stops. No customer, driver, note or billing details are shared here.</p>`;
+}
+document.addEventListener('click',event=>{
+ const p=event.target.closest('[data-period]'),l=event.target.closest('[data-layout]'),d=event.target.closest('[data-detail]'),s=event.target.closest('[data-sort]');
+ if(p){period=p.dataset.period;render();}if(l){layout=l.dataset.layout;render();}if(d){selected=d.dataset.detail;render();$('detail').scrollIntoView({behavior:'smooth',block:'nearest'});}if(s){if(sortKey===s.dataset.sort)sortDirection*=-1;else{sortKey=s.dataset.sort;sortDirection=sortKey==='name'?1:-1;}render();}
+});
+$('refresh').addEventListener('click',load);$('date').addEventListener('change',load);
+$('survey-location').addEventListener('change',event=>{surveyLocation=event.target.value;renderSurveys();});
+$('survey-score').addEventListener('change',event=>{const next=Number(event.target.value);if(Number.isInteger(next)&&next>=0&&next<=10)surveyScore=next;renderSurveys();});
+$('survey-excel').addEventListener('click',()=>exportSurveys('xlsx'));
+$('survey-csv').addEventListener('click',()=>exportSurveys('csv'));
+$('login-form').addEventListener('submit',async event=>{event.preventDefault();const button=event.target.querySelector('[type=submit]');button.disabled=true;try{const form=new FormData(event.target);await signInWithEmailAndPassword(auth,String(form.get('email')).trim(),String(form.get('password')));event.target.reset();}catch(error){status(errorMessage(error),true);}finally{button.disabled=false;}});
+$('reset').addEventListener('click',async()=>{const email=$('login-form').elements.email.value.trim();if(!email){status('Enter your email first.',true);return;}try{await sendPasswordResetEmail(auth,email);status('If this sign-in exists, a reset email will arrive shortly.');}catch(error){status(errorMessage(error),true);}});
+$('signout').addEventListener('click',()=>signOut(auth).catch(error=>status(errorMessage(error),true)));
+onAuthStateChanged(auth,account=>{
+ const settingsGeneration=++accessSession;generation++;clearInterval(refreshTimer);response=null;user=account;selected='';surveyLocation='all';surveyScore=8;layout='cards';$('content').hidden=true;$('survey-reviews').textContent='';$('survey-summary').textContent='';$('survey-warning').textContent='';$('survey-warning').hidden=true;clearSurveyExport();
+ $('login').hidden=Boolean(account);$('signout').hidden=!account;$('refresh').hidden=!account;$('settings').hidden=!owner(account);$('name').textContent=account?.displayName||account?.email||'Secure access';$('role').textContent=owner(account)?'Owner':'Read only';
+ applyTheme(account);
+ if(account){if(!owner(account))callAccess({action:'capabilities'}).then(result=>{if(accessSession===settingsGeneration&&auth.currentUser?.uid===account.uid)$('settings').hidden=result.data?.canManageAccess!==true;}).catch(()=>{});load();refreshTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!busy)load();},300000);}else status('Sign in to view location performance.');
+});
+window.addEventListener('beforeunload',()=>clearInterval(refreshTimer));
+</script></body></html>
