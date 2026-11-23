@@ -17184,7 +17184,7 @@ const WeeklyBilling = (() => {
             v[16]=exportScore(row.survey);v[17]=exportScore(row.onTime);v[18]=exportScore(row.completion);
         }
         v[20]=number(row.mileage);
-        const withNote=s=>[String(s || '').trim(),extra?String(draft.surveyNote || '').trim():'',...deductions.map(deductionNote)].filter(Boolean).filter((x,i,a)=>!a.slice(0,i).some(previous=>previous===x || previous.includes(x))).join('; ') || null;
+        const withNote=s=>[String(s || '').trim(),extra?String(draft.surveyNote || '').trim():'',...deductions.map(deductionNote)].map(note=>note.replace(/["\u201c\u201d\u201e\u201f]/g,'').trim()).filter(Boolean).filter((x,i,a)=>!a.slice(0,i).some(previous=>previous===x || previous.includes(x))).join('; ') || null;
         v[26]=withNote(row.internalNotes);v[27]=withNote(row.notes);
         return v;
     };
