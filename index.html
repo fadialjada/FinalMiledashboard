@@ -1400,17 +1400,17 @@
 .team-assignment-report .ta-input { width:100%; box-sizing:border-box; padding:12px; margin-top:10px; background:#131c29; color:var(--ta-text); border:1px solid #53627a; border-radius:10px; font:inherit; resize:vertical; }
 .team-assignment-report .ta-arrival-inputs label { display:block; margin-top:8px; }
 .team-assignment-report .ta-arrival-inputs label > span { color:var(--ta-muted); font-size:12px; }
-.team-assignment-report.team-assignment-export .ta-edit-only { display:none !important; }
-.team-assignment-report.team-assignment-export .ta-read-value { display:block !important; }
+.team-assignment-report[data-screenshot-surface] .ta-edit-only { display:none !important; }
+.team-assignment-report[data-screenshot-surface] .ta-read-value { display:block !important; }
 @media(max-width:600px) {
-    .team-assignment-report:not(.team-assignment-export) .ta-header { grid-template-columns:minmax(0,1fr); padding:12px 16px; }
-    .team-assignment-report:not(.team-assignment-export) .ta-date { padding-left:38px; }
-    .team-assignment-report:not(.team-assignment-export) .ta-body { padding:18px 14px; }
-    .team-assignment-report:not(.team-assignment-export) .ta-block { padding:14px; }
-    .team-assignment-report:not(.team-assignment-export) .ta-table th, .team-assignment-report:not(.team-assignment-export) .ta-table td { padding-left:5px; padding-right:5px; }
-    .team-assignment-report:not(.team-assignment-export) .ta-table { font-size:13px; }
-    .team-assignment-report:not(.team-assignment-export) .ta-table small { font-size:11px; }
-    .team-assignment-report:not(.team-assignment-export) .ta-preload-layout { grid-template-columns:minmax(0,1fr); gap:14px; }
+    .team-assignment-report:not([data-screenshot-surface]) .ta-header { grid-template-columns:minmax(0,1fr); padding:12px 16px; }
+    .team-assignment-report:not([data-screenshot-surface]) .ta-date { padding-left:38px; }
+    .team-assignment-report:not([data-screenshot-surface]) .ta-body { padding:18px 14px; }
+    .team-assignment-report:not([data-screenshot-surface]) .ta-block { padding:14px; }
+    .team-assignment-report:not([data-screenshot-surface]) .ta-table th, .team-assignment-report:not([data-screenshot-surface]) .ta-table td { padding-left:5px; padding-right:5px; }
+    .team-assignment-report:not([data-screenshot-surface]) .ta-table { font-size:13px; }
+    .team-assignment-report:not([data-screenshot-surface]) .ta-table small { font-size:11px; }
+    .team-assignment-report:not([data-screenshot-surface]) .ta-preload-layout { grid-template-columns:minmax(0,1fr); gap:14px; }
     .team-assignment-report .ta-input { font-size:16px; }
 }
 
@@ -1438,15 +1438,15 @@
 .morning-report.report-is-editing .report-edit-only { display:block; }
 .morning-report.report-is-editing .report-read-value { display:none; }
 .morning-report .report-read-value { display:block; margin-top:12px; color:#e2e8f0; font-size:12px; font-weight:600; }
-.morning-report-export .report-edit-only, .morning-report-export .report-controls { display:none !important; }
-.morning-report-export .report-read-value { display:block !important; }
-.morning-report-export .report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
-.morning-report-export .report-team-grid, .morning-report-export .report-check-grid, .morning-report-export .report-topic-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
-.morning-report-export .report-metrics-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
-.morning-report-export .report-table { min-width:0; }
-.morning-report-export .report-table-scroll { overflow:hidden; }
-.morning-report-export .report-header { padding:24px; }
-.morning-report-export .report-body { padding:24px; }
+.morning-report[data-screenshot-surface] .report-edit-only, .morning-report[data-screenshot-surface] .report-controls { display:none !important; }
+.morning-report[data-screenshot-surface] .report-read-value { display:block !important; }
+.morning-report[data-screenshot-surface] .report-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.morning-report[data-screenshot-surface] .report-team-grid, .morning-report[data-screenshot-surface] .report-check-grid, .morning-report[data-screenshot-surface] .report-topic-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.morning-report[data-screenshot-surface] .report-metrics-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.morning-report[data-screenshot-surface] .report-table { min-width:0; }
+.morning-report[data-screenshot-surface] .report-table-scroll { overflow:hidden; }
+.morning-report[data-screenshot-surface] .report-header { padding:24px; }
+.morning-report[data-screenshot-surface] .report-body { padding:24px; }
 @media print {
     @page { size:letter portrait; margin:.4in; }
     body.morning-report-printing > :not(#morning-report-print-root) { display:none !important; }
@@ -1510,13 +1510,13 @@
         .truck-assignment-request-sheet .tar-footer span { display:block; margin-top:5px; color:var(--tar-muted); font-size:12px; line-height:1.5; }
         .truck-assignment-request-sheet .tar-empty { padding:28px 24px; color:var(--tar-muted); font-size:14px; }
         @media(max-width:460px) {
-            .truck-assignment-request-sheet:not(.truck-assignment-request-export) .tar-header { padding:18px; }
-            .truck-assignment-request-sheet:not(.truck-assignment-request-export) .tar-title-line h2 { font-size:21px; }
-            .truck-assignment-request-sheet:not(.truck-assignment-request-export) .tar-grid { grid-template-columns:minmax(0,1fr); padding:16px; gap:10px; }
-            .truck-assignment-request-sheet:not(.truck-assignment-request-export) .tar-contractor { padding:15px; }
-            .truck-assignment-request-sheet:not(.truck-assignment-request-export) .tar-card-top { min-height:0; }
-            .truck-assignment-request-sheet:not(.truck-assignment-request-export) .tar-summary { margin:0 16px 16px; }
-            .truck-assignment-request-sheet:not(.truck-assignment-request-export) .tar-footer { padding:18px; align-items:flex-start; }
+            .truck-assignment-request-sheet:not([data-screenshot-surface]) .tar-header { padding:18px; }
+            .truck-assignment-request-sheet:not([data-screenshot-surface]) .tar-title-line h2 { font-size:21px; }
+            .truck-assignment-request-sheet:not([data-screenshot-surface]) .tar-grid { grid-template-columns:minmax(0,1fr); padding:16px; gap:10px; }
+            .truck-assignment-request-sheet:not([data-screenshot-surface]) .tar-contractor { padding:15px; }
+            .truck-assignment-request-sheet:not([data-screenshot-surface]) .tar-card-top { min-height:0; }
+            .truck-assignment-request-sheet:not([data-screenshot-surface]) .tar-summary { margin:0 16px 16px; }
+            .truck-assignment-request-sheet:not([data-screenshot-surface]) .tar-footer { padding:18px; align-items:flex-start; }
         }
         .overview-route-issues { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-bottom:16px; }
         .overview-route-issues[data-single="true"] { grid-template-columns:1fr; }
@@ -8511,6 +8511,55 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
 html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-header button[title="Notifications"]>svg {color:#ffffff!important;}
 }
 </style>
+<style>
+.metrics-response-table {
+    min-width: 58rem;
+    --metrics-rule: var(--fmo-theme-line, #455c76);
+    --metrics-line: color-mix(in srgb, var(--metrics-rule) 65%, var(--fmo-theme-card, #1e293b));
+}
+html[data-dashboard-theme="grey"] .metrics-response-table {
+    --metrics-rule: color-mix(in srgb, var(--fmo-theme-line, #535353) 85%, #64829c);
+}
+html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) .metrics-response-table {
+    --response-track: rgb(0 0 0 / 15%);
+}
+/* The screenshot renderer alone sets this attribute. Coaching uses a dedicated card palette. */
+html[data-screenshot-theme="grey"] .brief-card.compact .brief-head {
+    background: linear-gradient(115deg, var(--fmo-theme-raised), var(--fmo-theme-card) 65%);
+}
+html[data-screenshot-theme="grey"] .brief-card.compact :is(.brief-meta, .brief-coaching) {
+    background: var(--fmo-theme-deep);
+    border-color: var(--fmo-theme-line);
+}
+html[data-screenshot-theme="grey"] .brief-card.compact .brief-coaching { border-left-color: #44a98a; }
+html[data-screenshot-theme="grey"] .brief-card.compact :is(.brief-heading h3, .brief-original-text, .brief-message) {
+    color: var(--fmo-theme-ink);
+}
+html[data-screenshot-theme="grey"] .balanced-picture-theme [data-screenshot-surface] table th {
+    background-color: var(--fmo-theme-header) !important;
+}
+/* Keep the Dark Gray dividers in a color format the PNG renderer understands. */
+html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #565a5e; --metrics-line: #474a4c; }
+.metrics-response-table th, .metrics-response-table td { white-space: nowrap; }
+.metrics-response-table thead th:nth-child(5) { width: 16%; min-width: 10.5rem; }
+#root #metrics-period-table > thead > tr > th { padding: 9px 10px; vertical-align: top; border-bottom: 2px solid var(--metrics-rule) !important; }
+#root #metrics-period-table > tbody > tr > td { border-bottom: 1px solid var(--metrics-line) !important; }
+#root #metrics-period-table > tbody > tr.metrics-grand-total > td { border-top: 2px solid var(--metrics-rule) !important; }
+.metrics-response-table .metric-target { display: block; font-size: 11px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.metrics-response-table .metrics-grand-total td:first-child { text-align: center; }
+.metrics-response-table .metric-missing { color: var(--fmo-theme-muted, #a4b3c6); }
+.metrics-response-table .response-meter {
+    display: grid; grid-template-columns: minmax(0, 1fr) 7.5ch; gap: 8px; min-width: 6.9rem;
+    align-items: center; font-variant-numeric: tabular-nums; color: var(--fmo-theme-ink, #e2e8f0);
+}
+.response-meter.response-red { --response-fill: var(--fmo-score-red, #ffaaa0); }
+.response-meter.response-amber { --response-fill: var(--fmo-score-amber, #efc56c); }
+.response-meter.response-green { --response-fill: var(--fmo-score-green, #8ad6ae); }
+.response-meter.response-neutral { --response-fill: currentColor; }
+.metrics-response-table .response-track { width: 92%; justify-self: end; display: block; height: 4px; border-radius: 3px; overflow: hidden; background: var(--response-track, rgb(255 255 255 / 15%)); }
+.response-fill { display: block; height: 100%; border-radius: inherit; background: var(--response-fill); }
+.response-value { display: block; min-width: 6.5ch; text-align: right; line-height: 1.15; }
+</style>
 </head>
 <body class="balanced-picture-theme bg-slate-900 text-slate-100 font-sans antialiased overflow-x-hidden">
     <div id="root"></div>
@@ -8529,7 +8578,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             Table as TableIcon, Trash2, Route, Settings, ClipboardPaste, Award, DollarSign,
             PlusCircle, X, Loader2, ActivitySquare, MessageSquare, User, Share2,
             FileText, History, Maximize, Minimize, Bell, ThumbsUp, Smile, Search, ClipboardList,
-            Heart, Coffee, PartyPopper, Hand, Moon, Sun, Sparkles, Pizza, Cookie, Mic, Paperclip, MoreHorizontal, Phone, Building2, Wrench, GraduationCap, MapPin, ChevronDown
+            Heart, Coffee, PartyPopper, Hand, Moon, Sun, Sparkles, Pizza, Cookie, Mic, Paperclip, MoreHorizontal, Phone, Building2, Wrench, GraduationCap, MapPin, ChevronDown, ChevronRight
         } from 'lucide-react';
 
         let firebaseConfig = {
@@ -9511,13 +9560,27 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             const rows = data.metricsTracker?.[tab];
             if (!['wtd', 'mtd', 'feedback'].includes(tab) || !fields.includes(field) || !rows?.[index]) return data;
             let nextValue = String(value ?? '');
-            if (field in numbers) {
+            if (tab !== 'feedback' && field in numbers && field !== 'surveyCnt' && !nextValue.trim()) nextValue = null;
+            else if (field in numbers) {
                 const number = Number(value);
                 nextValue = Math.min(numbers[field], Math.max(0, Number.isFinite(number) ? number : 0));
                 if (field === 'surveyCnt') nextValue = Math.trunc(nextValue);
             }
-            return { ...data, metricsTracker: { ...data.metricsTracker,
-                [tab]: rows.map((row, i) => i === index ? { ...row, [field]: nextValue } : row) } };
+            const edited={...rows[index],[field]:nextValue};
+            if (tab!=='feedback' && ['firstName','lastName'].includes(field) && nextValue!==rows[index][field]) {
+                edited.metricReportName=rows[index].metricReportName || metricsPersonName(rows[index]);
+                edited.metricNameConfirmed=true;
+            }
+            const updatedRows = rows.map((row, i) => i === index ? edited : row);
+            const tracker = { ...data.metricsTracker, [tab]: updatedRows };
+            const totalsKey = tab + 'Totals', savedTotals = tracker[totalsKey];
+            if (savedTotals && field === 'surveyCnt' && nextValue !== rows[index].surveyCnt) {
+                const currentTotal = surveyNumber(savedTotals.surveyCnt);
+                const corrected = currentTotal === null ? null : currentTotal - (surveyNumber(rows[index].surveyCnt) ?? 0) + nextValue;
+                const count = corrected !== null && corrected >= 0 ? corrected : updatedRows.reduce((sum,row)=>sum+(surveyNumber(row.surveyCnt) ?? 0),0);
+                tracker[totalsKey] = { ...savedTotals, surveyCnt: count };
+            }
+            return { ...data, metricsTracker: tracker };
         };
         const mergeMetricsRowOrder = (before = [], local = [], merged = []) => {
             if (![before, local, merged].every(rows => Array.isArray(rows) && rows.every(row => row?.id != null))) return merged;
@@ -9537,11 +9600,23 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             });
             return result;
         };
-        const mergeMetricsTrackerOrder = (before, local, merged) => {
+        const mergeMetricsTrackerOrder = (before, local, merged, remote) => {
             if (!merged) return merged;
             const next = { ...merged };
             ['wtd', 'mtd', 'feedback'].forEach(tab => {
                 if (Array.isArray(merged[tab])) next[tab] = mergeMetricsRowOrder(before?.[tab], local?.[tab], merged[tab]);
+                if (tab === 'feedback') return;
+                const key = tab+'Totals';
+                const countOffset = tracker => {
+                    const count = surveyNumber(tracker?.[key]?.surveyCnt);
+                    return count === null || !Array.isArray(tracker?.[tab]) ? null
+                        : count - tracker[tab].reduce((sum,row)=>sum+(surveyNumber(row.surveyCnt) ?? 0),0);
+                };
+                const offset = countOffset(before);
+                if (offset !== null && next[key] && Array.isArray(next[tab]) &&
+                    countOffset(local) === offset && countOffset(remote) === offset) {
+                    next[key] = {...next[key],surveyCnt:offset+next[tab].reduce((sum,row)=>sum+(surveyNumber(row.surveyCnt) ?? 0),0)};
+                }
             });
             return next;
         };
@@ -9563,7 +9638,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             const numeric = (value, detail, field, address) => {
                 const raw = text(value);
                 if(detail?.error || detail?.uncachedFormula)throw new Error(`${address} contains an Excel error or an uncalculated formula. Open and save the report in Excel, then retry.`);
-                if(!raw || /^(?:n\/?a|[-—–])$/i.test(raw))return 0;
+                if(!raw || /^(?:n\/?a|[-—–])$/i.test(raw))return field === 'surveyCnt' ? 0 : null;
                 const cleaned=raw.replace(/,/g,'').replace(/%$/,'').trim();
                 if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(cleaned))throw new Error(`${address} is not a readable number. Check that cell in Excel.`);
                 let number=Number(cleaned);
@@ -9579,6 +9654,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             }).map(item=>item.row);
             const parse = table => {
                 const start=header(table.rows);if(start<0)return null;
+                const driverKeyColumn=table.rows[start].findIndex(value=>norm(value)==='driverkey');
                 const map=columns(table.rows[start]),missing=Object.keys(map).filter(key=>map[key]<0);
                 if(missing.length)throw new Error(`The sheet is missing these columns: ${missing.map(key=>({firstName:'First Name',lastName:'Last Name',surveyCnt:'Survey Count',surveyAvg:'Survey Average',onTime:'On-Time %',completion:'Completion %',exchange:'Exchange %'}[key])).join(', ')}.`);
                 for(const [key,names]of Object.entries(aliases))if(table.rows[start].filter(value=>names.includes(norm(value))).length!==1)throw new Error(`The ${key} column appears more than once. Choose a report with one set of metric columns.`);
@@ -9592,6 +9668,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                     const values=Object.fromEntries(fields.map(field=>[field,numeric(raw[map[field]],table.cellDetails?.[index]?.[map[field]],field,cellName(index,map[field]))]));
                     if(total){if(totals)throw new Error('More than one Total row was found. Import one complete WTD or MTD report at a time.');totals=values;continue;}
                     const row={firstName,lastName,...values},key=nameKey(row);
+                    if (driverKeyColumn>=0 && text(raw[driverKeyColumn])) row.metricDriverKey=text(raw[driverKeyColumn]);
                     if(seen.has(key))throw new Error(`The sheet contains the same driver name more than once (${firstName} ${lastName}). Correct the duplicate before importing.`);
                     seen.add(key);rows.push(row);
                 }
@@ -9612,16 +9689,62 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 const matching=reports.filter(item=>word.test(item.name));
                 return matching.length===1?matching[0]:reports.length===1?reports[0]:null;
             };
-            const apply = (data,tab,report) => {
-                if(!['wtd','mtd'].includes(tab)||!report?.rows?.length||!report.totals)throw new Error('Choose a complete WTD or MTD report.');
-                const existing=data.metricsTracker?.[tab]||[],byName=new Map();
-                for(const row of existing){const key=nameKey(row);if(byName.has(key))throw new Error(`The dashboard has duplicate rows for ${row.firstName} ${row.lastName}. Correct those rows before importing.`);byName.set(key,row);}
-                const imported=new Set();
-                const updated=report.rows.map(row=>{const key=nameKey(row),saved=byName.get(key);imported.add(key);return {...saved,...row,id:saved?.id??(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2))};});
-                const kept=existing.filter(row=>!imported.has(nameKey(row)));
-                return {data:{...data,metricsTracker:{...data.metricsTracker,[tab]:sort([...updated,...kept]),[tab+'Totals']:{...report.totals}}},imported:updated.length,kept:kept.length};
+            const mergeRows = (existing, incoming, people, reportOrder = false) => {
+                const prepare = row => people ? people.format(row) : row;
+                const merged = existing.slice(), byName = new Map(), byId = new Map(), seen = new Set(), touched = new Set();
+                const updated = [];
+                const keyOf = row => normalizeContactNameKey(metricsPersonName(prepare(row)));
+                existing.forEach((row,i)=>{
+                    const key=keyOf(row);
+                    if (byName.has(key)) throw new Error('Two saved rows match '+metricsPersonName(prepare(row))+'. Review their names before importing.');
+                    byName.set(key,i);
+                    if (row.metricDriverKey) {
+                        if (byId.has(row.metricDriverKey)) throw new Error('Two saved rows use the same DriverKey. Review their names before importing.');
+                        byId.set(row.metricDriverKey,i);
+                    }
+                });
+                const savedNames = new Set(byName.keys());
+                const seenIds = new Set();
+                for (const source of incoming) {
+                    if (people?.idMatch(source)===null) throw new Error('The DriverKey and saved names disagree for '+metricsPersonName(source)+'. Review this driver before importing.');
+                    const row=prepare(source), key=normalizeContactNameKey(metricsPersonName(row));
+                    if (seen.has(key) || (row.metricDriverKey && seenIds.has(row.metricDriverKey))) throw new Error('Two report rows match '+metricsPersonName(row)+'. Review their names before importing.');
+                    seen.add(key);
+                    if(row.metricDriverKey) seenIds.add(row.metricDriverKey);
+                    let bySpelling=byName.get(key), matchedExistingSpelling=false;
+                    if (bySpelling===undefined && people && people.resolve(metricsPersonName(row))==='') {
+                        const nearby=findSurveyNameMatch(key,savedNames);
+                        if (nearby) { bySpelling=byName.get(nearby); matchedExistingSpelling=true; }
+                    }
+                    const byReportId=byId.get(row.metricDriverKey);
+                    const index=byReportId ?? bySpelling, saved=existing[index];
+                    if ((byReportId!==undefined && bySpelling!==undefined && byReportId!==bySpelling) ||
+                        (saved && row.metricDriverKey && saved.metricDriverKey && row.metricDriverKey!==saved.metricDriverKey) || touched.has(index)) {
+                        throw new Error('Conflicting matches for '+metricsPersonName(row)+'. Review the driver names and DriverKeys before importing.');
+                    }
+                    const item={...saved,...row,id:saved?.id ?? row.id ?? (globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2))};
+                    if (saved?.metricNameConfirmed) {
+                        const corrected=prepare(saved);
+                        item.metricReportName=corrected.metricReportName;
+                        item.firstName=corrected.firstName;
+                        item.lastName=corrected.lastName;
+                    } else if (matchedExistingSpelling) {
+                        item.metricReportName=row.metricReportName || metricsPersonName(source);
+                        item.firstName=saved.firstName;
+                        item.lastName=saved.lastName;
+                    }
+                    updated.push(item);
+                    if (index===undefined) merged.push(item);
+                    else { merged[index]=item; touched.add(index); }
+                }
+                return {rows:reportOrder ? [...updated,...existing.filter((row,i)=>!touched.has(i))] : merged,kept:existing.length-touched.size};
             };
-            return {read,parse,choose,apply,sort,nameKey};
+            const apply = (data,tab,report,people) => {
+                if(!['wtd','mtd'].includes(tab)||!report?.rows?.length||!report.totals)throw new Error('Choose a complete WTD or MTD report.');
+                const merged=mergeRows(data.metricsTracker?.[tab] || [],report.rows,people,true);
+                return {data:{...data,metricsTracker:{...data.metricsTracker,[tab]:sort(merged.rows),[tab+'Totals']:{...report.totals}}},imported:report.rows.length,kept:merged.kept};
+            };
+            return {read,parse,choose,apply,mergeRows,sort,nameKey,columns};
         })();
 
         const FeedbackWorkbookImport = (()=>{
@@ -10706,7 +10829,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
 
             const getCountableRouteRows = (inputData) => {
                 const d = inputData || DEFAULT_DATA;
-                return (d.routeTable || []).filter(route => ['cnt', 'door', 'serviceUnit', 'route', 'contractor', 'driver', 'helper'].some(key => String(route?.[key] || '').trim()));
+                return (Array.isArray(d.routeTable) ? d.routeTable : []).filter(row => row && typeof row==='object' && ['door','serviceUnit','route','contractor','driver','helper','stops','pcs','cube','mileage','hos'].some(key=>String(row[key] ?? '').trim()!==''));
             };
 
             const isSameDayRoute = (route) => {
@@ -11161,7 +11284,10 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 if(key!=='feedback')delete tracker[key+'Totals'];
                 return {...data,metricsTracker:tracker};
             };
-            const ordinaryOwnNote=(note,uid)=>Boolean(uid&&note);
+            const canDeleteNote=(note,uid)=>Boolean(uid && note && (
+                (!isManagerNote(note) && !note.system) ||
+                (auth.currentUser?.uid===uid && canManageLocationRecords(auth.currentUser))
+            ));
             const canUse=(account,section,profile=accessProfilesCache.get(account?.uid))=>sections.includes(section)&&Boolean(account?.uid&&(canManageLocationRecords(account)||(profile?.enabled&&profile.permissions?.[section]&&(profile.sectionActions?.[section]?.view??true))));
             const approveRole=account=>canManageLocationRecords(account)||isUserAdministrator(account);
             const label=field=>field==='routeTable'?'Routes':field==='shiftNotes'?'Shift Notes':field.endsWith('.wtd')?'WTD Metrics':field.endsWith('.mtd')?'MTD Metrics':'Feedback';
@@ -11217,7 +11343,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 if(!all&&(!Number.isInteger(index)||index<0||index>=beforeRows.length))throw new Error('That row is no longer available. Refresh first.');
                 if(all&&field==='shiftNotes'&&!isOwnerAccount(auth.currentUser))throw new Error('Delete notes one at a time.');
                 const indexes=all?beforeRows.map((_,i)=>i):[index],removed=indexes.map(i=>beforeRows[i]);
-                if(section==='shiftNotes'&&removed.some(note=>!ordinaryOwnNote(note,uid)))throw new Error('Only an Admin can delete Manager Notes or system records.');
+                if(section==='shiftNotes'&&removed.some(note=>!canDeleteNote(note,uid)))throw new Error('Only an Admin can delete Manager Notes or system records.');
                 const chosen=new Set(indexes),afterRows=beforeRows.filter((_,i)=>!chosen.has(i));
                 return {beforeRows,afterRows,indexes,removed};
             };
@@ -11227,7 +11353,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 const removed=new Set(request.indexes);
                 if(!equalSaved(request.afterRows,request.beforeRows.filter((_,index)=>!removed.has(index))))throw new Error('A deletion request must preserve every row that is not selected.');
                 if(request.indexes.length!==1&&request.field==='shiftNotes'&&!isOwnerAccount(auth.currentUser))throw new Error('Delete notes one at a time.');
-                if(request.section==='shiftNotes'&&request.indexes.some(index=>!ordinaryOwnNote(request.beforeRows[index],request.requesterUid)))throw new Error('Only an Admin can delete Manager Notes or system records.');
+                if(request.section==='shiftNotes'&&request.indexes.some(index=>!canDeleteNote(request.beforeRows[index],request.requesterUid)))throw new Error('Only an Admin can delete Manager Notes or system records.');
             };
             const ref=(kind,id)=>doc(db,'artifacts',appId,'public','data',kind,id);
             const actor=()=>({uid:auth.currentUser?.uid,name:currentAuditName||getDefaultUserName(auth.currentUser)});
@@ -11306,7 +11432,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                             const requesterProfile=await readProfile(transaction,request.requesterUid);
                             if(!canUse({uid:request.requesterUid},request.section,requesterProfile))throw new Error('The requester no longer has deletion permission.');
                         }
-                        if(request.section==='shiftNotes'&&request.indexes.some(index=>!ordinaryOwnNote(request.beforeRows[index],request.requesterUid)))throw new Error('The request contains protected notes.');
+                        if(request.section==='shiftNotes'&&request.indexes.some(index=>!canDeleteNote(request.beforeRows[index],request.requesterUid)))throw new Error('The request contains protected notes.');
                         writeDeletion(transaction,{data:day.data(),request,identity,operationId,requestId:id,approved:true,now});
                     }
                     if(decision==='denied')transaction.set(ref('auditEvents',operationId),{actorUid:identity.uid,actorName:identity.name,timestamp:now.toISOString(),createdAt:serverTimestamp(),collection:'deletionRequests',recordId:id,section:'Deletion requests',operation:'deny-deletion',summary:'Denied deletion request for '+request.date,changeCount:1,changes:[],requestId:id,requestedByUid:request.requesterUid});
@@ -11335,7 +11461,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 });
             };
             const enable=async()=>{if(!isOwnerAccount(auth.currentUser))throw new Error('Only the dashboard owner can enable these controls.');await firebaseSetDoc(ref('config','recentDeletionPolicy'),{version:1,updatedByUid:auth.currentUser.uid,updatedAt:serverTimestamp()});};
-            return {enabled,setEnabled,sections,fields,normalize,today,sameDay,validDate,getRows,putRows,ordinaryOwnNote,canUse,approveRole,label,rowLabel,holdReasons,nextUsage,comparable,equalSaved,resolveSelection,select,validatePlan,remove,decide,restore,enable,ref};
+            return {enabled,setEnabled,sections,fields,normalize,today,sameDay,validDate,getRows,putRows,canDeleteNote,canUse,approveRole,label,rowLabel,holdReasons,nextUsage,comparable,equalSaved,resolveSelection,select,validatePlan,remove,decide,restore,enable,ref};
         })();
 
         const PERMISSION_OPTIONS = [
@@ -11929,7 +12055,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 await document.fonts.ready;
                 const card=host.querySelector('.overview-route-card');
                 if(!card)throw new Error('No active route header is available.');
-                prepareScreenshotSurface(card, '#1f2937', 16);
+                prepareScreenshotSurface(card);
                 // Rasterize inline icons first so html2canvas retains the faint truck watermark.
                 for(const svg of card.querySelectorAll('svg')){
                     const computed=getComputedStyle(svg),clone=svg.cloneNode(true),image=new Image();
@@ -11947,7 +12073,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 }
                 const bounds=card.getBoundingClientRect(),width=Math.ceil(bounds.width),height=Math.ceil(bounds.height);
                 const png=await downloadScreenshotPng(card,'route-update.png',{
-                    backgroundColor:'#1f2937',logging:false,useCORS:false,width,height,windowWidth:1024,windowHeight:height
+                    backgroundColor:SCREENSHOT_BACKGROUND,logging:false,useCORS:false,width,height,windowWidth:1024,windowHeight:height
                 },true);
                 return await new Promise((resolve,reject)=>{
                     const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('The route picture could not be created.'));reader.readAsDataURL(png);
@@ -11961,7 +12087,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
         };
         const copyRoutePictureToClipboard = async imagePromise => {
             return copyScreenshotImageForEmail(async () => routePicturePngBlob(await imagePromise), {
-                background:'#1f2937',maxWidth:730,label:'Route update'
+                background:SCREENSHOT_BACKGROUND,maxWidth:730,label:'Route update'
             });
         };
         const prepareAndOpenLateRouteEmail = async (call,draft) => {
@@ -12353,6 +12479,11 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                         else if (last === 'etaUnknown' && after === true) add(`selected “Not Yet / Still on route” for ${row.contractor || old.contractor || 'the preload team'}; ETA is unknown.`);
                         else if (last === 'nextCheckAt' && after) add(`moved the preload follow-up to ${activityTimeLabel(after)}.`);
                         else if (last === 'assignmentId' && before !== after) add('changed the selected preload team.');
+                    } else if (field==='sameDayArrival' || field.startsWith('sameDayArrival.')) {
+                        const arrival=row.sameDayArrival || {};
+                        if ((field==='sameDayArrival' && arrival.confirmedAt) || (last==='confirmedAt' && after)) add(`confirmed ${row.contractor || 'the same-day team'} arrived at ${activityTimeLabel(arrival.confirmedAt || after)}.`);
+                        else if ((field==='sameDayArrival' && arrival.eta) || last==='eta') add(setLine(`same-day arrival ETA for ${route}`,old.sameDayArrival?.eta,arrival.eta,'timeOffDock'));
+                        else if (last==='unknownUntil' && Number.isFinite(after)) add(`marked the same-day team still on route with ETA unknown.`);
                     } else if (activityFieldNames[field]) add(setLine(`${activityFieldNames[field]} for ${route}`,change.before,change.after,field));
                 }
             }
@@ -12778,6 +12909,9 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             format: 'geodis-dashboard-backup', version: 1, appId, exportedAt: now, exportedBy: actorUid,
             records: records.map(record => ({ collection: record.collection, id: record.id, data: stripAuditMetadata(record.data) }))
         });
+        const checkBackupSize = bytes => {
+            if (bytes > 256 * 1024 * 1024) throw new Error('This backup exceeds the 256 MB file limit.');
+        };
         const validateBackupFile = backup => {
             if (!backup || backup.format !== 'geodis-dashboard-backup' || backup.version !== 1 || backup.appId !== appId || !Array.isArray(backup.records)) {
                 throw new Error('Choose a backup downloaded from this dashboard.');
@@ -12813,7 +12947,11 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             return record.data;
         };
         const downloadJsonFile = (value, filename) => {
-            const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
+            const isBackup = value?.format === 'geodis-dashboard-backup';
+            if (isBackup) validateBackupFile(value);
+            const blob = new Blob([JSON.stringify(value, null, isBackup ? undefined : 2)], {type:'application/json'});
+            if (isBackup) checkBackupSize(blob.size);
+            const url = URL.createObjectURL(blob);
             const link = document.createElement('a'); link.href = url; link.download = filename;
             document.body.appendChild(link); link.click(); link.remove();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -12882,7 +13020,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             canvas.height = height * scale;
             try {
                 context.scale(scale, scale);
-                context.fillStyle = '#151e2b';
+                context.fillStyle = SCREENSHOT_BACKGROUND;
                 context.fillRect(0, 0, width, height);
                 const drawText = (text, x, y, font, color, maxWidth = textWidth) => {
                     context.font = font;
@@ -12890,12 +13028,12 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                     context.fillStyle = color;
                     context.fillText(text, x, y, maxWidth);
                 };
-                const muted = '#acbbd0';
-                const ink = '#edf2fa';
+                const muted = SCREENSHOT_MUTED;
+                const ink = SCREENSHOT_INK;
                 drawText(heading, padding, 23, '700 12px "Segoe UI", sans-serif', '#ffd280');
                 titleLines.forEach((line, i) => drawText(line, padding, 43 + i * 33, titleFont, ink));
                 drawText(dateLabel, padding, 82 + titleOffset, '400 13px "Segoe UI", sans-serif', muted);
-                context.fillStyle = '#334358';
+                context.fillStyle = SCREENSHOT_LINE;
                 context.fillRect(padding, 111 + titleOffset, textWidth, 1);
                 context.fillRect(padding, 184 + titleOffset + detailOffset, textWidth, 1);
                 const rightColumn = width / 2 + 6;
@@ -12936,6 +13074,79 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             details: [['Dock door', door], ['Ready at', readyTime]],
             message: `A quick reminder that today’s afternoon preload will be ready at Dock Door ${door} at ${readyTime}.`
         });
+        const sameDayArrivalSpec = row => {
+            if (!isSameDayRoute(row)) return null;
+            return /\b(?:san\s*antonio|s\.?\s*a\.?)\b/i.test(String(row.route || ''))
+                ? {kind:'san-antonio',name:'San Antonio same-day',deadline:930}
+                : {kind:'local',name:'Local same-day',deadline:990};
+        };
+        const sameDayArrivalAssignmentKey = (row,dateKey) => {
+            const spec=sameDayArrivalSpec(row);
+            if (!spec || row?.id == null) return null;
+            const clean=value=>String(value ?? '').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+            return JSON.stringify([dateKey,String(row.id),spec.kind,...['serviceUnit','contractor','driver','helper'].map(key=>clean(row[key]))]);
+        };
+        const sameDayArrivalState = (row,dateKey) => {
+            const assignmentKey=sameDayArrivalAssignmentKey(row,dateKey),saved=row?.sameDayArrival;
+            return saved?.dateKey===dateKey && saved.assignmentKey===assignmentKey ? saved : {dateKey,assignmentKey,eta:preloadClockValue(sameDayArrivalSpec(row)?.deadline)};
+        };
+        const getSameDayArrivalTeams = ({recap,dateKey,clock,location=ACTIVE_LOCATION}) => {
+            if (location!=='austin' || !recap || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey || '')) return [];
+            const rows=getCountableRouteRows(recap).filter(row=>row?.id!=null && sameDayArrivalSpec(row));
+            const counts=new Map();rows.forEach(row=>counts.set(String(row.id),(counts.get(String(row.id))||0)+1));
+            return rows.filter(row=>counts.get(String(row.id))===1).map(row=>{
+                const spec=sameDayArrivalSpec(row),state=sameDayArrivalState(row,dateKey),eta=parsePreloadEtaMinutes(state.eta);
+                const confirmed=Number.isFinite(Date.parse(state.confirmedAt)) && getPreloadClock(new Date(state.confirmedAt)).dateKey===dateKey;
+                const today=dateKey===clock.dateKey,now=clock.minutes;
+                let kind='waiting',tone='waiting',label='Starts '+preloadClockLabel(spec.deadline),showReminder=false;
+                let message='The arrival check starts at '+preloadClockLabel(spec.deadline)+' Central.';
+                if (confirmed) {kind='confirmed';tone='green';label='Arrived';message='The team has been confirmed at the warehouse.';}
+                else if (!today) {label=dateKey<clock.dateKey?'Not recorded':'Scheduled';message=dateKey<clock.dateKey?'No arrival confirmation was saved for this team.':'Arrival checks will be available on this route date.';}
+                else if (now>=spec.deadline) {
+                    showReminder=true;
+                    if (eta!=null && eta>spec.deadline) {kind=now<eta?'late-eta':'late-check';tone='red';label='Late ETA';message='The entered ETA is after the '+preloadClockLabel(spec.deadline)+' arrival deadline. Confirm only when the team is at the warehouse.';}
+                    else if (now>spec.deadline) {kind='overdue';tone='red';label='Not arrived';message='The arrival deadline has passed. Update their ETA or confirm that the team is at the warehouse.';}
+                    else if (eta!=null) {kind='arrival';tone='green';label='Arrival check';message='Has the assigned same-day team arrived at the warehouse?';}
+                    else if (Number.isFinite(state.unknownUntil) && now<state.unknownUntil) {label='Still on route';message='Next arrival check: '+preloadClockLabel(state.unknownUntil)+' Central.';showReminder=false;}
+                    else {kind='missing-eta';tone='amber';label='ETA needed';message='Please enter the expected warehouse arrival time, or tell us the team is still on route.';}
+                }
+                return {row,spec,state,dateKey,eta,kind,tone,label,message,showReminder,
+                    signature:JSON.stringify([dateKey,state.assignmentKey,kind,eta,state.unknownUntil || null]),
+                    title:spec.name+(kind==='missing-eta'?' team ETA needed':tone==='red'?' arrival not confirmed':' arrival check')};
+            });
+        };
+        const saveSameDayArrivalChange = async ({dateKey,rowId,assignmentKey,action,etaValue,actorUid,actorName,timestamp}) => {
+            requirePermission('routes');
+            const at=new Date(timestamp);
+            if (!Number.isFinite(+at)) throw new Error('The arrival update time is unavailable. Please try again.');
+            const clock=getPreloadClock(at);
+            if (ACTIVE_LOCATION!=='austin' || dateKey!==clock.dateKey) throw new Error('Same-day arrival checks are available for today in Pflugerville only.');
+            if (!actorUid || actorUid!==auth.currentUser?.uid) throw new Error('Your login changed. Please reopen the reminder.');
+            if (!['eta','unknown','confirm'].includes(action)) throw new Error('Choose an arrival action.');
+            const eta=action==='eta'?parsePreloadEtaMinutes(etaValue):null;
+            if (action==='eta' && eta==null) throw new Error('Enter a valid warehouse arrival time.');
+            const recapRef=doc(db,'artifacts',appId,'public','data','dailyRecaps',dateKey);
+            return runTransaction(db,async transaction=>{
+                const snapshot=await transaction.get(recapRef);
+                if (actorUid!==auth.currentUser?.uid) throw new Error('Your login changed. Please reopen the reminder.');
+                requirePermission('routes');
+                const recap=snapshot.exists()?snapshot.data():{},rows=recap.routeTable || [];
+                const matches=rows.filter(row=>row && String(row.id)===String(rowId));
+                if (matches.length!==1 || !sameDayArrivalSpec(matches[0]) || sameDayArrivalAssignmentKey(matches[0],dateKey)!==assignmentKey)
+                    throw new Error('The same-day assignment changed. Reopen the arrival check for the current team.');
+                const row=matches[0],current=sameDayArrivalState(row,dateKey);
+                if (Number.isFinite(Date.parse(current.confirmedAt)) && getPreloadClock(new Date(current.confirmedAt)).dateKey===dateKey) return {recap};
+                const arrival={...current,dateKey,assignmentKey,updatedAt:at.toISOString(),updatedBy:actorName,updatedByUid:actorUid};
+                delete arrival.unknownUntil;
+                if (action==='eta') arrival.eta=preloadClockValue(eta);
+                if (action==='unknown') {arrival.eta='';arrival.unknownUntil=nextUnknownPreloadCheck(clock.minutes);}
+                if (action==='confirm') {arrival.confirmedAt=at.toISOString();arrival.confirmedBy=actorName;arrival.confirmedByUid=actorUid;}
+                const patch={routeTable:rows.map(item=>item && String(item.id)===String(rowId)?{...item,sameDayArrival:arrival}:item),lastUpdatedBy:actorName,lastUpdatedAt:at.toISOString()};
+                transaction.set(recapRef,patch,{merge:true});
+                return {recap:{...recap,...patch}};
+            });
+        };
+
         const getSameDayDockDoor = row => String(row.door ?? '').trim()
             .replace(/^(?:dock\s+)?door(?:\s+#?\s*|\s*#)\s*/i, '').trim();
         const getSameDayAssignmentCard = (row, dateLabel, dockArrival) => {
@@ -13042,7 +13253,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             const selected = choice && saved?.preloadArrival.assignmentId === choice.preloadArrival.assignmentId ? saved : choice;
             // Treat the designation as one shared choice. A live update must not
             // merge different assignments or carry an old team's confirmation forward.
-            return { ...merged, ...(merged.metricsTracker ? { metricsTracker: mergeMetricsTrackerOrder(baseline?.metricsTracker, local?.metricsTracker, merged.metricsTracker) } : {}), routeTable: (merged.routeTable || []).map(row => {
+            return { ...merged, ...(merged.metricsTracker ? { metricsTracker: mergeMetricsTrackerOrder(baseline?.metricsTracker, local?.metricsTracker, merged.metricsTracker, remote?.metricsTracker) } : {}), routeTable: (merged.routeTable || []).map(row => {
                 if (!row) return row;
                 const { preloadArrival, ...rest } = row;
                 return selected && String(row.id) === String(selected.id)
@@ -13247,6 +13458,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
             ['preloadMessage', '12:30 PM preload message', 'The reminder to send the preload message.', 'preload-arrival'],
             ['compliance17', '5:00 PM route update', 'The afternoon compliance reminder.', 'compliance-cue'],
             ['preloadArrival', 'Preload team arrival', 'Missing ETA at 4:30 PM, arrival checks at the saved ETA, and late-arrival warnings after 6:00 PM Central.', 'preload-arrival'],
+            ...(ACTIVE_LOCATION==='austin' ? [['sameDayArrival','Same-day team arrival','Local arrivals at 4:30 PM and San Antonio arrivals at 3:30 PM Central.','preload-arrival']] : []),
             ['compliance19', '7:00 PM end-of-day update', 'The evening compliance reminder.', 'compliance-cue'],
             ['urgentNote', 'Urgent / Manager Note', 'A newly saved urgent Shift Note or Manager Note.', 'urgent'],
             ['driverAssignment', 'Driver assignment warning', 'A new warning displayed in Routes.', 'silent'],
@@ -13429,11 +13641,15 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
         };
         const PRESENCE_AWAY_AFTER_MS = 10 * 60 * 1000;
         const PRESENCE_HEARTBEAT_MS = 5 * 60 * 1000;
-        const SCREENSHOT_BACKGROUND = '#1b1f25';
+        // Canvas-drawn cards and clipboard mattes share the Dark Gray dashboard palette.
+        const SCREENSHOT_BACKGROUND = '#2b2b2b';
+        const SCREENSHOT_INK = '#f2f2f2';
+        const SCREENSHOT_MUTED = '#c2c2c2';
+        const SCREENSHOT_LINE = '#535353';
         const prepareScreenshotSurface = (surface, background = SCREENSHOT_BACKGROUND, cornerRadius = 16) => {
             surface.setAttribute('data-screenshot-surface', 'true');
             surface.setAttribute('data-dashboard-export-dark', 'true');
-            surface.style.setProperty('color', '#f7f9fc', 'important');
+            surface.style.setProperty('color', SCREENSHOT_INK, 'important');
             // Export copies keep rounded edges without theme shadows.
             surface.style.setProperty('background', background, 'important');
             for (const [property, value] of Object.entries({ 'border-radius':cornerRadius + 'px', border:'0', outline:'none', 'box-shadow':'none', 'text-shadow':'none', filter:'none', 'backdrop-filter':'none' })) {
@@ -13463,10 +13679,16 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
                 let canvas;
                 let blob;
                 try {
-                    canvas = await window.html2canvas(element, { ...options, scale: scale * factor, onclone:async (clonedDoc,clonedElement)=>{
-                        clonedDoc.documentElement.dataset.dashboardTheme='dark';
-                        if(options.onclone) await options.onclone(clonedDoc,clonedElement);
-                    } });
+                    const renderOptions = { ...options, scale: scale * factor, onclone:async (clonedDoc,clonedElement)=>{
+                        clonedDoc.documentElement.dataset.dashboardTheme = 'grey';
+                        clonedDoc.documentElement.dataset.screenshotTheme = 'grey';
+                        if (options.onclone) await options.onclone(clonedDoc, clonedElement);
+                        // Re-enable dashboard theme styles on the renderer's private copy.
+                        clonedElement.removeAttribute('data-dashboard-export-dark');
+                        // Dark Gray type can wrap differently from the user's theme.
+                        renderOptions.height = Math.max(options.height, Math.ceil(clonedElement.getBoundingClientRect().height));
+                    } };
+                    canvas = await window.html2canvas(element, renderOptions);
                     if (!canvas.width || !canvas.height) throw new Error('Unable to allocate screenshot canvas.');
                     // Flatten any remaining transparency before copying or downloading the PNG.
                     const context = canvas.getContext('2d');
@@ -15575,7 +15797,7 @@ const copyScreenshotImageForEmail = async (createImage, options = {}) => {
                 return {selector:badge.classList.contains('brief-fault')?'.brief-fault':'.brief-category',width:rect.width,height:rect.height,url:canvas.toDataURL('image/png')};
             }));
             return clone=>{
-                const surface=clone.getElementById('driver-coaching-export');prepareScreenshotSurface(surface,'#18212e',16);
+                const surface=clone.getElementById('driver-coaching-export');prepareScreenshotSurface(surface);
                 for (const badge of badges) {
                     const target=surface.querySelector(badge.selector),image=clone.createElement('img');
                     image.src=badge.url;image.alt=target.textContent.trim();
@@ -15639,7 +15861,7 @@ const copyScreenshotImageForEmail = async (createImage, options = {}) => {
                 if(editing||!selected||capturing)return;setCapturing(true);setError('');
                 try{
                     const element=document.getElementById('driver-coaching-export'),rect=element.getBoundingClientRect();
-                    const blob=await downloadScreenshotPng(element,'Driver-Coaching.png',{width:rect.width,height:rect.height,backgroundColor:'#18212e',useCORS:true,logging:false,scrollX:0,scrollY:0,onclone:await driverCoachingScreenshotClone(element)},true);
+                    const blob=await downloadScreenshotPng(element,'Driver-Coaching.png',{width:rect.width,height:rect.height,backgroundColor:SCREENSHOT_BACKGROUND,useCORS:true,logging:false,scrollX:0,scrollY:0,onclone:await driverCoachingScreenshotClone(element)},true);
                     if(imageRef.current)URL.revokeObjectURL(imageRef.current);const url=URL.createObjectURL(blob);imageRef.current=url;
                     const img=new Image();img.src=url;await img.decode();setCopyNotice('');setImage({url,width:img.naturalWidth,height:img.naturalHeight,blob});
                 }catch(error){setError(error.message || 'The coaching screenshot could not be prepared.');}finally{setCapturing(false);}
@@ -16387,6 +16609,44 @@ const TeamAssignmentReport = ({data, activeDate, displayDateString, preloadSched
             </section>;
         };
 
+
+        const SameDayArrivalReminder = ({team,busy,error,canUpdate,onAction,onClose}) => {
+            const [editingEta,setEditingEta]=useState(false),[etaDraft,setEtaDraft]=useState(''),[inputError,setInputError]=useState('');
+            useEffect(()=>{setEditingEta(false);setInputError('');},[team?.state.assignmentKey,team?.state.eta,team?.kind==='confirmed']);
+            if (!team) return null;
+            const {row,spec,kind,tone,eta,message,dateKey}=team;
+            const dateLabel=new Date(dateKey+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
+            const quantity=value=>value==null || String(value).trim()===''?'—':value;
+            const colors=tone==='red'?'bg-rose-500/15 border-rose-500/50 text-rose-200':tone==='amber'?'bg-amber-500/15 border-amber-500/45 text-amber-200':tone==='green'?'bg-emerald-500/15 border-emerald-500/45 text-emerald-200':'bg-slate-800 border-slate-600 text-slate-200';
+            const button='px-3 py-2 rounded-lg border border-current/25 hover:bg-white/10 transition-colors text-xs font-semibold disabled:opacity-50 disabled:cursor-wait';
+            const openEta=()=>{setEtaDraft(preloadClockValue(eta));setInputError('');setEditingEta(true);};
+            const saveEta=async event=>{event.preventDefault();if(parsePreloadEtaMinutes(etaDraft)==null){setInputError('Enter the expected arrival time.');return;}if(await onAction('eta',etaDraft))setEditingEta(false);};
+            const unknown=async()=>{if(await onAction('unknown'))setEditingEta(false);};
+            const active=!['waiting','confirmed'].includes(kind);
+            return <section aria-label={spec.name+' arrival reminder'} data-same-day-tone={tone} className={'dashboard-reminder mb-4 border p-4 rounded-xl '+colors}>
+                <div className="flex items-start gap-3"><Clock className="w-6 h-6 shrink-0 mt-0.5"/><div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3"><h3 className="font-bold text-sm">{team.title}</h3>{onClose&&<button type="button" onClick={onClose} className="text-xs font-semibold shrink-0">Close</button>}</div>
+                    <p className="text-sm mt-1">{message}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 py-3 border-y border-white/10 text-slate-200">
+                        <div className="min-w-0"><h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Assigned team</h4><p className="font-semibold text-sm break-words mb-2">{row.contractor || 'Contractor not assigned'}</p>
+                            <dl className="space-y-1 text-sm">{[['Driver',row.driver],['Helper',row.helper]].map(([label,value])=><div key={label} className="flex gap-2 min-w-0"><dt className="text-slate-400 shrink-0">{label}:</dt><dd className="min-w-0 break-words">{value || 'Not assigned'}</dd></div>)}</dl></div>
+                        <div className="min-w-0"><h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Loading details</h4><p className="font-semibold text-sm mb-2">{row.serviceUnit || 'Same-day route'} · {row.route}</p>
+                            <dl className="space-y-1 text-sm"><div className="flex gap-2"><dt className="text-slate-400">Door:</dt><dd>{getSameDayDockDoor(row) || 'Not assigned'}</dd></div><div className="flex gap-2"><dt className="text-slate-400">Route date:</dt><dd>{dateLabel}</dd></div><div className="flex gap-2"><dt className="text-slate-400">Stops / pieces:</dt><dd>{quantity(row.stops)} / {quantity(row.pcs)}</dd></div></dl></div>
+                        <div className="min-w-0"><h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Team arrival</h4><p className="text-sm">ETA: <strong className="text-base">{preloadClockLabel(eta)}</strong><span className="text-xs text-slate-400"> · Central</span></p><p className="text-xs mt-2 text-slate-300">Arrival deadline: <strong>{preloadClockLabel(spec.deadline)} Central</strong></p></div>
+                    </div>
+                    {(error||inputError)&&<p role="alert" className="mt-2 text-sm font-semibold">{error || inputError}</p>}
+                    {active&&(editingEta?<form onSubmit={saveEta} className="mt-3 flex flex-wrap items-end gap-2"><label className="text-xs">Expected warehouse arrival (Central)<input autoFocus type="time" aria-label="Expected warehouse arrival" value={etaDraft} onChange={event=>{setEtaDraft(event.target.value);setInputError('');}} disabled={busy} className="block mt-1 p-2 rounded-lg bg-slate-900 border border-slate-500 text-slate-100 text-sm"/></label><button type="submit" disabled={busy||!canUpdate} className={button}>{busy?'Saving…':'Use ETA'}</button><button type="button" onClick={unknown} disabled={busy||!canUpdate} className={button}>Still on route · ETA unknown</button><button type="button" onClick={()=>setEditingEta(false)} disabled={busy} className={button}>Cancel</button></form>:<div className="flex flex-wrap gap-2 mt-3"><button type="button" onClick={openEta} disabled={busy||!canUpdate} className={button}>{kind==='missing-eta'?'Add ETA':'Not Yet · Update ETA'}</button>{kind==='missing-eta'&&<button type="button" onClick={unknown} disabled={busy||!canUpdate} className={button}>Still on route · ETA unknown</button>}{kind!=='missing-eta'&&<button type="button" onClick={()=>onAction('confirm')} disabled={busy||!canUpdate} className={button}>{busy?'Saving…':'Confirm Arrived'}</button>}</div>)}
+                    {active&&!canUpdate&&<p className="text-xs mt-2">A team member with Routes access can update this reminder.</p>}
+                </div></div>
+            </section>;
+        };
+        const SameDayRouteCards = ({teams,onOpen,openRowId}) => !teams.length?null:<div className={'mt-4 grid grid-cols-1 gap-4'+(teams.length>1?' md:grid-cols-2':'')}>
+            {teams.map(team=>{const {row,spec,tone,label,eta}=team;const statusColor=tone==='red'?'text-rose-400':tone==='green'?'text-emerald-400':tone==='amber'?'text-amber-400':'text-slate-400';return <div key={String(row.id)} data-dashboard-card="same-day" data-same-day-route={String(row.id)} role="region" aria-label={spec.name+' '+(row.serviceUnit || '')} className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md flex justify-between items-center relative overflow-hidden group">
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none"><Truck className="w-24 h-24 text-slate-100"/></div>
+                <div className="flex flex-col relative z-10 min-w-0"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-indigo-400 shrink-0"/>{spec.name}</span><span className="text-lg font-semibold text-white leading-tight mt-1">{row.serviceUnit || 'Same-day route'}</span><button type="button" aria-expanded={String(openRowId)===String(row.id)} onClick={()=>onOpen(String(row.id))} className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-300 mt-1.5 text-left">Arrival details<ChevronRight className="w-3 h-3"/></button></div>
+                <div className="text-right flex flex-col items-end gap-1.5 mt-1 relative z-10 shrink-0"><div className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-700/60 pb-1.5 w-full text-right">Team arrival</div><div className={'text-[11px] font-black uppercase tracking-wide inline-flex items-center justify-end gap-1 '+statusColor}><span className="inline-block w-1.5 h-1.5 rounded-full bg-current shrink-0"/>{label}</div><div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">ETA {preloadClockLabel(eta)}</div></div>
+            </div>;})}
+        </div>;
 
         // Device opt-in is separate from shared chime choices. No background push or data uploads.
         let desktopNotificationContext={uid:null,owner:false,open:null};
@@ -18001,7 +18261,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             canvas.height = Math.round(height * scale);
             try {
                 context.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
-                context.fillStyle = '#18212e';
+                context.fillStyle = SCREENSHOT_BACKGROUND;
                 context.fillRect(0, 0, width, height);
                 // Cut the curve at export resolution so there are no shaded pixels in the corners.
                 const radiusX = 16 * canvas.width / width;
@@ -18029,12 +18289,12 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     context.fillText(value, x, y, maxWidth);
                 };
                 const divider = y => {
-                    context.fillStyle = '#344358';
+                    context.fillStyle = SCREENSHOT_LINE;
                     context.fillRect(padding + 1, y, width - 2 * (padding + 1), 1);
                 };
                 const right = width - padding;
-                const muted = '#a9b9ce';
-                const ink = '#f5f8fd';
+                const muted = SCREENSHOT_MUTED;
+                const ink = SCREENSHOT_INK;
                 text('INSURANCE POLICY', padding, 19, 12, muted, true);
                 titleLines.forEach((title, index) => text(title, padding, 37 + index * 32, 27, ink, true));
                 divider(86 + extraHeight);
@@ -18043,7 +18303,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 INSURANCE_COVERAGES.forEach(([key, label], index) => {
                     const rowY = 127 + 40 * index + extraHeight;
                     const coverageName = key === 'workersComp' && policy.workersType === 'OCC/ACC' ? label + ' · OCC/ACC' : label;
-                    text(coverageName, padding, rowY, 17, '#e5edf8', false, 'left', 470);
+                    text(coverageName, padding, rowY, 17, ink, false, 'left', 470);
                     text(policy.dates[key] ? formatInsuranceDate(policy.dates[key]) : 'Not on file', right, rowY, 17, ink, true, 'right', 190);
                     divider(rowY + 30);
                 });
@@ -18099,7 +18359,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         return blob;
                     });
                     const emailCopy = copyScreenshotImageForEmail(() => png, {
-                        background:'#18212e', maxWidth:740, label:contractor.name + ' insurance policy', requireFormatting:true
+                        background:SCREENSHOT_BACKGROUND, maxWidth:740, label:contractor.name + ' insurance policy', requireFormatting:true
                     }).catch(() => null);
                     await png;
                     const copied = await emailCopy;
@@ -18801,6 +19061,308 @@ function LeadershipAccessPage(){
 }
 
 
+        const surveyNumber = value => {
+            if (value == null || !['number','string'].includes(typeof value) || String(value).trim() === '') return null;
+            const number = Number(value);
+            return Number.isSafeInteger(number) && number >= 0 ? number : null;
+        };
+        
+        const surveyCountTone = (count, period, total = false) => {
+            const value = surveyNumber(count);
+            if (total || value === null) return 'response-neutral';
+            if (value >= (period === 'wtd' ? 10 : 40)) return 'response-green';
+            if (value >= (period === 'wtd' ? 6 : 20)) return 'response-amber';
+            return 'response-red';
+        };
+        const surveyCountCellColors = {
+            'response-neutral': 'text-slate-300',
+            'response-green': 'bg-emerald-900/40 text-emerald-400',
+            'response-amber': 'bg-amber-900/40 text-amber-400',
+            'response-red': 'bg-rose-900/40 text-rose-400'
+        };
+        const surveyCountClass = (count, period, total) => {
+            const tone = surveyCountTone(count, period, total);
+            return tone + ' ' + surveyCountCellColors[tone];
+        };
+        
+        const findSurveyNameMatch = (key, names) => {
+            if (!key || names.has(key)) return key;
+            // Some reports append a numeric suffix to a surname or surname initial.
+            // Resolve against the entire location directory before using such an abbreviation.
+            const search = key.replace(/^(\p{L}[\p{L} ]* \p{L}+)\d+$/u,'$1');
+            if (/\d/.test(search)) return '';
+            const words = search.split(' ');
+            const ordered = contactNameIdentityKey(search);
+            const joined = words.join('');
+            const rankInOrder = (source, target) => {
+                if (source.length !== target.length || source.length < 2) return Infinity;
+                const differences = source.map((word,i) => word === target[i] ? -1 : i).filter(i => i >= 0);
+                if (differences.length !== 1 || !source.some((word,i) => word.length > 1 && word === target[i])) return Infinity;
+                const i = differences[0], a = source[i], b = target[i];
+                if (a.length === 1 && b.startsWith(a)) return 2;
+                // Similar first names can belong to different people with the same surname.
+                if (i === 0 && a[0] !== b[0] && a.slice(0,2) !== b[1] + b[0]) return Infinity;
+                return isSingleContactNameEdit(a,b) ? 3 : Infinity;
+            };
+            let bestRank = Infinity, winner = '';
+            for (const name of names) {
+                if (/\d/.test(name)) continue;
+                const parts = name.split(' ');
+                let rank;
+                if (ordered === contactNameIdentityKey(name) || (words.length > 1 && parts.length > 1 && joined === parts.join(''))) rank = 1;
+                else if (words.length === 1) rank = key === parts[parts.length - 1] ? 2 : Infinity;
+                else if (words.length !== parts.length && words[0].length > 1 && words.at(-1).length > 1 &&
+                    words[0] === parts[0] && words.at(-1) === parts.at(-1) && Math.min(words.length,parts.length) === 2) rank = 2;
+                else {
+                    rank = rankInOrder(words, parts);
+                    if (words.length === 2) rank = Math.min(rank, rankInOrder([words[1],words[0]], parts));
+                }
+                if (!Number.isFinite(rank)) continue;
+                if (rank < bestRank) { bestRank = rank; winner = name; }
+                else if (rank === bestRank) winner = null;
+            }
+            return winner;
+        };
+
+        const metricsPersonName = row => [row.firstName,row.lastName].filter(Boolean).join(' ').trim();
+        const createMetricsPeople = (master, history, nameMappings, location, throughDate, currentTracker) => {
+            const labels = new Map(), roster = new Set(), candidates = new Set(), routes = new Set(), partners = new Map();
+            const aliases = new Map(), corrections = new Map(), overrides = new Map(), reportIds = new Map();
+            const remember = (value, preferred = false) => {
+                const label = String(value || '').trim().replace(/\s+/g,' '), key = normalizeContactNameKey(label);
+                if (key && (preferred || !labels.has(key))) labels.set(key,label);
+                return key;
+            };
+            const link = (map, from, to) => {
+                const key=normalizeContactNameKey(from), target=remember(to);
+                if (!key || !target || key===target) return;
+                if (!map.has(key)) map.set(key,new Set());
+                map.get(key).add(target);
+            };
+            const learn = tracker => {
+                for (const tab of ['wtd','mtd']) for (const row of tracker?.[tab] || []) {
+                    if (row.metricNameConfirmed && row.metricReportName) link(corrections,row.metricReportName,metricsPersonName(row));
+                    if (row.metricDriverKey && (row.metricNameConfirmed || row.metricReportName)) {
+                        const name=remember(metricsPersonName(row));
+                        if (!reportIds.has(row.metricDriverKey)) reportIds.set(row.metricDriverKey,new Set());
+                        if (name) reportIds.get(row.metricDriverKey).add(name);
+                    }
+                }
+            };
+            for (const day of history || []) {
+                if (day.date <= throughDate) for (const route of getCountableRouteRows(day)) {
+                    const crew=[...new Set([route.driver,route.helper].filter(Boolean).map(name=>remember(name)))];
+                    for (const key of crew) {
+                        routes.add(key);
+                        if (!partners.has(key)) partners.set(key,new Set());
+                        for (const other of crew) if (other!==key) partners.get(key).add(other);
+                    }
+                }
+                learn(day.metricsTracker);
+            }
+            learn(currentTracker);
+            for (const person of [...(master?.drivers || []), ...(master?.helpers || [])]) {
+                const key=remember(person?.name,true);
+                if (!key) continue;
+                roster.add(key);
+                for (const alias of person.nameAliases || []) link(aliases,alias,person.name);
+            }
+            for (const [from,to] of Object.entries(nameMappings || {})) link(overrides,from,to);
+            const localAliases = location === 'austin' ? new Map([
+                ['jose c','Jose Cardona'],
+                ['jose c1','Jose Cardona'],
+                ['yulier valdes','Yulier Valdez'],
+                ['jockusch trevino','Joshua Trevino']
+            ]) : new Map();
+            const confirmedKey = value => {
+                let key=normalizeContactNameKey(value);
+                const seen = new Set();
+                while (key && !seen.has(key)) {
+                    seen.add(key);
+                    const choices=overrides.get(key) || aliases.get(key) || corrections.get(key);
+                    if (choices) {
+                        if (choices.size !== 1) return null;
+                        key=choices.values().next().value;
+                    } else if (localAliases.has(key) && !roster.has(key)) key=remember(localAliases.get(key));
+                    else return key;
+                }
+                return key ? null : '';
+            };
+            const full = key => key && !/\d/.test(key) && key.split(' ').filter(word=>word.length>1).length>=2;
+            const canonicalRoster = new Set();
+            for (const name of roster) {
+                const key=confirmedKey(name);
+                if (full(key)) canonicalRoster.add(key);
+            }
+            for (const name of [...canonicalRoster,...routes,...labels.keys()]) {
+                const key=confirmedKey(name);
+                if (full(key)) candidates.add(key);
+            }
+            const cache = new Map();
+            const workedTogether = (key,target) => [...(partners.get(key) || [])].some(other=>confirmedKey(other)===target);
+            const resolve = value => {
+                const raw=normalizeContactNameKey(value);
+                if (cache.has(raw)) return cache.get(raw);
+                const key=confirmedKey(raw);
+                let target=key;
+                if (key && key===raw && !canonicalRoster.has(key)) {
+                    const rosterMatch = full(key) && routes.has(key) ? findSurveyNameMatch(key,canonicalRoster) : '';
+                    target = rosterMatch === null ? null : rosterMatch || findSurveyNameMatch(key,candidates);
+                    if (target && target!==key && workedTogether(key,target)) target=routes.has(key) ? key : null;
+                }
+                const label=target === null ? null : labels.get(target) || '';
+                cache.set(raw,label);
+                return label;
+            };
+            const idMatch = row => {
+                const targets=reportIds.get(row.metricDriverKey);
+                if (!targets || row.metricNameConfirmed) return undefined;
+                if (targets.size!==1) return null;
+                const key=targets.values().next().value, linked=resolve(key) || labels.get(key);
+                const spelled=resolve(metricsPersonName(row));
+                if (spelled && normalizeContactNameKey(spelled)!==normalizeContactNameKey(linked)) return null;
+                return linked;
+            };
+            const format = row => {
+                const source=metricsPersonName(row);
+                if (row.metricNameConfirmed) {
+                    const target=confirmedKey(source);
+                    if (!target || target===normalizeContactNameKey(source)) return row;
+                }
+                const idName=idMatch(row);
+                const label=idName===undefined ? resolve(source) : idName;
+                if (!label || label===source) return row;
+                const parts=label.split(' ');
+                const firstWords=String(row.firstName||'').trim().split(/\s+/).length;
+                const split=firstWords<parts.length && normalizeContactNameKey(parts.slice(0,firstWords).join(' '))===normalizeContactNameKey(row.firstName) ? firstWords : 1;
+                return {...row,firstName:parts.slice(0,split).join(' '),lastName:parts.slice(split).join(' '),metricReportName:row.metricReportName || source};
+            };
+            const needsReview = row => {
+                if (!candidates.size) return false;
+                const byId=idMatch(row);
+                return !(byId===undefined ? resolve(metricsPersonName(row)) : byId);
+            };
+            return {resolve, format, idMatch, needsReview, confirmedKey, workedTogether, roster:canonicalRoster};
+        };
+
+        const buildSurveyStopTotals = (history, period, metrics, master, nameMappings = {}, location, directory) => {
+            const people=directory || createMetricsPeople(master,history,nameMappings,location,period.throughDate);
+            const names=new Set(people.roster);
+            const personKey=people.confirmedKey;
+            const rawKeys=metrics.map(row=>normalizeContactNameKey(metricsPersonName(row)));
+            const metricKeys=metrics.map(row=>{
+                if (people.idMatch(row)===null) return '';
+                const label=metricsPersonName(people.format(row));
+                return people.resolve(label)===null ? '' : normalizeContactNameKey(label);
+            });
+            const anchors = new Set(names);
+            for (const key of metricKeys) {
+                if (key.split(' ').filter(word => word.length > 1).length >= 2) anchors.add(key);
+            }
+            const routeLinks = new Map();
+            const routePerson = key => {
+                if (!key || anchors.has(key)) return key;
+                if (!routeLinks.has(key)) {
+                    const candidate=people.resolve(key), resolved=normalizeContactNameKey(candidate);
+                    const match=candidate===null ? key : (resolved && resolved!==key ? resolved : findSurveyNameMatch(key, anchors) || key);
+                    routeLinks.set(key,match!==key && people.workedTogether(key,match) ? key : match);
+                }
+                return routeLinks.get(key);
+            };
+            const assignments = [], spellings = new Map(), separateCrew = new Set();
+            const reportedDates = new Set();
+            for (const day of history) {
+                if (day.date < period.startDate || day.date > period.throughDate) continue;
+                if (Array.isArray(day.routeTable)) reportedDates.add(day.date);
+                for (const route of getCountableRouteRows(day)) {
+                    const crew = [...new Set([personKey(route.driver),personKey(route.helper)].filter(Boolean))];
+                    assignments.push({crew, stops:surveyNumber(route.stops)});
+                    for (const key of crew) {
+                        const match = routePerson(key);
+                        if (key === match) continue;
+                        if (!spellings.has(match)) spellings.set(match,new Set());
+                        spellings.get(match).add(key);
+                        if (crew.some(other => other !== key && routePerson(other) === match)) separateCrew.add(key);
+                    }
+                }
+            }
+            const expectedDays = 1 + (Date.parse(period.throughDate+'T00:00:00Z') - Date.parse(period.startDate+'T00:00:00Z')) / 86400000;
+            if (expectedDays < 1 || reportedDates.size !== expectedDays) {
+                return {byRow:metrics.map(()=>null), total:null, missingDays:Math.max(0,expectedDays-reportedDates.size)};
+            }
+            const byPerson = new Map();
+            let total = 0;
+            for (const {crew,stops} of assignments) {
+                total = stops === null || total === null ? null : total + stops;
+                for (const key of crew) {
+                    const match = routePerson(key);
+                    const name = separateCrew.has(key) || (spellings.get(match)?.size > 1 && !people.roster.has(match)) ? key : match;
+                    names.add(name);
+                    const previous = byPerson.has(name) ? byPerson.get(name) : 0;
+                    byPerson.set(name, previous === null || stops === null ? null : previous + stops);
+                }
+            }
+            const lookup = key => {
+                if (!key || names.has(key)) return key;
+                return findSurveyNameMatch(key, names);
+            };
+            const keys = metricKeys.map(lookup);
+            const claims = new Map(), exactClaims = new Map();
+            keys.forEach((key,i)=>{
+                if (!key) return;
+                claims.set(key,(claims.get(key) || 0)+1);
+                if (key===rawKeys[i]) exactClaims.set(key,(exactClaims.get(key) || 0)+1);
+            });
+            // Prior assignments establish identity only. Their stops belong to their own reporting period.
+            const unrecognized = new Set(metricKeys.filter((name,i) => name && keys[i] === ''));
+            const previouslyAssigned = new Set();
+            if (unrecognized.size) {
+                for (const day of history) {
+                    if (day.date >= period.startDate) continue;
+                    for (const route of getCountableRouteRows(day)) {
+                        for (const person of [route.driver,route.helper]) {
+                            const key = normalizeContactNameKey(people.resolve(person) || personKey(person));
+                            if (unrecognized.has(key)) previouslyAssigned.add(key);
+                        }
+                    }
+                }
+            }
+            const assignedNames = new Set(byPerson.keys());
+            const byRow = keys.map((key,index) => {
+                const source = metricKeys[index];
+                if (!source || key === null || (claims.get(key)>1 && (key!==rawKeys[index] || exactClaims.get(key)>1))) return null;
+                if (byPerson.has(key)) return byPerson.get(key);
+                if (previouslyAssigned.has(source)) return 0;
+                // A rostered person can have no assignments, or several possible name matches.
+                return key && names.has(key) && findSurveyNameMatch(key, assignedNames) === '' ? 0 : null;
+            });
+            return {byRow, total, missingDays:0};
+        };
+        
+        const metricScoreNumber = value => {
+            if (value == null || String(value).trim() === '') return null;
+            const number = Number(value);
+            return Number.isFinite(number) ? number : null;
+        };
+        const formatMetricScore = (value, suffix = '') => {
+            const number = metricScoreNumber(value);
+            return number === null ? '—' : number.toFixed(2) + suffix;
+        };
+        const SurveyResponseBar = ({count, stops, period, total = false}) => {
+            const surveys = surveyNumber(count);
+            const recordedStops = surveyNumber(stops);
+            let rate = null, reason;
+            if (surveys === null) reason = 'Survey count unavailable.';
+            else if (recordedStops === null) reason = 'Stop count unavailable for this period.';
+            else if (recordedStops === 0) {
+                rate = 0;
+                reason = 'No recorded stops for this period. Response rate displays as 0.00%.';
+            } else rate = surveys / recordedStops * 100;
+            return <span className={'response-meter ' + surveyCountTone(surveys, period, total)} title={reason}>
+                <span className="response-track" aria-hidden="true"><span className="response-fill" style={{width: Math.min(rate ?? 0,100) + '%'}} /></span>
+                <span className="response-value" aria-label={rate === null ? reason : undefined}>{formatMetricScore(rate,'%')}</span>
+            </span>;
+        };
         const App = () => {
             const [user, setUser] = useState(null);
             const [dashboardTheme,setDashboardTheme] = useDashboardTheme();
@@ -18812,7 +19374,6 @@ function LeadershipAccessPage(){
             const reportPrefix = ACTIVE_LOCATION === 'austin' ? 'LSF PFL' : 'LSF ' + locationName;
             const displayComplianceLabel = label => label.replace(/^LSF PFL(?= )/, () => reportPrefix);
             const locationEnabled = locationContext?.registry.enabled === true;
-            const showLocationPreview = isAdminUser && window.location.protocol === 'file:';
             const canActivateLocations = isAdminUser && locationContext?.registryAvailable && !locationEnabled;
             const isLocationAdmin = hasSiteAdmin(locationContext,ACTIVE_LOCATION);
             const canManageRecords = isAdminUser || isLocationAdmin;
@@ -19052,6 +19613,9 @@ function LeadershipAccessPage(){
             const [editingOnlineUserId, setEditingOnlineUserId] = useState(null);
             const [onlineNameDraft, setOnlineNameDraft] = useState('');
             const [recordToDelete, setRecordToDelete] = useState(null);
+            const routeDeletionInFlightRef = useRef(false), routeDeletionContextRef = useRef('');
+            routeDeletionContextRef.current = JSON.stringify([user?.uid, activeDate]);
+            const [routeDeletionRowId, setRouteDeletionRowId] = useState(null);
             const [recentDeletionPending,setRecentDeletionPending]=useState(null),[recentDeletionBusy,setRecentDeletionBusy]=useState(false),[recentDeletionError,setRecentDeletionError]=useState(''),[recentDeletionNotice,setRecentDeletionNotice]=useState('');
             useEffect(()=>{setRecentDeletionPending(null);setRecentDeletionError('');setRecentDeletionNotice('');},[user?.uid,activeDate]);
             const [isCreatingDriverCall, setIsCreatingDriverCall] = useState(false);
@@ -19103,7 +19667,7 @@ function LeadershipAccessPage(){
                 const ariaLabel = `${metricsSubTab.toUpperCase()} ${label} row ${index + 1}`;
                 return field === 'comment'
                     ? <textarea aria-label={ariaLabel} value={row[field] ?? ''} rows={3} onChange={change} className={inputClass + 'w-full min-w-[15rem] resize-y'} />
-                    : <input aria-label={ariaLabel} type={options.numeric ? 'number' : 'text'} min={options.numeric ? 0 : undefined} max={options.max} step={options.numeric ? (field === 'surveyCnt' ? '1' : '0.01') : undefined} value={row[field] ?? (options.numeric && metricsSubTab !== 'feedback' ? 0 : '')} onChange={change} className={inputClass + (options.numeric ? 'w-20 text-center' : 'w-full min-w-[6rem]')} />;
+                    : <input aria-label={ariaLabel} type={options.numeric ? 'number' : 'text'} min={options.numeric ? 0 : undefined} max={options.max} step={options.numeric ? (field === 'surveyCnt' ? '1' : '0.01') : undefined} value={row[field] ?? (field === 'surveyCnt' ? 0 : '')} onChange={change} className={inputClass + (options.numeric ? 'w-20 text-center' : 'w-full min-w-[6rem]')} />;
             };
 
 
@@ -19190,6 +19754,18 @@ function LeadershipAccessPage(){
             });
             const savedPreloadDay = dateKey => dailySnapshotRef.current.date === dateKey
                 ? dailySnapshotRef.current.data : historyData.find(day => day.date === dateKey);
+            const [sameDayArrivalOpen,setSameDayArrivalOpen]=useState(null);
+            const [sameDayArrivalBusy,setSameDayArrivalBusy]=useState({});
+            const [sameDayArrivalErrors,setSameDayArrivalErrors]=useState({});
+            const sameDayArrivalPending=useRef(new Set()),sameDayArrivalPlayed=useRef(new Set()),sameDayArrivalContext=useRef('');
+            sameDayArrivalContext.current=(user?.uid || '')+':'+activeDate;
+            useEffect(()=>{setSameDayArrivalOpen(null);setSameDayArrivalErrors({});sameDayArrivalPlayed.current.clear();},[user?.uid,activeDate]);
+            const sameDayArrivalTeams=isLoading || !routesEnabled || ACTIVE_LOCATION!=='austin' || dailySnapshotRef.current.date!==activeDate ? []
+                : getSameDayArrivalTeams({recap:dailySnapshotRef.current.data,dateKey:activeDate,clock:preloadClock});
+            const sameDayArrivalReminders=sameDayArrivalTeams.filter(team=>team.showReminder);
+            const sameDayArrivalSignature=sameDayArrivalReminders.map(team=>team.signature).join('|');
+            const selectedSameDayArrival=sameDayArrivalTeams.find(team=>String(team.row.id)===sameDayArrivalOpen) || null;
+            const sameDayArrivalActionKey=team=>sameDayArrivalContext.current+':'+String(team.row.id);
             const preloadArrivalAlert = isLoading || !preloadEnabled ? null : getPreloadArrivalAlert({
                 rows: savedPreloadDay(activeDate)?.routeTable, notes: savedPreloadDay(activeDate)?.shiftNotes,
                 schedule: allPreloadSchedules[activeDate], dateKey: activeDate, clock: preloadClock
@@ -19312,6 +19888,10 @@ function LeadershipAccessPage(){
             };
 
             const [masterLists, setMasterLists] = useState(DEFAULT_MASTER_LISTS);
+            const routePeopleOptions = useMemo(() => ({
+                drivers: sortMasterPeople(masterLists.drivers || []),
+                helpers: sortMasterPeople(masterLists.helpers || [])
+            }), [masterLists.drivers, masterLists.helpers]);
             useEffect(()=>{ownerLocksCache.clear();setOwnerLocksReady(!ownerPolicyEnabled);if(!user||!ownerPolicyEnabled)return;return onSnapshot(collection(db,'artifacts',appId,'public','data','weekLocks'),snapshot=>{ownerLocksCache.clear();snapshot.forEach(item=>ownerLocksCache.set(item.id,item.data()));setOwnerLocksReady(true);setOwnerLockRevision(value=>value+1);},()=>{setOwnerLocksReady(false);setOwnerActiveLock(true);});},[user?.uid,ownerPolicyEnabled]);
             useEffect(()=>{const section=ownerPermissionKey(activeTab);setOwnerActiveLock(ownerPolicyEnabled&&['routes','metrics','bonus'].includes(section)&&(!ownerLocksReady||ownerIsSectionLocked(section,activeDate)));},[activeTab,activeDate,ownerPolicyEnabled,ownerLocksReady,ownerLockRevision]);
 
@@ -19627,6 +20207,37 @@ function LeadershipAccessPage(){
                 }
             };
 
+            const updateSameDayArrival = async (team,action,etaValue) => {
+                const uid=user?.uid,dateKey=activeDate,context=uid+':'+dateKey;
+                if (!team || !uid || auth.currentUser?.uid!==uid || isLoading || !canEditSection('routes') || ACTIVE_LOCATION!=='austin'
+                    || dateKey!==getChicagoDateKey() || dailySnapshotRef.current.date!==dateKey) return false;
+                const key=context+':'+String(team.row.id);
+                if (sameDayArrivalPending.current.has(key)) return false;
+                sameDayArrivalPending.current.add(key);setSameDayArrivalBusy(previous=>({...previous,[key]:true}));
+                setSameDayArrivalErrors(previous=>({...previous,[key]:''}));
+                const actorName=cleanFirstName((masterLists.nameOverrides || {})[uid] || userName || getDefaultUserName(auth.currentUser));
+                const stillHere=()=>auth.currentUser?.uid===uid && sameDayArrivalContext.current===context;
+                try {
+                    const result=await saveSameDayArrivalChange({dateKey,rowId:team.row.id,assignmentKey:team.state.assignmentKey,action,etaValue,actorUid:uid,actorName,timestamp:new Date().toISOString()});
+                    if (!stillHere()) return true;
+                    if (dailySnapshotRef.current.date===dateKey && (!dailySnapshotRef.current.data?.lastUpdatedAt || result.recap.lastUpdatedAt>=dailySnapshotRef.current.data.lastUpdatedAt)) {
+                        const baseline=dailySnapshotRef.current.data,incoming=normalizeMetricsNameData({...baseline,...result.recap});
+                        dailySnapshotRef.current={date:dateKey,data:incoming};
+                        setData(local=>mergeDailyRecapEdits(baseline,local,incoming,dateKey));
+                    }
+                    setHistoryData(previous=>previous.map(day=>day.date===dateKey && (!day.lastUpdatedAt || result.recap.lastUpdatedAt>=day.lastUpdatedAt)?{...day,...result.recap,date:dateKey}:day));
+                    setPreloadClock(getPreloadClock());
+                    return true;
+                } catch (error) {
+                    console.error('Could not save same-day arrival:',error);
+                    if (stillHere()) setSameDayArrivalErrors(previous=>({...previous,[key]:error.message || 'Could not save the arrival update. Please try again.'}));
+                    return false;
+                } finally {
+                    sameDayArrivalPending.current.delete(key);
+                    setSameDayArrivalBusy(previous=>{const next={...previous};delete next[key];return next;});
+                }
+            };
+
             const updatePreloadArrival = async (action, etaValue) => {
                 const alert = preloadArrivalAlert;
                 if (!alert || isLoading || preloadArrivalInFlight.current || activeDate !== getChicagoDateKey()) return false;
@@ -19770,8 +20381,11 @@ function LeadershipAccessPage(){
                 if (isViewingToday && showPreloadAlert && !messageDone && !playedAlerts.current[1230] && playDashboardSound('preloadMessage')) playedAlerts.current[1230] = true;
                 if (isViewingToday && preloadArrivalAlert && !preloadArrivalSounds.current.has(preloadArrivalAlert.signature)
                     && playDashboardSound('preloadArrival')) preloadArrivalSounds.current.add(preloadArrivalAlert.signature);
+                if (isViewingToday && sameDayArrivalReminders.length) {
+                    for (const team of sameDayArrivalReminders) if (!sameDayArrivalPlayed.current.has(team.signature) && playDashboardSound('sameDayArrival')) sameDayArrivalPlayed.current.add(team.signature);
+                } else stopDashboardSounds('sameDayArrival');
                 if (getChicagoTimeParts().hours < 12) playedAlerts.current = { 12: false, 1230: false, 1730: false, 17: false, 19: false };
-            }, [canRemindForLocation, timeAlerts, morningReportReminder?.dateKey, morningReportReminder?.overdue, showPreloadAlert, preloadArrivalAlert?.signature, activeDate, user?.uid, isLoading, soundSettingsLoaded, audioReady,
+            }, [sameDayArrivalSignature, canRemindForLocation, timeAlerts, morningReportReminder?.dateKey, morningReportReminder?.overdue, showPreloadAlert, preloadArrivalAlert?.signature, activeDate, user?.uid, isLoading, soundSettingsLoaded, audioReady,
                 dismissedAlerts, preloadDismissed, data.loadout?.compliance, data.shiftNotes, allPreloadSchedules]);
 
             // Sound Trigger: Urgent Notes
@@ -20316,7 +20930,7 @@ function LeadershipAccessPage(){
             }, [publishTeamChatTyping]);
 
             const isDashboardBackgroundEvent = (event, allowDoubleClickSelection = false) => {
-                if (!user || isLoading || isCapturing || dashboardSaveInFlightRef.current || event.defaultPrevented) return false;
+                if (!user || isLoading || isCapturing || dashboardSaveInFlightRef.current || routeDeletionInFlightRef.current || event.defaultPrevented) return false;
                 if (event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
                 if (routeOptionsId != null || isTeamTasksOpen || isSettingsOpen || isPreloadModalOpen || isParkingModalOpen || isMasterModalOpen || recordToDelete || isCreatingDriverCall || isHeaderCalendarOpen || !canEditSection(activeEditPermission)) return false;
                 if (!allowDoubleClickSelection && window.getSelection()?.toString().trim()) return false;
@@ -20348,7 +20962,66 @@ function LeadershipAccessPage(){
 
             const canDeleteTodayRows = section => recentInbox.policy.enabled && RecentDeletion.validDate(activeDate)
                 && RecentDeletion.canUse(user,section,accessProfile);
+            const deleteRouteRow = async rowId => {
+                if (routeDeletionInFlightRef.current || dashboardSaveInFlightRef.current || recentDeletionBusy || recentDeletionPending) return false;
+                const uid = user?.uid, dateKey = activeDate, context = routeDeletionContextRef.current;
+                const stillHere = () => auth.currentUser?.uid === uid && routeDeletionContextRef.current === context;
+                let finish = null, failure = null;
+                try {
+                    if (!uid || isLoading || !isEditing || activeTab !== 'routes' || routesSubTab !== 'table') return false;
+                    if (!canDeleteTodayRows('routes')) throw new Error('You do not have deletion permission for Routes.');
+                    if (rowId == null) throw new Error('This route needs a unique record ID. Refresh the table before deleting it.');
+                    const matches = (data.routeTable || []).filter(row => String(row.id) === String(rowId));
+                    if (matches.length !== 1) throw new Error('This route is unavailable or has a duplicate record ID. Refresh the table.');
+                    const snapshot = dailySnapshotRef.current;
+                    if (snapshot.date !== dateKey || !snapshot.data) throw new Error('The saved routes are still loading. Try again once they finish.');
+                    const savedRows = snapshot.data.routeTable || [];
+                    const savedMatches = savedRows.map((row, index) => String(row.id) === String(rowId) ? index : -1).filter(index => index >= 0);
+                    if (savedMatches.length > 1) throw new Error('This table has duplicate record IDs. Correct those before deleting.');
+                    setSaveError(''); setRecentDeletionError(''); setRecentDeletionNotice('');
+                    if (!savedMatches.length) {
+                        applyLocalRouteTableChange(data.routeTable.filter(row => String(row.id) !== String(rowId)));
+                        setRecentDeletionNotice('Unsaved route removed. Your other edits remain open.');
+                        return true;
+                    }
+                    // Use the saved row as the deletion target, even if this editor
+                    // has changed its contractor or other fields in the draft.
+                    const request = { date: dateKey, section: 'routes', field: 'routeTable', index: savedMatches[0], all: false,
+                        expectedRows: JSON.parse(JSON.stringify(savedRows)) };
+                    routeDeletionInFlightRef.current = true;
+                    setRouteDeletionRowId(String(rowId));
+                    finish = dashboardSaveTracker.begin('route-row-deletion:' + dateKey);
+                    const result = await RecentDeletion.remove(request);
+                    if (!stillHere()) return result.status === 'deleted';
+                    if (result.status === 'deleted') {
+                        const latest = dailySnapshotRef.current;
+                        if (latest.date === dateKey && (!latest.data?.lastUpdatedAt || !result.data.lastUpdatedAt || result.data.lastUpdatedAt >= latest.data.lastUpdatedAt)) {
+                            const baseline = latest.data, incoming = normalizeMetricsNameData({ ...baseline, ...result.data });
+                            dailySnapshotRef.current = { date: dateKey, data: incoming };
+                            // A deletion is saved independently. Merge its result so
+                            // edits to the remaining routes and sections stay open.
+                            setData(local => mergeDailyRecapEdits(baseline, local, incoming, dateKey));
+                        }
+                        setRecentDeletionNotice('Route deleted. Your other edits remain open. A recovery copy was saved for the dashboard owner.');
+                        return true;
+                    }
+                    setRecentDeletionNotice('Deletion request submitted. Your other edits remain open. Check the notification bell for the decision.');
+                    return false;
+                } catch (error) {
+                    failure = error;
+                    if (stillHere()) setSaveError(error.message || 'The route could not be deleted. Your edits remain open.');
+                    return false;
+                } finally {
+                    if (finish) {
+                        finish(failure, true);
+                        routeDeletionInFlightRef.current = false;
+                        setRouteDeletionRowId(null);
+                    }
+                }
+            };
+
             const beginRecentDeletion=(section,field,index=null,all=false)=>{
+                if (routeDeletionInFlightRef.current) return;
                 try{
                     if(all&&field==='shiftNotes'&&!isAdminUser)throw new Error('Delete notes one at a time.');
                     if (!canDeleteTodayRows(section)) throw new Error('You do not have deletion permission for this section.');
@@ -20358,7 +21031,7 @@ function LeadershipAccessPage(){
                 }catch(error){setSaveError(error.message);}
             };
             const commitRecentDeletion=async()=>{
-                if(!recentDeletionPending||recentDeletionBusy)return;setRecentDeletionBusy(true);setRecentDeletionError('');
+                if(!recentDeletionPending||recentDeletionBusy||routeDeletionInFlightRef.current)return;setRecentDeletionBusy(true);setRecentDeletionError('');
                 const finish=dashboardSaveTracker.begin('recent-deletion:'+recentDeletionPending.date);let failure=null;
                 try{
                     const result=await RecentDeletion.remove(recentDeletionPending);
@@ -20372,7 +21045,7 @@ function LeadershipAccessPage(){
             };
 
             const handleSave = async () => {
-                if (dashboardSaveInFlightRef.current) return;
+                if (dashboardSaveInFlightRef.current || routeDeletionInFlightRef.current) return;
                 if (!db) { setSaveError('The database is unavailable. Your edits have not been saved.'); setDashboardConnection('lost'); return; }
                 setSaveError('');
                 setSaveErrorNoteId(null);
@@ -20589,7 +21262,7 @@ function LeadershipAccessPage(){
             const handleImportMetrics = report => {
                 if(!isEditing||activeTab!=='metrics'||!['wtd','mtd','feedback'].includes(metricsSubTab)||!canEditSection('metrics'))throw new Error('Enter Edit mode in Metrics to import a report.');
                 if(metricsSubTab==='feedback'&&!routeWindowHistoryLoaded)throw new Error('Saved Feedback history is still loading. Wait a moment, then import again.');
-                const result=metricsSubTab==='feedback'?FeedbackWorkbookImport.apply(data,report,{history:historyData,date:activeDate}):MetricsWorkbookImport.apply(data,metricsSubTab,report);
+                const result=metricsSubTab==='feedback'?FeedbackWorkbookImport.apply(data,report,{history:historyData,date:activeDate}):MetricsWorkbookImport.apply(data,metricsSubTab,report,metricsPeople);
                 setData(result.data);setEditingMetricsRow(null);return result;
             };
             const handlePasteMetrics = (e) => {
@@ -20661,48 +21334,50 @@ function LeadershipAccessPage(){
                     return; 
                 }
 
-                const mRows = text.split(/\r?\n/).map(r => r.trim()).filter(r => r);
+                const mRows = text.split(/\r?\n/).filter(r => r.trim()).map(line=>line.split('\t').map(c=>c.trim()));
                 const mParsedData = [];
+                const headerRow=mRows.find(cols=>Object.values(MetricsWorkbookImport.columns(cols)).every(i=>i>=0));
+                const namedColumns=headerRow && MetricsWorkbookImport.columns(headerRow);
+                const driverKeyColumn=headerRow ? headerRow.findIndex(value=>value.toLowerCase().replace(/[^a-z0-9]/g,'')==='driverkey') : -1;
+                const parseNum = val => metricScoreNumber(String(val ?? '').trim().replace(/,/g,'').replace(/%$/,''));
                 let foundTotals = null;
 
-                for (const row of mRows) {
-                    const cols = row.split('\t').map(c => c.trim());
-                    const rawStr = row.toLowerCase();
+                for (const cols of mRows) {
+                    if (cols===headerRow) continue;
+                    const rawStr = cols.join('\t').toLowerCase();
                     
                     if (rawStr.includes('minimum target') || rawStr.includes('driverkey') || rawStr.includes('max. driver')) continue;
 
-                    const nums = cols.map(c => c.replace(/[^0-9.-]/g, '')).filter(c => c !== '').map(Number);
-                    if (rawStr.includes('grand total') || rawStr.includes('total') || (cols[0] === '' && cols[1] === '' && nums.length >= 4)) {
-                        if (nums.length >= 4) {
-                            foundTotals = {
-                                surveyCnt: nums[nums.length - 5] || 0,
-                                surveyAvg: nums[nums.length - 4] || 0,
-                                onTime: nums[nums.length - 3] || 0,
-                                completion: nums[nums.length - 2] || 0,
-                                exchange: nums[nums.length - 1] || 0
-                            };
-                        }
+                    const labeledTotal = cols.some(cell=>/^(?:grand\s+)?total$/i.test(cell));
+                    const unnamedTotal = !cols[0] && !cols[1] && cols.slice(2).some(cell=>parseNum(cell)!==null);
+                    if (labeledTotal || unnamedTotal) {
+                        const fields = ['surveyCnt','surveyAvg','onTime','completion','exchange'];
+                        const totalStart = Math.max(0,cols.length-fields.length);
+                        foundTotals = Object.fromEntries(fields.map((field,i)=>{
+                            const value = parseNum(cols[namedColumns?.[field] ?? (totalStart+i)]);
+                            return [field, field === 'surveyCnt' ? value ?? 0 : value];
+                        }));
                         continue;
                     }
 
                     if (cols.length < 4) continue;
 
-                    let offset = /^\d+/.test(cols[0]) ? 0 : -1;
-                    const parseNum = (val) => parseFloat((val || '').replace(/[^0-9.-]/g, '')) || 0;
+                    const offset = driverKeyColumn===0 || /^\d+/.test(cols[0]) ? 0 : -1;
 
-                    const firstName = cols[1 + offset] || '';
-                    const lastName = cols[2 + offset] || '';
+                    const firstName = cols[namedColumns?.firstName ?? (1 + offset)] || '';
+                    const lastName = cols[namedColumns?.lastName ?? (2 + offset)] || '';
                     if (!firstName && !lastName) continue;
 
                     mParsedData.push({
                         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                        ...(driverKeyColumn>=0 && cols[driverKeyColumn] ? {metricDriverKey:cols[driverKeyColumn]} : {}),
                         firstName: firstName,
                         lastName: lastName,
-                        surveyCnt: parseInt(parseNum(cols[3 + offset]), 10) || 0,
-                        surveyAvg: parseNum(cols[4 + offset]),
-                        onTime: parseNum(cols[5 + offset]),
-                        completion: parseNum(cols[6 + offset]),
-                        exchange: parseNum(cols[7 + offset])
+                        surveyCnt: parseInt(parseNum(cols[namedColumns?.surveyCnt ?? (3 + offset)]), 10) || 0,
+                        surveyAvg: parseNum(cols[namedColumns?.surveyAvg ?? (4 + offset)]),
+                        onTime: parseNum(cols[namedColumns?.onTime ?? (5 + offset)]),
+                        completion: parseNum(cols[namedColumns?.completion ?? (6 + offset)]),
+                        exchange: parseNum(cols[namedColumns?.exchange ?? (7 + offset)])
                     });
                 }
 
@@ -20712,13 +21387,13 @@ function LeadershipAccessPage(){
                     const nd = JSON.parse(JSON.stringify(data));
                     if (!nd.metricsTracker) nd.metricsTracker = { wtd: [], mtd: [], feedback: [] };
                     
-                    const existing = nd.metricsTracker[metricsSubTab] || [];
-                    mParsedData.forEach(newRow => {
-                        const matchIdx = existing.findIndex(r => r.firstName === newRow.firstName && r.lastName === newRow.lastName);
-                        if (matchIdx >= 0) existing[matchIdx] = newRow;
-                        else existing.push(newRow);
-                    });
-                    nd.metricsTracker[metricsSubTab] = existing;
+                    try {
+                        nd.metricsTracker[metricsSubTab]=MetricsWorkbookImport.mergeRows(nd.metricsTracker[metricsSubTab] || [],mParsedData,metricsPeople).rows;
+                    } catch (error) {
+                        setPasteFeedback('❌ '+error.message);
+                        setTimeout(() => setPasteFeedback(''), 5000);
+                        return;
+                    }
 
                     if (foundTotals) {
                         nd.metricsTracker[`${metricsSubTab}Totals`] = foundTotals;
@@ -20939,7 +21614,6 @@ function LeadershipAccessPage(){
                         const isTeamAssignment = element.matches('[data-team-assignment-screenshot="true"]');
                         const isTruckAssignmentRequest = element.matches('[data-truck-assignment-request="true"]');
                         const isBonusPanel = element.matches('[data-bonus-screenshot-panel="true"]');
-                        const screenshotBackground = isBonusPanel ? '#17202c' : SCREENSHOT_BACKGROUND;
                         const bonusTableWidths = isBonusPanel ? Array.from(element.querySelectorAll('table'), table => table.getBoundingClientRect().width) : [];
                         const isReportPanel = isMorningReport || isTeamAssignment || isTruckAssignmentRequest;
                         const baseWidth = Math.ceil(isReportPanel ? Math.max(isTruckAssignmentRequest ? 900 : 1100, element.getBoundingClientRect().width) : isMasterPanel
@@ -20962,7 +21636,7 @@ function LeadershipAccessPage(){
                         screenshotClone.style.filter = 'none';
                         screenshotClone.style.outline = 'none';
                         screenshotClone.style.borderRadius = '16px';
-                        prepareScreenshotSurface(screenshotClone, screenshotBackground);
+                        prepareScreenshotSurface(screenshotClone);
                         screenshotClone.style.transform = 'none';
                         screenshotClone.style.animation = 'none';
                         screenshotClone.querySelectorAll('[data-panel-screenshot-ignore="true"], [data-master-screenshot-ignore="true"]').forEach(node => {
@@ -20972,16 +21646,13 @@ function LeadershipAccessPage(){
                             node.style.display = 'flex';
                         });
                         if (isMorningReport) {
-                            screenshotClone.classList.add('morning-report-export');
                             screenshotClone.querySelectorAll('.report-edit-only').forEach(node => node.style.setProperty('display', 'none', 'important'));
                             screenshotClone.querySelectorAll('.report-read-value').forEach(node => node.style.setProperty('display', 'block', 'important'));
                         }
                         if (isTeamAssignment) {
-                            screenshotClone.classList.add('team-assignment-export');
                             screenshotClone.querySelectorAll('.ta-edit-only').forEach(node => node.style.setProperty('display', 'none', 'important'));
                             screenshotClone.querySelectorAll('.ta-read-value').forEach(node => node.style.setProperty('display', 'block', 'important'));
                         }
-                        if (isTruckAssignmentRequest) screenshotClone.classList.add('truck-assignment-request-export');
                         if (isPreloadTable) {
                             // Export the currently selected values as text, without dropdown arrows or inputs.
                             const liveControls = element.querySelectorAll('input, select, button');
@@ -21012,7 +21683,7 @@ function LeadershipAccessPage(){
                         screenshotClone.querySelectorAll('table').forEach(table => {
                             table.style.width = '100%';
                         });
-                        document.body.appendChild(screenshotClone);
+                        (document.getElementById('root') || document.body).appendChild(screenshotClone);
                         if (isTeamAssignment) {
                             await Promise.all(Array.from(screenshotClone.querySelectorAll('img'), async image => {
                                 if (image.decode) await image.decode();
@@ -21029,7 +21700,7 @@ function LeadershipAccessPage(){
                             ? Math.ceil(captureRect.height)
                             : Math.ceil(Math.max(screenshotClone.scrollHeight, captureRect.height)) + (isBonusPanel ? 0 : 6);
                         const image = await downloadScreenshotPng(screenshotClone, fileName, {
-                            backgroundColor: screenshotBackground,
+                            backgroundColor: SCREENSHOT_BACKGROUND,
                             useCORS: true,
                             logging: false,
                             allowTaint: true,
@@ -21769,7 +22440,7 @@ function LeadershipAccessPage(){
                 const file = event.target.files?.[0]; event.target.value = ''; if (!file || !canManageRecords) return;
                 setSettingsError(''); setSettingsMessage(''); setRestorePreview(null); setRestoreConfirmation('');
                 try {
-                    if (file.size > 25000000) throw new Error('Choose a backup smaller than 25 MB.');
+                    checkBackupSize(file.size);
                     const backup = validateBackupFile(JSON.parse(await file.text()));
                     if(isLocationAdmin) backup.records=backup.records.filter(record=>LOCATION_OPERATIONAL_RECORDS.includes(record.collection));
                     setImportedBackup(backup); setRestoreRecordKey('');
@@ -22897,53 +23568,44 @@ function LeadershipAccessPage(){
             }, [activeTab, activeDate, highlightedShiftNoteId, data.shiftNotes, isLoading]);
 
             const calculateMetricsTotals = (metricsList) => {
-                if (!metricsList || metricsList.length === 0) return null;
-                let totalCnt = 0; let sumAvgWeight = 0; let sumOnTime = 0; let sumCompletion = 0; let sumExchange = 0;
-                let validOnTime = 0, validComp = 0, validExch = 0;
-                
-                metricsList.forEach(m => { 
-                    const cnt = m.surveyCnt || 0;
-                    totalCnt += cnt; 
-                    sumAvgWeight += (m.surveyAvg || 0) * cnt; 
-                    
-                    if (m.onTime !== undefined && m.onTime > 0) { sumOnTime += m.onTime; validOnTime++; }
-                    if (m.completion !== undefined && m.completion > 0) { sumCompletion += m.completion; validComp++; }
-                    if (m.exchange !== undefined) { sumExchange += m.exchange; validExch++; }
-                });
-                
-                const driverCount = metricsList.length;
-                if (driverCount === 0) return null;
-                
-                return { 
-                    surveyCnt: totalCnt, 
-                    surveyAvg: totalCnt > 0 ? (sumAvgWeight / totalCnt).toFixed(2) :"0.00", 
-                    onTime: validOnTime > 0 ? (sumOnTime / validOnTime).toFixed(2) :"0.00", 
-                    completion: validComp > 0 ? (sumCompletion / validComp).toFixed(2) :"0.00", 
-                    exchange: validExch > 0 ? (sumExchange / validExch).toFixed(2) :"0.00" 
-                };
-            };
-
-            const getMetricColor = (key, val, subTab, isTotal = false) => {
-                const num = parseFloat(val);
-                if (isNaN(num)) return '';
-                if (key === 'surveyCnt') {
-                    if (subTab === 'wtd') {
-                        if (isTotal) {
-                            if (num >= 200) return 'bg-emerald-900/40 text-emerald-400';
-                            if (num >= 120) return 'bg-amber-900/40 text-amber-400';
-                            return 'bg-rose-900/40 text-rose-400';
-                        } else {
-                            if (num >= 10) return 'bg-emerald-900/40 text-emerald-400';
-                            if (num >= 6) return 'bg-amber-900/40 text-amber-400';
-                            return 'bg-rose-900/40 text-rose-400';
-                        }
-                    } else {
-                        const target = isTotal ? 800 : 40;
-                        if (num >= target * 0.8) return 'bg-emerald-900/40 text-emerald-400';
-                        if (num >= target * 0.5) return 'bg-amber-900/40 text-amber-400';
-                        return 'bg-rose-900/40 text-rose-400';
+                if (!metricsList?.length) return null;
+                let count = 0, ratedCount = 0, weightedSum = 0;
+                const sums = {onTime:0, completion:0, exchange:0};
+                const reported = {onTime:0, completion:0, exchange:0};
+                for (const row of metricsList) {
+                    const surveys = surveyNumber(row.surveyCnt) ?? 0;
+                    count += surveys;
+                    const average = metricScoreNumber(row.surveyAvg);
+                    if (average !== null) {
+                        ratedCount += surveys;
+                        weightedSum += average * surveys;
+                    }
+                    for (const key of Object.keys(sums)) {
+                        const value = metricScoreNumber(row[key]);
+                        if (value === null) continue;
+                        sums[key] += value;
+                        reported[key]++;
                     }
                 }
+                const totals = {surveyCnt:count, surveyAvg:ratedCount ? (weightedSum/ratedCount).toFixed(2) : null};
+                for (const key of Object.keys(sums)) totals[key] = reported[key] ? (sums[key]/reported[key]).toFixed(2) : null;
+                return totals;
+            };
+
+            const metricsPeople = useMemo(() => {
+                if (activeTab !== 'metrics' || metricsSubTab === 'feedback') return null;
+                return createMetricsPeople(masterLists,historyData,bonusData.nameMappings,ACTIVE_LOCATION,getMetricsReportingDate(activeDate),data.metricsTracker);
+            }, [activeTab,metricsSubTab,masterLists,historyData,bonusData.nameMappings,activeDate,data.metricsTracker]);
+            const surveyStops = useMemo(() => {
+                if (activeTab !== 'metrics' || metricsSubTab === 'feedback' || !routeWindowHistoryLoaded) return null;
+                const period = getMetricsReportingPeriod(activeDate, metricsSubTab);
+                return buildSurveyStopTotals(historyData, period, data.metricsTracker?.[metricsSubTab] || [], masterLists, bonusData.nameMappings, ACTIVE_LOCATION,metricsPeople);
+            }, [activeTab, metricsSubTab, activeDate, routeWindowHistoryLoaded, historyData, data.metricsTracker, masterLists, bonusData.nameMappings,metricsPeople]);
+            
+            const getMetricColor = (key, val, subTab, isTotal = false) => {
+                const num = parseFloat(val);
+                if (isNaN(num)) return 'metric-missing';
+                if (key === 'surveyCnt') return surveyCountClass(val, subTab, isTotal);
                 if (key === 'surveyAvg') return num >= 9.65 ? 'bg-emerald-900/40 text-emerald-400' : 'bg-rose-900/40 text-rose-400';
                 if (key === 'onTime') {
                     if (num >= 97.50) return 'bg-emerald-900/40 text-emerald-400';
@@ -23095,10 +23757,11 @@ function LeadershipAccessPage(){
                 const arrived=isPreloadArrivedStatus(allPreloadSchedules[today]?.status),notes=data.shiftNotes || [];
                 if(showPreloadAlert && !preloadDismissed && !arrived && !notes.some(note=>note.system && note.preloadReminder && note.preloadDate===today))items.push({key:'preload-message:'+today,title:'Preload reminder',body:getPreloadMessageReminderText(preloadScheduleForDay(today)),target:{kind:'overview'}});
                 if(preloadArrivalAlert)items.push({key:'preload-arrival:'+today+':'+preloadArrivalAlert.signature,title:'Preload arrival check',body:'Review the preload team’s arrival status.',target:{kind:'overview'}});
+                for(const team of sameDayArrivalReminders)items.push({key:'same-day-arrival:'+team.signature,title:team.title,body:team.message,target:{kind:'overview'}});
                 const prior=desktopReminderKnownRef.current;
                 if(prior)for(const item of items)if(!prior.has(item.key))showDesktopAlert(item);
                 desktopReminderKnownRef.current=new Set(items.map(item=>item.key));
-            },[reportPrefix,canRemindForLocation,user?.uid,isLoading,soundSettingsLoaded,activeDate,timeAlerts,dismissedAlerts,preloadDismissed,showPreloadAlert,preloadArrivalAlert?.signature,morningReportReminder?.dateKey,morningReportReminder?.overdue,data.loadout?.compliance,data.shiftNotes,data.routeTable,allPreloadSchedules]);
+            },[sameDayArrivalSignature,reportPrefix,canRemindForLocation,user?.uid,isLoading,soundSettingsLoaded,activeDate,timeAlerts,dismissedAlerts,preloadDismissed,showPreloadAlert,preloadArrivalAlert?.signature,morningReportReminder?.dateKey,morningReportReminder?.overdue,data.loadout?.compliance,data.shiftNotes,data.routeTable,allPreloadSchedules]);
 
             const resolveManagerIssue = async alert => {
                 if(!canManageRecords || !canManageLocationRecords(auth.currentUser) || auth.currentUser.uid!==user?.uid || !db || managerAlertWriteRef.current || !['urgentFollowUp','driverIssue'].includes(alert.rule)) return;
@@ -23518,7 +24181,7 @@ function LeadershipAccessPage(){
                                 <button onClick={handleDownloadScreenshot} className="p-1 bg-transparent border-0 text-slate-300 hover:text-white transition-all active:scale-95 cursor-pointer" title="Download Screenshot">
                                     <Camera className="w-4 h-4" />
                                 </button>
-                                <button disabled={!isEditMode && !canEditSection(activeEditPermission)} onClick={() => { if (!dashboardSaveInFlightRef.current) { isEditMode ? handleSave() : canEditSection(activeEditPermission) && setIsEditing(true); } }} className={`p-1 bg-transparent border-0 transition-all flex items-center justify-center cursor-pointer ${isEditing ?"text-emerald-300" :"text-slate-300 hover:text-white"}`} title={isEditing ?"Save Changes" :"Edit Dashboard"}>
+                                <button disabled={routeDeletionRowId !== null || (!isEditMode && !canEditSection(activeEditPermission))} onClick={() => { if (!dashboardSaveInFlightRef.current) { isEditMode ? handleSave() : canEditSection(activeEditPermission) && setIsEditing(true); } }} className={`p-1 bg-transparent border-0 transition-all flex items-center justify-center cursor-pointer ${isEditing ?"text-emerald-300" :"text-slate-300 hover:text-white"}`} title={isEditing ?"Save Changes" :"Edit Dashboard"}>
                                     {isEditing ? <Save className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
                                 </button>
                             <div data-header-calendar="true" className="dashboard-header-date relative flex items-center justify-center px-2 text-slate-300 font-bold text-xs bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.50)_0%,rgba(15,23,42,0.34)_30%,rgba(15,23,42,0)_58%)]">
@@ -23579,7 +24242,7 @@ function LeadershipAccessPage(){
                         </div>
                     </header>
 
-                    <main data-task-unread-count={taskNotifications.length} className="dashboard-main-content max-w-7xl mx-auto px-4 py-8">
+                    <main style={activeTab === 'metrics' && metricsSubTab !== 'feedback' ? {maxWidth:'92rem'} : undefined} data-task-unread-count={taskNotifications.length} className="dashboard-main-content max-w-7xl mx-auto px-4 py-8">
                         {recentDeletionNotice&&<div role="status" data-dashboard-edit-ignore="true" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-indigo-700/50 bg-indigo-950/20 p-4 text-sm text-indigo-100"><span>{recentDeletionNotice}</span><button type="button" aria-label="Dismiss deletion message" onClick={()=>setRecentDeletionNotice('')}><X className="h-4 w-4"/></button></div>}
                         <RouteWindowReminderBar items={routeWindowItems} onOpen={openShiftNoteFromNotification} onHide={item=>saveShiftNoteReadState(Array.from(new Set([...shiftReadIdsRef.current,item.id])))}/>
                         {taskNotifications.length > 0 && !isTeamTasksOpen && <section data-team-task-alert data-html2canvas-ignore="true" data-dashboard-edit-ignore="true" role="status" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/35 bg-rose-950/20 p-4">
@@ -23668,6 +24331,9 @@ function LeadershipAccessPage(){
                                     canUpdate={canEditSection('routes') && canEditSection('preload')}
                                     canConfirm={canEditSection('routes') && canEditSection('preload') && canEditSection('notes')}
                                     onAction={updatePreloadArrival} />
+                                {sameDayArrivalReminders.map(team=><SameDayArrivalReminder key={team.state.assignmentKey} team={team}
+                                    busy={Boolean(sameDayArrivalBusy[sameDayArrivalActionKey(team)])} error={sameDayArrivalErrors[sameDayArrivalActionKey(team)] || ''}
+                                    canUpdate={canEditSection('routes') && !isLoading} onAction={(action,value)=>updateSameDayArrival(team,action,value)}/>)}
 
                                 <div className="dashboard-data-stamp mb-4 text-slate-400 text-[10px] font-bold uppercase tracking-widest px-1 flex justify-between items-center">
                                     <div>Viewing Data for: <span className="text-indigo-400">{String(displayDateString)}</span></div>
@@ -23900,6 +24566,10 @@ function LeadershipAccessPage(){
                                             </div>
                                         </div>
                                     </div>
+                                    <SameDayRouteCards teams={sameDayArrivalTeams} openRowId={sameDayArrivalOpen} onOpen={rowId=>setSameDayArrivalOpen(current=>current===rowId?null:rowId)}/>
+                                    {selectedSameDayArrival&&<div className="mt-4"><SameDayArrivalReminder key={selectedSameDayArrival.state.assignmentKey} team={selectedSameDayArrival}
+                                        busy={Boolean(sameDayArrivalBusy[sameDayArrivalActionKey(selectedSameDayArrival)])} error={sameDayArrivalErrors[sameDayArrivalActionKey(selectedSameDayArrival)] || ''}
+                                        canUpdate={canEditSection('routes') && !isLoading && activeDate===preloadClock.dateKey} onAction={(action,value)=>updateSameDayArrival(selectedSameDayArrival,action,value)} onClose={()=>setSameDayArrivalOpen(null)}/></div>}
                                 </section>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -24113,7 +24783,7 @@ function LeadershipAccessPage(){
                                 <div ref={routesScreenshotRef} className={`bg-slate-800 rounded-xl border border-slate-700 shadow-2xl relative ${isRoutesFullscreen ? 'flex-1 overflow-hidden flex flex-col' : 'overflow-hidden'}`}>
                                     {isEditing&&(data.routeTable||[]).length>0&&<div data-table-delete-toolbar="routes" data-panel-screenshot-ignore="true" data-dashboard-edit-ignore="true" className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 bg-slate-900/40 px-4 py-3">
                                         <span className="text-xs font-bold text-slate-300">Route table · {(data.routeTable||[]).length} rows</span>
-                                        <button type="button" aria-label="Delete all routes" title="Delete the entire route table for this date" disabled={recentDeletionBusy||!canDeleteTodayRows('routes')} onClick={()=>beginRecentDeletion('routes','routeTable',null,true)} className="inline-flex items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 disabled:opacity-40"><Trash2 className="h-4 w-4"/>Delete table</button>
+                                        <button type="button" aria-label="Delete all routes" title="Delete the entire route table for this date" disabled={routeDeletionRowId!==null||recentDeletionBusy||!canDeleteTodayRows('routes')} onClick={()=>beginRecentDeletion('routes','routeTable',null,true)} className="inline-flex items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 disabled:opacity-40"><Trash2 className="h-4 w-4"/>Delete table</button>
                                     </div>}
                                     <div data-panel-screenshot-only="true" className="hidden items-center justify-between gap-4 px-5 py-4 bg-slate-900 border-b border-slate-700">
                                         <div className="flex items-center gap-3">
@@ -24145,7 +24815,7 @@ function LeadershipAccessPage(){
                                                         <tr key={row.id} className="hover:bg-slate-700/30 transition-colors group" style={{ backgroundColor: '#1e293b' }}>
                                                             {ROUTE_COLUMNS.map((col, colIdx) => {
                                                                 const val = col.key==='cnt'?String(rowIndex+1):row[col.key];
-                                                                const listItems = masterLists[col.list] || [];
+                                                                const listItems = ['drivers', 'helpers'].includes(col.list) ? routePeopleOptions[col.list] : (masterLists[col.list] || []);
                                                                 const isNotInList = val && !listItems.find(i => i.name === val);
                                                                 const CellContent = col.key === 'contractor' ? RouteContractorCell : React.Fragment;
                                                                 const cellProps = col.key === 'contractor' ? { isPreload: row.preloadArrival?.date === activeDate } : {};
@@ -24173,7 +24843,7 @@ function LeadershipAccessPage(){
                                                                                 <select className="w-full text-center bg-slate-900 border border-slate-600 text-white rounded px-1 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500 outline-none" value={val || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(data)); const rowIndex = nd.routeTable.findIndex(r => r.id === row.id); if (rowIndex >= 0) { nd.routeTable[rowIndex][col.key] = e.target.value; applyLocalRouteTableChange(nd.routeTable); } }}>
                                                                                     <option value="">- Select -</option>
                                                                                     {isNotInList && <option value={val}>⚡ {val} (Not in List)</option>}
-                                                                                    {(masterLists[col.list] || []).map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+                                                                                    {listItems.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
                                                                                 </select>
                                                                             ) : col.type === 'checkbox' ? (
                                                                                 <input type="checkbox" className="w-4 h-4 rounded border-slate-600 bg-slate-900 cursor-pointer" checked={!!val} onChange={(e) => { const nd = JSON.parse(JSON.stringify(data)); const r = nd.routeTable.find(r => r.id === row.id); if (r) { r[col.key] = e.target.checked; applyLocalRouteTableChange(nd.routeTable); } }} />
@@ -24193,7 +24863,7 @@ function LeadershipAccessPage(){
                                                             {isEditing && (
                                                                 <td data-panel-screenshot-ignore="true" className="px-2 py-1 text-center sticky right-0 bg-slate-800 border-l border-slate-700">
                                                                     {(isSameDayRoute(row) || canChoosePreloadTeam) && <button type="button" aria-haspopup="dialog" onClick={event => openRouteOptions(event, row)} aria-label={`Route options for ${row.serviceUnit || row.route || 'route'}`} title="Route options" className="p-1 text-slate-400 hover:text-emerald-300"><MoreHorizontal className="w-4 h-4" /></button>}
-                                                                    <button disabled={!canDeleteTodayRows('routes')} title="Delete this saved route" onClick={() => beginRecentDeletion('routes','routeTable',data.routeTable.findIndex(item=>item.id===row.id))} className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                                                                    <button type="button" disabled={routeDeletionRowId!==null||recentDeletionBusy||!canDeleteTodayRows('routes')} aria-label={`Delete route ${row.serviceUnit || row.route || rowIndex + 1}`} aria-busy={routeDeletionRowId===String(row.id)} title={routeDeletionRowId===String(row.id)?'Deleting route…':'Delete this route'} onClick={() => deleteRouteRow(row.id)} className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-wait"><Trash2 className={`w-4 h-4 ${routeDeletionRowId===String(row.id)?'animate-pulse':''}`} /></button>
                                                                 </td>
                                                             )}
                                                         </tr>
@@ -24358,51 +25028,54 @@ function LeadershipAccessPage(){
                                                 </tbody>
                                             </table>
                                         ) : (
-                                            <table {...metricsRowDrag.tableProps} className="w-full text-left border-collapse whitespace-nowrap" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
+                                            <table {...metricsRowDrag.tableProps} className="metrics-response-table w-full text-left border-collapse whitespace-nowrap" id="metrics-period-table" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
+                                                {surveyStops?.missingDays > 0 && <caption className="text-left text-xs text-slate-400 pb-2">Stops and response rates are pending route data for {surveyStops.missingDays} {surveyStops.missingDays === 1 ? 'day' : 'days'} in this reporting period.</caption>}
                                                 <thead>
-                                                    <tr className="bg-slate-900 border-b border-slate-700">
-                                                        <th colSpan="2" className="px-3 py-2 text-[10px] font-black uppercase text-center text-slate-400 tracking-wider" style={{ padding: '8px 16px', borderRight: '1px solid #334155', textAlign: 'center' }}>MINIMUM TARGET ({metricsSubTab.toUpperCase()})</th>
-                                                        <th className="px-3 py-2 text-xs font-black text-center text-white bg-slate-800 border-x border-slate-700 shadow-inner" style={{ padding: '8px 16px' }}>{metricsSubTab === 'wtd' ? '10' : '40'}</th>
-                                                        <th className="px-3 py-2 text-xs font-black text-center text-white bg-slate-800 border-x border-slate-700 shadow-inner" style={{ padding: '8px 16px' }}>9.65</th>
-                                                        <th className="px-3 py-2 text-xs font-black text-center text-white bg-slate-800 border-x border-slate-700 shadow-inner" style={{ padding: '8px 16px' }}>97.50%</th>
-                                                        <th className="px-3 py-2 text-xs font-black text-center text-white bg-slate-800 border-x border-slate-700 shadow-inner" style={{ padding: '8px 16px' }}>98.05%</th>
-                                                        <th className="px-3 py-2 text-xs font-black text-center text-white bg-slate-800 border-x border-slate-700 shadow-inner" style={{ padding: '8px 16px' }}>1.70%</th>
-                                                        {isEditing && <th data-panel-screenshot-ignore="true" className="bg-slate-900"></th>}
-                                                    </tr>
                                                     <tr className="bg-slate-900/80">
-                                                        <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-700" style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#94a3b8' }}>First Name</th>
-                                                        <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-700" style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#94a3b8' }}>Last Name</th>
-                                                        <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center border-b border-slate-700" style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#94a3b8' }}>Survey Count</th>
-                                                        <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center border-b border-slate-700" style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#94a3b8' }}>Survey AVG</th>
-                                                        <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center border-b border-slate-700" style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#94a3b8' }}>OnTime%</th>
-                                                        <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center border-b border-slate-700" style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#94a3b8' }}>Completion %</th>
-                                                        <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center border-b border-slate-700" style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#94a3b8' }}>Exchange %</th>
-                                                        {isEditing && <th data-panel-screenshot-ignore="true" className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center border-b border-slate-700" style={{ padding: '12px 16px', borderBottom: '1px solid #334155', color: '#94a3b8' }}>Action</th>}
+                                                        {[
+                                                            ['First Name'], ['Last Name'], ['Stops'],
+                                                            ['Survey Count', metricsSubTab === 'wtd' ? '≥ 10' : '≥ 40'], ['Response Rate'],
+                                                            ['Survey Average', '≥ 9.65'], ['On-Time Delivery', '≥ 97.50%'],
+                                                            ['Completion', '≥ 98.05%'], ['Exchange', '≤ 1.70%']
+                                                        ].map(([label, target], col) => (
+                                                            <th key={label} scope="col" className={'text-[10px] font-black uppercase text-slate-400 tracking-wider ' + (col < 2 ? 'text-left' : 'text-center')}>
+                                                                {label}{target && <span className="metric-target">{target}</span>}
+                                                            </th>
+                                                        ))}
+                                                        {isEditing && <th scope="col" data-panel-screenshot-ignore="true" className="text-[10px] font-black uppercase text-slate-400 text-center">Action</th>}
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-700/50">
                                                     {(!data.metricsTracker || !data.metricsTracker[metricsSubTab] || data.metricsTracker[metricsSubTab].length === 0) ? (
-                                                        <tr><td colSpan={isEditing ? 8 : 7} className="py-12 text-center text-slate-500 text-sm font-bold uppercase tracking-widest italic">No {metricsSubTab.toUpperCase()} data available. {isEditing && 'Paste your Excel data above to automatically populate.'}</td></tr>
+                                                        <tr><td colSpan={isEditing ? 10 : 9} className="py-12 text-center text-slate-500 text-sm font-bold uppercase tracking-widest italic">No {metricsSubTab.toUpperCase()} data available. {isEditing && 'Paste your Excel data above to automatically populate.'}</td></tr>
                                                     ) : (
                                                         <>
-                                                            {data.metricsTracker[metricsSubTab].map((row, idx) => (
+                                                            {data.metricsTracker[metricsSubTab].map((row, idx) => {
+                                                                const display = metricsPeople?.format(row) || row;
+                                                                return (
                                                                 <tr key={row.id || idx} {...metricsRowDrag.rowProps(idx)} className="hover:bg-slate-700/30 transition-colors group">
-                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'firstName', 'first name') : row.firstName}</td>
-                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'lastName', 'last name') : row.lastName}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyCnt', row.surveyCnt??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyCnt', 'survey count', {numeric:true}) : (row.surveyCnt??0)}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyAvg', row.surveyAvg??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyAvg', 'survey average', {numeric:true, max:10}) : Number(row.surveyAvg??0).toFixed(2)}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('onTime', row.onTime??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'onTime', 'on-time delivery', {numeric:true, max:100}) : `${Number(row.onTime??0).toFixed(2)}%`}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('completion', row.completion??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'completion', 'completion', {numeric:true, max:100}) : `${Number(row.completion??0).toFixed(2)}%`}</td>
-                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('exchange', row.exchange??0, metricsSubTab)}`} style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'exchange', 'exchange', {numeric:true, max:100}) : `${Number(row.exchange??0).toFixed(2)}%`}</td>
+                                                                    <td className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '7px 10px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'firstName', 'first name') : display.firstName}</td>
+                                                                    <td title={display.metricReportName && 'Report name: '+display.metricReportName} className="px-3 py-2 text-xs font-medium text-slate-300" style={{ padding: '7px 10px', borderBottom: '1px solid #334155' }}>
+                                                                        {isMetricRowEditing(idx) ? metricRowField(row, idx, 'lastName', 'last name') : display.lastName}
+                                                                        {surveyStops && metricsPeople?.needsReview(row) && <span className="ml-2 text-[10px] font-semibold text-amber-400" title="No single driver matches this report name. In Edit, enter the roster name and save the correction for future reports.">Check name</span>}
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-xs font-bold text-center text-slate-300">{surveyStops?.byRow[idx] ?? '—'}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${surveyCountClass(row.surveyCnt, metricsSubTab)}`} style={{ padding: '7px 10px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyCnt', 'survey count', {numeric:true}) : (row.surveyCnt ?? '—')}</td>
+                                                                    <td className="px-3 py-2 text-xs font-bold"><SurveyResponseBar count={row.surveyCnt} stops={surveyStops?.byRow[idx]} period={metricsSubTab} /></td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('surveyAvg', row.surveyAvg, metricsSubTab)}`} style={{ padding: '7px 10px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'surveyAvg', 'survey average', {numeric:true, max:10}) : formatMetricScore(row.surveyAvg)}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('onTime', row.onTime, metricsSubTab)}`} style={{ padding: '7px 10px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'onTime', 'on-time delivery', {numeric:true, max:100}) : formatMetricScore(row.onTime, '%')}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('completion', row.completion, metricsSubTab)}`} style={{ padding: '7px 10px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'completion', 'completion', {numeric:true, max:100}) : formatMetricScore(row.completion, '%')}</td>
+                                                                    <td className={`px-3 py-2 text-xs font-bold text-center ${getMetricColor('exchange', row.exchange, metricsSubTab)}`} style={{ padding: '7px 10px', borderBottom: '1px solid #334155' }}>{isMetricRowEditing(idx) ? metricRowField(row, idx, 'exchange', 'exchange', {numeric:true, max:100}) : formatMetricScore(row.exchange, '%')}</td>
                                                                     {isEditing && (
-                                                                        <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center" style={{ padding: '8px 16px', borderBottom: '1px solid #334155' }}>
+                                                                        <td data-panel-screenshot-ignore="true" className="px-3 py-2 text-center" style={{ padding: '7px 10px', borderBottom: '1px solid #334155' }}>
                                                                             <div className="flex items-center justify-center gap-0.5"><MetricsRowControls tab={metricsSubTab} index={idx} editing={isMetricRowEditing(idx)} onEdit={() => setEditingMetricsRow(isMetricRowEditing(idx) ? null : {tab:metricsSubTab,index:idx})} /><button aria-label="Delete metric row" disabled={!canDeleteTodayRows('metrics')} onClick={() => {setEditingMetricsRow(null);beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,idx);}} className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer">
                                                                                 <Trash2 className="w-4 h-4" />
                                                                             </button></div>
                                                                         </td>
                                                                     )}
                                                                 </tr>
-                                                            ))}
+                                                                );
+                                                            })}
                                                             {(() => {
                                                                 const calculatedTotals = calculateMetricsTotals(data.metricsTracker[metricsSubTab]);
                                                                 if (!calculatedTotals && !data.metricsTracker[`${metricsSubTab}Totals`]) return null;
@@ -24410,16 +25083,18 @@ function LeadershipAccessPage(){
                                                                 const updateCustomTotal = (key, val) => {
                                                                     const nd = JSON.parse(JSON.stringify(data));
                                                                     if (!nd.metricsTracker[`${metricsSubTab}Totals`]) nd.metricsTracker[`${metricsSubTab}Totals`] = { ...calculatedTotals };
-                                                                    nd.metricsTracker[`${metricsSubTab}Totals`][key] = val; setData(nd);
+                                                                    nd.metricsTracker[`${metricsSubTab}Totals`][key] = val.trim() === '' ? null : val; setData(nd);
                                                                 };
                                                                 return (
-                                                                    <tr className="bg-slate-900 border-t-2 border-slate-600 shadow-inner">
-                                                                        <td colSpan="2" className="px-3 py-3 text-xs font-black uppercase text-right text-slate-300 tracking-wider" style={{ padding: '12px 16px' }}>Grand Total</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('surveyCnt', totals.surveyCnt??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" className="w-14 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.surveyCnt??0} onChange={(e) => updateCustomTotal('surveyCnt', e.target.value)} /> : (totals.surveyCnt??0)}</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('surveyAvg', totals.surveyAvg??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.surveyAvg??0} onChange={(e) => updateCustomTotal('surveyAvg', e.target.value)} /> : Number(totals.surveyAvg??0).toFixed(2)}</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('onTime', totals.onTime??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.onTime??0} onChange={(e) => updateCustomTotal('onTime', e.target.value)} /> : `${Number(totals.onTime??0).toFixed(2)}%`}</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('completion', totals.completion??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.completion??0} onChange={(e) => updateCustomTotal('completion', e.target.value)} /> : `${Number(totals.completion??0).toFixed(2)}%`}</td>
-                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('exchange', totals.exchange??0, metricsSubTab, true)}`} style={{ padding: '12px 16px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.exchange??0} onChange={(e) => updateCustomTotal('exchange', e.target.value)} /> : `${Number(totals.exchange??0).toFixed(2)}%`}</td>
+                                                                    <tr className="metrics-grand-total bg-slate-900">
+                                                                        <td colSpan="2" className="px-3 py-3 text-xs font-black uppercase text-center text-slate-300 tracking-wider" style={{ padding: '10px' }}>Grand Total</td>
+                                                                        <td className="px-3 py-2 text-xs font-bold text-center text-slate-300">{surveyStops?.total ?? '—'}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('surveyCnt', totals.surveyCnt, metricsSubTab, true)}`} style={{ padding: '10px' }}>{isEditing ? <input type="number" className="w-14 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.surveyCnt ?? ''} onChange={(e) => updateCustomTotal('surveyCnt', e.target.value)} /> : (totals.surveyCnt ?? '—')}</td>
+                                                                        <td className="px-3 py-2 text-xs font-bold"><SurveyResponseBar count={totals.surveyCnt} stops={surveyStops?.total} period={metricsSubTab} total /></td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('surveyAvg', totals.surveyAvg, metricsSubTab, true)}`} style={{ padding: '10px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.surveyAvg ?? ''} onChange={(e) => updateCustomTotal('surveyAvg', e.target.value)} /> : formatMetricScore(totals.surveyAvg)}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('onTime', totals.onTime, metricsSubTab, true)}`} style={{ padding: '10px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.onTime ?? ''} onChange={(e) => updateCustomTotal('onTime', e.target.value)} /> : formatMetricScore(totals.onTime, '%')}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('completion', totals.completion, metricsSubTab, true)}`} style={{ padding: '10px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.completion ?? ''} onChange={(e) => updateCustomTotal('completion', e.target.value)} /> : formatMetricScore(totals.completion, '%')}</td>
+                                                                        <td className={`px-3 py-3 text-xs font-black text-center ${getMetricColor('exchange', totals.exchange, metricsSubTab, true)}`} style={{ padding: '10px' }}>{isEditing ? <input type="number" step="0.01" className="w-16 bg-slate-800 border border-slate-600 rounded text-center focus:ring-1 focus:ring-indigo-500 outline-none text-white" value={totals.exchange ?? ''} onChange={(e) => updateCustomTotal('exchange', e.target.value)} /> : formatMetricScore(totals.exchange, '%')}</td>
                                                                         {isEditing && <td data-panel-screenshot-ignore="true"></td>}
                                                                     </tr>
                                                                 );
@@ -24720,7 +25395,7 @@ function LeadershipAccessPage(){
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {isEditing && canDeleteTodayRows('shiftNotes') && RecentDeletion.ordinaryOwnNote(note,user.uid) && <button aria-label={'Delete note '+note.id} onClick={() => beginRecentDeletion('shiftNotes','shiftNotes',(data.shiftNotes||[]).findIndex(item=>item.id===note.id))} className="text-slate-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"><X className="w-5 h-5" /></button>}
+                                                    {isEditing && canDeleteTodayRows('shiftNotes') && RecentDeletion.canDeleteNote(note,user.uid) && <button aria-label={'Delete note '+note.id} onClick={() => beginRecentDeletion('shiftNotes','shiftNotes',(data.shiftNotes||[]).findIndex(item=>item.id===note.id))} className="text-slate-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"><X className="w-5 h-5" /></button>}
                                                 </div>
                                                 {isEditing && canManageRecords && isManagerNote(note) && <ManagerNoteTeamOverride note={note} defaults={masterLists.managerNoteAcknowledgementUids} people={locationTaskAssignees.filter(person=>!isProtectedMasterAdminProfile({uid:person.uid,...accessProfilesCache.get(person.uid)}) && !masterLists.deletedDashboardUsers?.[person.uid])} onChange={selected=>setData(previous=>({...previous,shiftNotes:(previous.shiftNotes || []).map(item=>{if(item.id!==note.id)return item;const updated={...item};if(selected===null)delete updated.managerNoteAcknowledgementUids;else updated.managerNoteAcknowledgementUids=normalizeManagerNoteAcknowledgementUids(selected);return updated;})}))}/>}
                                                 {isEditing && saveErrorNoteId!=null && String(note.id)===String(saveErrorNoteId) && (()=>{const prior=dailySnapshotRef.current.date===activeDate?(dailySnapshotRef.current.data?.shiftNotes || []).find(item=>String(item.id)===String(note.id))?.driverCall:null;const message=validateDriverCallIssue(note.driverCall,prior);return message?<p role="alert" className="mb-3 text-sm text-rose-200">{message}</p>:null;})()}
@@ -25419,7 +26094,7 @@ function LeadershipAccessPage(){
                                 </div>
                                 <nav aria-label="Settings sections" className="dashboard-modal-tabs flex gap-1 px-3 border-b border-slate-700 bg-slate-800/40 shrink-0 overflow-x-auto">
                                     {[['personal','My Settings'], ['users', 'Users & Permissions'], ['leadership','Leadership Access'], ['history', 'Activity History'], ['dataManagement', 'Data Management'], ['backup', 'Backup & Restore'], ['sounds', 'Sounds & Alerts'], ['managerAlerts', 'Manager Alerts'], ['rings', 'Rings'], ['locations','Locations']].filter(([key])=>
-                                        key==='personal' ? true : key==='leadership' ? isAdminUser || leadershipAccess.canManageAccess : key==='locations' ? isAdminUser && (locationEnabled || showLocationPreview || canActivateLocations)
+                                        key==='personal' ? true : key==='leadership' ? isAdminUser || leadershipAccess.canManageAccess : key==='locations' ? isAdminUser && (locationEnabled || canActivateLocations)
                                         : key==='users' ? canManageUserAccounts || isLocationAdmin
                                         : ['history','backup'].includes(key) ? canManageRecords
                                         : ['sounds','managerAlerts','rings'].includes(key) ? allowLocationAppearance
@@ -25442,14 +26117,6 @@ function LeadershipAccessPage(){
                                             <h3 className="font-bold text-white">Activate locations</h3>
                                             <p className="text-sm text-slate-300">Open Sacramento, Houston and Dallas as empty workspaces. Existing accounts keep Austin access until you assign them.</p>
                                             <button type="button" disabled={settingsBusy} onClick={activateDashboardLocations} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Activate locations</button>
-                                        </section>
-                                    )}
-                                    {showLocationPreview && !locationEnabled && settingsTab === 'locations' && (
-                                        <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-800/40 p-4">
-                                            <h3 className="font-bold text-white">New update</h3>
-                                            <p className="text-sm text-slate-300">Try location switching and access with sample accounts. The current dashboard is connected to Austin.</p>
-                                            <a href="./New%20Update%20-%20Location%20Preview.html" target="_blank" rel="noopener noreferrer"
-                                                className="inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white">Open location preview</a>
                                         </section>
                                     )}
                                     {isLocationAdmin && !isAdminUser && settingsTab === 'users' && <LocationMemberSettings context={locationContext} account={user} />}
