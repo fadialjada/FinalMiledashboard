@@ -17615,7 +17615,7 @@ const WeeklyBilling = (() => {
         const reordered=names.filter(name=>personNameKey(name)===personNameKey(value));if(reordered.length)return reordered;
         return names.filter(name=>closePersonNames(name,value));
     };
-    const build = ({week,reportDate,records,metrics,bonuses,masterLists={},ready,area='Pflugerville'}) => {
+    const build = ({week,reportDate,records,metrics,bonuses,masterLists={},ready,area='Pflugerville',directory=null}) => {
         const saved=bonuses || {},people={},personMatchErrors=[],personNameMatches=[];
         const unique=names=>[...new Map(names.filter(Boolean).map(name=>[identity(name),String(name).trim()])).values()];
         const relevant=(records || []).filter(r=>r.date>=week.mondayStr && r.date<=week.sundayStr).sort((a,b)=>a.date.localeCompare(b.date));
@@ -17635,13 +17635,20 @@ const WeeklyBilling = (() => {
             const routes=personNameChoices(name,routeNames);
             return routes.length===1 && personNameChoices(routes[0],metricNames).length===1?routes[0]:name;
         };
-        const anchors=metricNames.map(name=>({name,canonical:preferred(name)}));
+        const anchors=directory?[]:metricNames.map(name=>({name,canonical:preferred(name)}));
         for(const anchor of anchors){
             const collisions=anchors.filter(other=>personNameKey(other.canonical)===personNameKey(anchor.canonical));
             if(collisions.length>1){personMatchErrors.push(anchor.name+': more than one metrics name matches the same person. Correct the duplicate names before billing.');anchor.canonical=anchor.name;}
         }
         const resolvePerson=name=>{
-            const mapped=canonicalPerson(name,saved),choices=personNameChoices(mapped,anchors.map(anchor=>anchor.name));
+            const mapped=canonicalPerson(name,saved);
+            if(directory){
+                const resolved=directory.resolve(mapped);
+                if(resolved===null)personMatchErrors.push(mapped+': ambiguous name. Confirm the spelling or name link before exporting.');
+                if(resolved && identity(name)!==identity(resolved))personNameMatches.push({source:String(name).trim(),name:resolved});
+                return resolved || mapped;
+            }
+            const choices=personNameChoices(mapped,anchors.map(anchor=>anchor.name));
             if(choices.length===1){const match=anchors.find(anchor=>anchor.name===choices[0]);if(identity(mapped)!==identity(match.canonical))personNameMatches.push({source:String(name).trim(),name:match.canonical});return match.canonical;}
             if(choices.length>1){personMatchErrors.push(String(name).trim()+': matches more than one person. Correct the name before billing.');return mapped;}
             const canonical=unique(anchors.map(anchor=>anchor.canonical)),matches=personNameChoices(mapped,canonical);
@@ -17649,9 +17656,25 @@ const WeeklyBilling = (() => {
             if(matches.length>1){personMatchErrors.push(String(name).trim()+': matches more than one person. Correct the name before billing.');return mapped;}
             return mapped;
         };
-        const hidden=new Set((saved.hiddenDrivers || []).map(name=>identity(resolvePerson(name))));
+        const hiddenNames=new Map();
+        for(const spelling of saved.hiddenDrivers || []){
+            const key=identity(resolvePerson(spelling));
+            if(!hiddenNames.has(key))hiddenNames.set(key,[]);
+            hiddenNames.get(key).push(spelling);
+        }
+        const hidden=new Set(hiddenNames.keys());
+        const hiddenReviews=[];
+        if(directory)for(const [key,spellings] of hiddenNames){
+            const canonical=resolvePerson(spellings[0]);
+            if(spellings.some(name=>identity(name)===key))continue;
+            const scored=(metrics || []).some(row=>identity(resolvePerson(metricsPersonName(row)))===key && (rate(row)>0 || number(row.surveyCnt)>=10));
+            const manual=Object.entries(saved.drivers || {}).some(([name,days])=>identity(resolvePerson(name))===key && Object.values(days || {}).some(value=>number(value)>0));
+            if(!scored && !manual)continue;
+            hiddenReviews.push({name:canonical,spellings});
+            personMatchErrors.push(canonical+': a hidden spelling matches this bonus. In Bonus, choose Include or Keep excluded before exporting.');
+        }
         const metricKeys=new Set(metricNames.map(name=>identity(resolvePerson(name))));
-        const extraNames=unique([...Object.keys(saved.drivers || {}),...(saved.manualDrivers || []).map(m=>`${m.firstName || ''} ${m.lastName || ''}`)]).filter(name=>!metricKeys.has(identity(resolvePerson(name))));
+        const extraNames=unique([...(directory?routeNames:[]),...Object.keys(saved.drivers || {}),...(saved.manualDrivers || []).map(m=>`${m.firstName || ''} ${m.lastName || ''}`)]).filter(name=>!metricKeys.has(identity(resolvePerson(name))));
         for(const m of [...(metrics || []),...extraNames.map(name=>({firstName:name,lastName:'',surveyCnt:0,surveyAvg:0,onTime:0,completion:0}))]){
             const name=resolvePerson(`${m.firstName || ''} ${m.lastName || ''}`),key=identity(name);
             if(!key || hidden.has(key))continue;
@@ -17670,6 +17693,7 @@ const WeeklyBilling = (() => {
         allRoutes.sort((a,b)=>a.date.localeCompare(b.date)||a.routeNumber.localeCompare(b.routeNumber,undefined,{numeric:true}));
         for(const person of Object.values(people)){
             const savedKeys=Object.keys(saved.drivers || {}).filter(key=>identity(resolvePerson(key))===person.key);
+            if(directory)person.savedNameKeys=savedKeys;
             for(let day=0;day<7;day++){
                 const date=move(week.mondayStr,day),routes=allRoutes.filter(r=>r.date===date && r.crew.includes(person.key));
                 const entries=savedKeys.map(key=>saved.drivers[key]?.[day]).filter(value=>value!==undefined && String(value).trim()!=='');
@@ -17678,11 +17702,12 @@ const WeeklyBilling = (() => {
                 if(conflict)personMatchErrors.push(`${person.name}, ${dateText(date)}: saved payouts use different values for matching names. Correct the conflict before billing.`);
                 const amount=manualPresent?number(manual):!routes.length || routes.some(r=>r.uniform===false)?null:rate(person);
                 const eligible=!conflict && routes.length>0 && (manualPresent ? amount!=null && amount>=0 : !routes.some(r=>r.uniform===false));
-                person.payments[date]={amount:eligible?amount:null,eligible,recordedAmount:manualPresent?number(manual):null,manual:manualPresent?String(manual):'',routeIds:routes.map(r=>r.id)};
+                const automatic=directory ? (!routes.length ? (allRoutes.some(r=>r.date===date)?'Off':'-') : routes.some(r=>r.uniform===false)?'Uniform Violation':'$'+rate(person)) : '';
+                person.payments[date]={...(directory?{automatic,conflict}:{}),amount:eligible?amount:null,eligible,recordedAmount:manualPresent?number(manual):null,manual:manualPresent?String(manual):'',routeIds:routes.map(r=>r.id)};
             }
         }
         for(const row of allRoutes){row.candidates=row.crew.filter(k=>people[k] && people[k].payments[row.date]?.eligible && ((people[k].payments[row.date].amount || 0)>0 || people[k].surveyBonus>0));}
-        const draft={week:{...week},reportDate,rows:allRoutes,people,ready:Boolean(ready),area,surveyNote:'Survey intake',surveyAllocations:{},skippedPayments:{},deductions:[],deductionImport:null,createdAt:new Date().toISOString(),personMatchErrors:[...new Set(personMatchErrors)],personNameMatches:[...new Map(personNameMatches.map(match=>[identity(match.source)+'|'+identity(match.name),match])).values()]};
+        const draft={...(directory?{hiddenReviews}:{}),week:{...week},reportDate,rows:allRoutes,people,ready:Boolean(ready),area,surveyNote:'Survey intake',surveyAllocations:{},skippedPayments:{},deductions:[],deductionImport:null,createdAt:new Date().toISOString(),personMatchErrors:[...new Set(personMatchErrors)],personNameMatches:[...new Map(personNameMatches.map(match=>[identity(match.source)+'|'+identity(match.name),match])).values()]};
         for(const row of allRoutes){if(row.candidates.length===1){const key=row.candidates[0],matches=allRoutes.filter(r=>r.date===row.date && r.candidates.includes(key));if(matches.length===1)assign(draft,row.id,key);}}
         for(const person of Object.values(people).filter(p=>p.surveyBonus>0)){
             const candidates=allRoutes.filter(r=>r.payee===person.key);
@@ -19592,6 +19617,32 @@ function LeadershipAccessPage(){
                 return !(byId===undefined ? resolve(metricsPersonName(row)) : byId);
             };
             return {resolve, format, idMatch, needsReview, confirmedKey, workedTogether, roster:canonicalRoster};
+        };
+
+        // November 16–22 was already paid. Keep its original calculation and those of earlier weeks.
+        const linkedBonusStart = '2026-11-23';
+        const buildLocationBonusDraft = (input,location) => {
+            if(input.week.mondayStr<linkedBonusStart)return WeeklyBilling.build(input);
+            const directory=createMetricsPeople(input.masterLists,input.records,input.bonuses?.nameMappings,location,input.week.sundayStr,{wtd:input.metrics});
+            const conflicts=[], seenMetrics=new Set();
+            const metrics=input.metrics.map(row=>{
+                if(directory.idMatch(row)===null)conflicts.push(metricsPersonName(row)+': the saved driver ID and name disagree. Review the name in Metrics before exporting.');
+                const formatted=directory.format(row),name=metricsPersonName(formatted),key=WeeklyBilling.identity(name);
+                if(key && seenMetrics.has(key))conflicts.push(name+': two Metrics rows match this person. Review both rows before exporting.');
+                seenMetrics.add(key);
+                return formatted;
+            });
+            const draft=WeeklyBilling.build({...input,metrics,directory});
+            if(input.forTracker)draft.metricNames=metrics.map(({firstName,lastName})=>({firstName,lastName}));
+            if(input.ready && input.reportDate>input.week.sundayStr && input.records.some(day=>day.routeTable?.length)){
+                for(const person of Object.values(draft.people)){
+                    if(Number(person.surveyCnt)>0 && (WeeklyBilling.rate(person)>0 || person.surveyBonus>0) && Object.values(person.payments).every(day=>!day.routeIds.length)){
+                        conflicts.push(person.name+': qualifying scores have no matching route this week. Check the route assignment or explicitly exclude this person in Bonus.');
+                    }
+                }
+            }
+            draft.personMatchErrors=[...new Set([...draft.personMatchErrors,...conflicts])];
+            return draft;
         };
 
         const getSurveyPeriodRoutes = (history, period) => {
@@ -22125,7 +22176,7 @@ function LeadershipAccessPage(){
                     const ready = Boolean(getChicagoDateKey() >= reportDate && finalReport?.lastUpdatedAt && metrics.some(row => String(row.firstName || row.lastName || '').trim()));
                     const records = dates.map((date,i) => ({...(snapshots[i+2].exists() ? snapshots[i+2].data() : {}),date}));
                     const bonuses = snapshots[1].exists() ? snapshots[1].data() : {drivers:{},hiddenDrivers:[],nameMappings:{},manualDrivers:[]};
-                    const draft=WeeklyBilling.build({week,reportDate,records,metrics,bonuses,masterLists,ready,area:ACTIVE_LOCATION === 'austin' ? 'Pflugerville' : locationName});
+                    const draft=buildLocationBonusDraft({week,reportDate,records,metrics,bonuses,masterLists,ready,area:locationName},ACTIVE_LOCATION);
                     draft.billingNameStorageKey=WeeklyBilling.nameLinkStorageKey(appId,user.uid);
                     setBillingDraft(draft);
                 } catch(error) {
@@ -23962,6 +24013,23 @@ function LeadershipAccessPage(){
                 return totals;
             };
 
+            const linkedBonus = useMemo(()=>{
+                if(activeTab!=='bonus')return null;
+                const week=getBonusWeekBoundaries(activeDate);
+                if(week.mondayStr<linkedBonusStart)return null;
+                const records=historyData.filter(day=>day.date!==activeDate && day.date>=week.mondayStr && day.date<=week.sundayStr);
+                if(activeDate<=week.sundayStr)records.push({...data,date:activeDate});
+                return buildLocationBonusDraft({week,reportDate:activeDate,records,metrics:data.metricsTracker?.wtd || [],bonuses:bonusData,masterLists,area:locationName,ready:routeWindowHistoryLoaded,forTracker:true},ACTIVE_LOCATION);
+            },[activeTab,activeDate,historyData,data,bonusData,masterLists,locationName,routeWindowHistoryLoaded]);
+            const resolveHiddenBonus = (review,include) => {
+                if(!isEditing || !canEditSection('bonus'))return;
+                bonusDirtyRef.current=true;
+                setBonusData(prior=>{
+                    const hidden=(prior.hiddenDrivers || []).filter(name=>!review.spellings.includes(name));
+                    if(!include)hidden.push(review.name);
+                    return {...prior,hiddenDrivers:[...new Set(hidden)]};
+                });
+            };
             const metricsPeople = useMemo(() => {
                 if (activeTab !== 'metrics' || metricsSubTab === 'feedback') return null;
                 return createMetricsPeople(masterLists,historyData,bonusData.nameMappings,ACTIVE_LOCATION,getMetricsReportingDate(activeDate),data.metricsTracker);
@@ -25884,6 +25952,14 @@ function LeadershipAccessPage(){
                                     </div>
                                 </div>
 
+                                {linkedBonus?.personMatchErrors.length>0 && <div role="alert" className="mb-4 rounded-lg border border-amber-700 bg-amber-950/30 p-4 text-sm">
+                                    <strong>Bonus items to review</strong>
+                                    {linkedBonus.personMatchErrors.map(issue=><p key={issue} className="mt-1">{issue}</p>)}
+                                    {linkedBonus.hiddenReviews.map(review=><div key={review.name} className="mt-2 flex flex-wrap items-center gap-2">
+                                        <span>{review.spellings.join(', ')} → {review.name}</span>
+                                        {isEditing && canEditSection('bonus') && <><button type="button" onClick={()=>resolveHiddenBonus(review,true)} className="rounded border px-2 py-1">Include {review.name}</button><button type="button" onClick={()=>resolveHiddenBonus(review,false)} className="rounded border px-2 py-1">Keep excluded</button></>}
+                                    </div>)}
+                                </div>}
                                 {billingError && <div role="alert" className="mb-4 px-4 py-3 rounded-lg border border-amber-700 bg-amber-950/30 text-amber-200 text-xs flex items-center justify-between gap-3"><span>{billingError}</span><button className="px-2 py-1" onClick={() => setBillingError('')} aria-label="Dismiss billing message">×</button></div>}
                                 {billingDraft && <WeeklyBillingPreview initialDraft={billingDraft} weekLocked={ownerPolicyEnabled&&(!ownerLocksReady||ownerIsSectionLocked('bonus',activeDate))} billingCompanyCatalog={masterLists.billingCompaniesForExport} canEditCompanies={canManageRecords && settingsReady} saveCompanyCatalog={async (catalog,baseline)=>{const saved=await saveBillingCompanyCatalog({uid:user.uid,catalog,baseline,name:getSavedDisplayName(user)});if(auth.currentUser?.uid!==user.uid)throw new Error('Your account changed. Reopen billing.');setMasterLists(previous=>({...previous,billingCompaniesForExport:saved}));return saved;}} onClose={() => setBillingDraft(null)} />}
                                 <div ref={bonusScreenshotRef} data-bonus-screenshot-panel="true" className={isBonusFullscreen ? 'flex-1 flex flex-col gap-4 overflow-hidden' : ''}>
@@ -25924,7 +26000,8 @@ function LeadershipAccessPage(){
                                                         <tr><td colSpan={isEditing && canEditSection('bonus') ?"11" :"10"} className="py-12 text-center text-slate-500 text-sm font-bold uppercase tracking-widest italic">No WTD Bonus data available.</td></tr>
                                                     ) : (
                                                         data.metricsTracker.wtd.map((row, idx) => {
-                                                            const cnt = row.surveyCnt || 0;
+                                                            const displayName=linkedBonus?.metricNames[idx] || row;
+                                                        const cnt = row.surveyCnt || 0;
                                                             const avg = row.surveyAvg || 0;
                                                             const onTime = row.onTime || 0;
                                                             const comp = row.completion || 0;
@@ -25950,8 +26027,8 @@ function LeadershipAccessPage(){
                                                                         </>
                                                                     ) : (
                                                                         <>
-                                                                            <td className="px-4 py-2 text-xs font-bold text-slate-200 border-r border-slate-700">{row.firstName}</td>
-                                                                            <td className="px-4 py-2 text-xs font-bold text-slate-200 border-r border-slate-700">{row.lastName}</td>
+                                                                            <td className="px-4 py-2 text-xs font-bold text-slate-200 border-r border-slate-700">{displayName.firstName}</td>
+                                                                            <td className="px-4 py-2 text-xs font-bold text-slate-200 border-r border-slate-700">{displayName.lastName}</td>
                                                                             <td className={`px-4 py-2 text-xs font-bold text-center border-r border-slate-700 ${getMetricColor('surveyCnt', cnt, 'wtd')}`}>{cnt}</td>
                                                                             <td className={`px-4 py-2 text-xs font-bold text-center border-r border-slate-700 ${getMetricColor('surveyAvg', avg, 'wtd')}`}>{avg.toFixed(2)}</td>
                                                                             <td className={`px-4 py-2 text-xs font-bold text-center border-r border-slate-700 ${getMetricColor('onTime', onTime, 'wtd')}`}>{onTime.toFixed(2)}%</td>
@@ -26011,6 +26088,10 @@ function LeadershipAccessPage(){
                                                         const allWeekPeople = new Set();
                                                         const weekRoutesByDay = {};
 
+                                                        const finalDriverList=linkedBonus?Object.values(linkedBonus.people).map(person=>{
+                                                            const [firstName,...rest]=person.name.split(/\s+/);
+                                                            return {...person,firstName,lastName:rest.join(' ')};
+                                                        }).sort((a,b)=>a.name.localeCompare(b.name)): (()=>{
                                                         [0, 1, 2, 3, 4, 5, 6].forEach(dayIdx => {
                                                             const dateObj = new Date(bonusBoundaries.mondayStr + 'T12:00:00');
                                                             dateObj.setDate(dateObj.getDate() + dayIdx);
@@ -26048,18 +26129,19 @@ function LeadershipAccessPage(){
                                                             if (key && !driversMap[key]) driversMap[key] = { firstName: md.firstName, lastName: md.lastName, surveyCnt: 0, surveyAvg: 0, onTime: 0, completion: 0 };
                                                         });
 
-                                                        const finalDriverList = Object.values(driversMap)
+                                                        return Object.values(driversMap)
                                                             .sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''))
                                                             .filter(driver => {
                                                                 const key = `${driver.firstName || ''} ${driver.lastName || ''}`.trim();
                                                                 return !(bonusData.hiddenDrivers || []).includes(key);
                                                             });
 
+                                                        })();
                                                         if (finalDriverList.length === 0) return <tr><td colSpan={isEditing && canEditSection('bonus') ?"12" :"11"} className="py-12 text-center text-slate-500 text-sm font-bold uppercase tracking-widest italic">Awaiting Metrics and Route Data</td></tr>;
 
                                                         return finalDriverList.map((driver, idx) => {
                                                             const rawDriverKey = `${driver.firstName || ''} ${driver.lastName || ''}`.trim();
-                                                            const driverKey = (bonusData.nameMappings || {})[rawDriverKey] || rawDriverKey;
+                                                            const driverKey = linkedBonus ? driver.name : (bonusData.nameMappings || {})[rawDriverKey] || rawDriverKey;
                                                             const surveyBonus = (driver.surveyCnt || 0) >= 10 ? 20 : 0;
                                                             let dailyRate = 0;
                                                             if ((driver.surveyAvg || 0) >= 9.65) {
@@ -26075,28 +26157,31 @@ function LeadershipAccessPage(){
                                                             const isEditingThisDriver = editingBonusDriver === driverKey && isEditing && canEditSection('bonus');
                                                             
                                                             const evaluatedDays = [0, 1, 2, 3, 4, 5, 6].map(dayIdx => {
-                                                                const routes = weekRoutesByDay[dayIdx];
+                                                                const payment=linkedBonus && driver.payments[bonusBoundaries.days[dayIdx]];
+                                                                const routes = weekRoutesByDay[dayIdx] || [];
                                                                 const driverRoutes = routes.filter(r => isFuzzyMatch(r.driver, driverKey) || isFuzzyMatch(r.helper, driverKey));
                                                                 let autoStatus ="Eligible";
                                                                 if (routes.length === 0) autoStatus ="Pending";
                                                                 else if (driverRoutes.length === 0) autoStatus ="Off";
                                                                 else if (driverRoutes.some(r => r.uniform === false)) autoStatus ="Uniform Violation";
 
-                                                                const manualVal = driverDays[dayIdx];
+                                                                const manualVal = payment ? payment.manual : driverDays[dayIdx];
                                                                 let defaultStr = '-';
                                                                 if (autoStatus ==="Off") defaultStr ="Off";
                                                                 else if (autoStatus ==="Uniform Violation") defaultStr ="Uniform Violation";
                                                                 else if (autoStatus ==="Eligible" && dailyRate > 0) defaultStr = `$${dailyRate}`;
                                                                 else if (autoStatus ==="Eligible" && dailyRate === 0) defaultStr ="$0"; 
 
-                                                                const valToDisplay = (manualVal !== undefined && manualVal !== '') ? manualVal : defaultStr;
+                                                                if(payment)defaultStr=payment.automatic;
+                                                                const valToDisplay = payment?.conflict ? 'Review entries' : payment?.recordedAmount>0 && !payment.routeIds.length ? 'Review assignment' : (manualVal !== undefined && manualVal !== '') ? manualVal : defaultStr;
                                                                 const val = String(valToDisplay);
                                                                 const isOff = val.toLowerCase() === 'off';
                                                                 const isPending = val === '-' || val.toLowerCase() === 'pending';
-                                                                const isNum = !isNaN(parseFloat(val.replace('$', ''))) && val.trim() !== '';
+                                                                const isNum = payment ? WeeklyBilling.number(val)!==null && WeeklyBilling.number(val)>=0 : !isNaN(parseFloat(val.replace('$', ''))) && val.trim() !== '';
                                                                 const isViolation = !isOff && !isPending && !isNum && val.trim() !== '';
 
-                                                                if (isNum) rowTotal += parseFloat(val.replace('$', ''));
+                                                                if(payment)rowTotal+=payment.amount ?? 0;
+                                                                else if (isNum) rowTotal += parseFloat(val.replace('$', ''));
 
                                                                 let bgClass ="bg-transparent";
                                                                 let textClass ="text-slate-300";
@@ -26108,7 +26193,7 @@ function LeadershipAccessPage(){
                                                                 return (
                                                                     <td key={dayIdx} className="px-2 py-1.5 border-r border-slate-700/50">
                                                                         {isEditing && canEditSection('bonus') ? (
-                                                                            <input type="text" className={`w-full min-w-[70px] text-center text-xs px-2 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500 border border-slate-700 rounded transition-colors placeholder-slate-600 ${bgClass} ${textClass}`} value={manualVal || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(bonusData)); if (!nd.drivers) nd.drivers = {}; if (!nd.drivers[driverKey]) nd.drivers[driverKey] = {}; nd.drivers[driverKey][dayIdx] = e.target.value; bonusDirtyRef.current = true; setBonusData(nd); }} placeholder={defaultStr} />
+                                                                            <input type="text" className={`w-full min-w-[70px] text-center text-xs px-2 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500 border border-slate-700 rounded transition-colors placeholder-slate-600 ${bgClass} ${textClass}`} value={manualVal || ''} onChange={(e) => { const nd = JSON.parse(JSON.stringify(bonusData)); if (!nd.drivers) nd.drivers = {}; if (!nd.drivers[driverKey]) nd.drivers[driverKey] = {}; if(linkedBonus)for(const key of driver.savedNameKeys || [])if(nd.drivers[key])delete nd.drivers[key][dayIdx]; nd.drivers[driverKey][dayIdx] = e.target.value; bonusDirtyRef.current = true; setBonusData(nd); }} placeholder={defaultStr} />
                                                                         ) : (
                                                                             <div className={`w-full min-w-[70px] text-center text-xs px-2 py-1.5 border border-slate-700/50 rounded ${bgClass} ${textClass} whitespace-nowrap overflow-hidden text-ellipsis`} title={val}>{isNum && !val.includes('$') ? `$${val}` : (val || '-')}</div>
                                                                         )}
@@ -26142,7 +26227,7 @@ function LeadershipAccessPage(){
                                                                                         const nd = JSON.parse(JSON.stringify(bonusData));
                                                                                         if (!nd.nameMappings) nd.nameMappings = {};
                                                                                         nd.nameMappings[driverKey] = newKey;
-                                                                                        if (nd.drivers && nd.drivers[driverKey]) nd.drivers[newKey] = nd.drivers[driverKey];
+                                                                                        if (!linkedBonus && nd.drivers && nd.drivers[driverKey]) nd.drivers[newKey] = nd.drivers[driverKey];
                                                                                         if (nd.manualDrivers) nd.manualDrivers = nd.manualDrivers.map(md => {
                                                                                             const k = `${md.firstName || ''} ${md.lastName || ''}`.trim();
                                                                                             if (k === driverKey) return { firstName: editBonusName.firstName, lastName: editBonusName.lastName };
