@@ -75,14 +75,12 @@
     <!-- Babel for in-browser JSX compilation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600&display=swap">
-
     <style>
         /* Custom scrollbar for a cleaner dashboard look */
         .route-name-trigger { font: inherit; font-weight: 500; color: #e7edf6; border: 0; padding: 0; margin: 0; background: transparent; cursor: help; text-decoration: none; }
         .route-name-trigger:hover { color: #bdc9e4; }
         .route-name-trigger:focus-visible { outline: 2px solid #9cafda; outline-offset: 3px; border-radius: 2px; }
-        .route-name-popup { position: fixed; z-index: 400; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; background: #17202c; color: #e7edf6; border: 1px solid #5a6880; border-radius: 12px; box-shadow: 0 14px 28px rgba(0,0,0,.35); padding: 16px; font: 13px/1.5 Arial, Helvetica, sans-serif; text-align: left; }
+        .route-name-popup { position: fixed; z-index: 400; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; background: #17202c; color: #e7edf6; border: 1px solid #5a6880; border-radius: 12px; box-shadow: 0 14px 28px rgba(0,0,0,.35); padding: 16px; font:13px/1.5 var(--dashboard-font); text-align: left; }
         .route-name-popup * { box-sizing: border-box; }
         .route-name-popup .route-name-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 0; background: transparent !important; border: 0 !important; box-shadow: none !important; }
         .route-name-popup h3 { font-size: 15px; font-weight: 700; margin: 2px 0 0; overflow-wrap: anywhere; }
@@ -1145,7 +1143,7 @@
         }
         .metric-ring-value {
             display: inline-block;
-            font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+            font-family:var(--dashboard-font);
             font-weight: 600;
             letter-spacing: 0;
             font-variant-numeric: tabular-nums lining-nums;
@@ -1227,24 +1225,28 @@
         .metric-ring-card:hover [data-ring-hover="highlight"] .metric-ring-stroke { opacity: 1; }
         @property --ring-showcase-level { syntax: '<number>'; inherits: true; initial-value: 0; }
         @keyframes metricRingShowcase1 {
-            0%, 10%, 90%, 100% { --ring-showcase-level: 0; }
-            4%, 6%, 94%, 96% { --ring-showcase-level: 1; }
+            0.000%, 8.333%, 91.667%, 100.000% { --ring-showcase-level: 0; }
+            3.333%, 5.000%, 95.000%, 96.667% { --ring-showcase-level: 1; }
         }
         @keyframes metricRingShowcase2 {
-            0%, 10%, 20%, 80%, 90%, 100% { --ring-showcase-level: 0; }
-            14%, 16%, 84%, 86% { --ring-showcase-level: 1; }
+            0.000%, 8.333%, 16.667%, 83.333%, 91.667%, 100.000% { --ring-showcase-level: 0; }
+            11.667%, 13.333%, 86.667%, 88.333% { --ring-showcase-level: 1; }
         }
         @keyframes metricRingShowcase3 {
-            0%, 20%, 30%, 70%, 80%, 100% { --ring-showcase-level: 0; }
-            24%, 26%, 74%, 76% { --ring-showcase-level: 1; }
+            0.000%, 16.667%, 25.000%, 75.000%, 83.333%, 100.000% { --ring-showcase-level: 0; }
+            20.000%, 21.667%, 78.333%, 80.000% { --ring-showcase-level: 1; }
         }
         @keyframes metricRingShowcase4 {
-            0%, 30%, 40%, 60%, 70%, 100% { --ring-showcase-level: 0; }
-            34%, 36%, 64%, 66% { --ring-showcase-level: 1; }
+            0.000%, 25.000%, 33.333%, 66.667%, 75.000%, 100.000% { --ring-showcase-level: 0; }
+            28.333%, 30.000%, 70.000%, 71.667% { --ring-showcase-level: 1; }
         }
         @keyframes metricRingShowcase5 {
-            0%, 40%, 50%, 60%, 100% { --ring-showcase-level: 0; }
-            44%, 46%, 54%, 56% { --ring-showcase-level: 1; }
+            0.000%, 33.333%, 41.667%, 58.333%, 66.667%, 100.000% { --ring-showcase-level: 0; }
+            36.667%, 38.333%, 61.667%, 63.333% { --ring-showcase-level: 1; }
+        }
+        @keyframes metricRingShowcase6 {
+            0.000%, 41.667%, 50.000%, 58.333%, 100.000% { --ring-showcase-level: 0; }
+            45.000%, 46.667%, 53.333%, 55.000% { --ring-showcase-level: 1; }
         }
         @keyframes metricRingShowcaseMedley {
             0%, 10%, 20%, 33.333%, 66.666%, 100% { transform: translate(0,0) rotate(0) scale(1); }
@@ -1353,7 +1355,7 @@
 .team-assignment-view .ta-camera { display:inline-flex; align-items:center; gap:8px; padding:9px 12px; color:#e7edf6; background:#2c3849; border:1px solid #5a6880; border-radius:8px; }
 .team-assignment-view .ta-camera:hover { background:#354256; }
 .team-assignment-view .ta-camera:disabled { opacity:.5; cursor:wait; }
-.team-assignment-report { --ta-bg:#1b1f25; --ta-panel:#1f2937; --ta-text:#edf2f7; --ta-muted:#b2bfd2; --ta-border:#435167; background:var(--ta-bg); color:var(--ta-text); font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; border:1px solid var(--ta-border); border-radius:20px; overflow:hidden; }
+.team-assignment-report { --ta-bg:#1b1f25; --ta-panel:#1f2937; --ta-text:#edf2f7; --ta-muted:#b2bfd2; --ta-border:#435167; background:var(--ta-bg); color:var(--ta-text); font:14px/1.5 var(--dashboard-font); border:1px solid var(--ta-border); border-radius:20px; overflow:hidden; }
 .team-assignment-report .ta-header { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:5px 16px; padding:14px 24px; background:var(--ta-panel); border-bottom:1px solid var(--ta-border); }
 .team-assignment-report .ta-title { display:flex; align-items:center; gap:12px; min-width:0; }
 .team-assignment-report .ta-title svg { width:26px; height:26px; flex:none; }
@@ -1483,7 +1485,7 @@
         .issue-review-panel input[type="date"] { color-scheme: dark; }
         @media(max-width:767px) { .issue-review-panel { padding:18px 16px; } .issue-review-panel input,.issue-review-panel select { font-size:16px; } }
         @media(pointer:coarse) { .issue-review-panel button,.issue-review-panel input,.issue-review-panel select { min-height:44px; } }
-        .truck-assignment-request-sheet { --tar-page:#141e2a; --tar-card:#222d3c; --tar-line:#53667f; --tar-text:#f1f5f9; --tar-muted:#b0bfd5; background:var(--tar-page); color:var(--tar-text); border:1px solid var(--tar-line); border-radius:18px; overflow:hidden; font-family:Arial,Helvetica,sans-serif; }
+        .truck-assignment-request-sheet { --tar-page:#141e2a; --tar-card:#222d3c; --tar-line:#53667f; --tar-text:#f1f5f9; --tar-muted:#b0bfd5; background:var(--tar-page); color:var(--tar-text); border:1px solid var(--tar-line); border-radius:18px; overflow:hidden; font-family:var(--dashboard-font); }
         .truck-assignment-request-sheet * { box-sizing:border-box; }
         .truck-assignment-request-sheet .tar-header { padding:20px 24px; background:var(--tar-card); border-bottom:1px solid var(--tar-line); }
         .truck-assignment-request-sheet .tar-brand { display:flex; align-items:center; gap:9px; color:var(--tar-muted); font-size:12px; font-weight:700; letter-spacing:.5px; }
@@ -1679,7 +1681,7 @@
         .overview-route-email-countdown[data-countdown-state="sent"], .overview-route-email-countdown[data-countdown-state="received"] { color:#34d399; }
 
 /* Leadership access settings */
-.la-access,.la-page{color:var(--fmo-theme-ink,#e7edf6);font:14px/1.6 system-ui,sans-serif;overflow-wrap:anywhere}
+.la-access,.la-page{color:var(--fmo-theme-ink,#e7edf6);font:14px/1.6 var(--dashboard-font);overflow-wrap:anywhere}
 .la-access *,.la-page *{box-sizing:border-box}
 .la-access{display:grid;gap:20px;min-width:0}
 .la-access h3,.la-access h4,.la-access p,.la-page h1,.la-page p{margin:0}
@@ -3515,7 +3517,7 @@ html[data-dashboard-theme="stone"] {
   --fmo-theme-goodLine:#a4bdae;
 }
 html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme #root :is(.dashboard-header,.dashboard-main-content,.dashboard-footer):not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *)) {
-  font-family:ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important;
+  font-family:var(--dashboard-font)!important;
   color:var(--fmo-theme-ink)!important;
 }
 html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme #root .dashboard-main-content :is(input,textarea,select,button):not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.brief-card *)) {
@@ -5267,7 +5269,7 @@ html[data-dashboard-theme="linen"] body.balanced-picture-theme #root .metric-rin
 
 @media screen {
 html[data-dashboard-theme="linen"] body.balanced-picture-theme #root :is(.dashboard-header,.dashboard-main-content,.dashboard-footer):not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *)) {
-  font-family:ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important;
+  font-family:var(--dashboard-font)!important;
   color:var(--fmo-theme-ink)!important;
 }
 html[data-dashboard-theme="linen"] body.balanced-picture-theme #root .dashboard-main-content :is(input,textarea,select,button):not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.brief-card *)) {
@@ -6642,7 +6644,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.bala
 html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme .team-assignment-report:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)),
 html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme .weekly-billing-dialog:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)),
 html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme [data-bonus-screenshot-panel="true"]:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)),
-html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme [data-dashboard-feedback="true"]:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){color:var(--fmo-theme-ink)!important;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme [data-dashboard-feedback="true"]:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){color:var(--fmo-theme-ink)!important;font-family:var(--dashboard-font)!important;}
 html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme [data-morning-report-screenshot="true"]:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){background:var(--fmo-theme-card)!important;border-color:var(--fmo-theme-line)!important;}
 html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme [data-morning-report-screenshot="true"] .report-header:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){background:var(--fmo-theme-raised)!important;border-color:var(--fmo-theme-line)!important;}
 html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"]) body.balanced-picture-theme [data-morning-report-screenshot="true"] .report-card:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)),
@@ -8222,7 +8224,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .metric-ring
 
 @media screen {
 html[data-dashboard-theme="grey"] body.balanced-picture-theme #root :is(.dashboard-header,.dashboard-main-content,.dashboard-footer):not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *)) {
-  font-family:ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important;
+  font-family:var(--dashboard-font)!important;
   color:var(--fmo-theme-ink)!important;
 }
 html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-main-content :is(input,textarea,select,button):not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.brief-card *)) {
@@ -8424,7 +8426,7 @@ html[data-dashboard-theme="grey"] body.balanced-picture-theme #root .dashboard-h
 
 
 @media screen {
-html[data-dashboard-theme="grey"] body.balanced-picture-theme [data-morning-report-screenshot="true"]:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){color:var(--fmo-theme-ink)!important;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;}
+html[data-dashboard-theme="grey"] body.balanced-picture-theme [data-morning-report-screenshot="true"]:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){color:var(--fmo-theme-ink)!important;font-family:var(--dashboard-font)!important;}
 html[data-dashboard-theme="grey"] body.balanced-picture-theme [data-morning-report-screenshot="true"]:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){background:var(--fmo-theme-card)!important;border-color:var(--fmo-theme-line)!important;}
 html[data-dashboard-theme="grey"] body.balanced-picture-theme [data-morning-report-screenshot="true"] .report-header:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){background:var(--fmo-theme-raised)!important;border-color:var(--fmo-theme-line)!important;}
 html[data-dashboard-theme="grey"] body.balanced-picture-theme [data-morning-report-screenshot="true"] .report-card:not(:where([data-dashboard-export-dark],[data-dashboard-export-dark] *,.morning-report-export,.morning-report-export *,.team-assignment-export,.team-assignment-export *)){background:var(--fmo-theme-raised)!important;border-color:var(--fmo-theme-line)!important;}
@@ -8542,10 +8544,53 @@ html[data-screenshot-theme="grey"] .balanced-picture-theme [data-screenshot-surf
 html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #565a5e; --metrics-line: #474a4c; }
 .metrics-response-table th, .metrics-response-table td { white-space: nowrap; }
 .metrics-response-table thead th:nth-child(5) { width: 16%; min-width: 10.5rem; }
-#root #metrics-period-table > thead > tr > th { padding: 9px 10px; vertical-align: top; border-bottom: 2px solid var(--metrics-rule) !important; }
+#root #metrics-period-table > thead > tr > th { white-space:nowrap; padding: 9px 10px; vertical-align: top; border-bottom: 2px solid var(--metrics-rule) !important; }
 #root #metrics-period-table > tbody > tr > td { border-bottom: 1px solid var(--metrics-line) !important; }
 #root #metrics-period-table > tbody > tr.metrics-grand-total > td { border-top: 2px solid var(--metrics-rule) !important; }
-.metrics-response-table .metric-target { display: block; font-size: 11px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.dashboard-mobile-toolbar.metrics-period-heading {display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"report targets actions";align-items:center;gap:14px;}
+.metrics-period-heading .metrics-report-info {grid-area:report;min-width:0;}
+.metrics-period-heading .metrics-actions {grid-area:actions;justify-self:end;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;min-width:0;}
+.metrics-driver-targets {grid-area:targets;text-align:center;min-width:0;color:var(--fmo-theme-ink,#edf2f7);font-variant-numeric:tabular-nums;}
+.metrics-driver-targets h3 {font:600 13px/1.35 var(--dashboard-font);margin:0 0 7px;}
+.metrics-driver-targets dl {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:0;}
+.metrics-driver-targets dl>div {padding:0 9px;}
+.metrics-driver-targets dl>div+div {border-inline-start:1px solid var(--fmo-theme-line,#495361);}
+.metrics-driver-targets dt {font:400 12px/1.4 var(--dashboard-font);white-space:nowrap;color:var(--fmo-theme-muted,#bdc6d2);}
+.metrics-driver-targets dd {font:600 15px/1.35 var(--dashboard-font);margin:2px 0 0;white-space:nowrap;}
+[data-dashboard-export-dark] .metrics-driver-targets {--fmo-theme-muted:#c2c2c2;--fmo-theme-line:#535353;--fmo-theme-ink:#f2f2f2;}
+@media(max-width:979px){
+  .dashboard-mobile-toolbar.metrics-period-heading {grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"report actions" "targets targets";gap:10px;}
+  .metrics-period-heading .metrics-driver-targets {padding-top:10px;border-top:1px solid var(--fmo-theme-line,#495361);}
+}
+@media(max-width:639px){
+  .dashboard-mobile-toolbar.metrics-period-heading {grid-template-columns:minmax(0,1fr);grid-template-areas:"report" "targets" "actions";}
+  .metrics-period-heading .metrics-actions {justify-self:center;justify-content:center;max-width:100%;}
+  .metrics-driver-targets dl {grid-template-columns:repeat(3,minmax(0,1fr));row-gap:9px;}
+  .metrics-driver-targets dl>div {padding:0 2px;}
+  .metrics-driver-targets dl>div:nth-child(4) {border-inline-start:0;}
+}
+.metrics-export-heading[data-panel-screenshot-only="true"] {display:none;flex-wrap:wrap;}
+@media(max-width:389px){
+  .metrics-driver-targets dl {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .metrics-driver-targets dl>div:nth-child(4) {border-inline-start:1px solid var(--fmo-theme-line,#495361);}
+  .metrics-driver-targets dl>div:nth-child(odd) {border-inline-start:0;}
+}
+/* Equal outside columns center the entire target group even when the date is short. */
+.metrics-export-heading[data-panel-screenshot-display="grid"] {
+    grid-template-columns:minmax(0,1fr) minmax(440px,2fr) minmax(0,1fr);
+    grid-template-areas:"report targets date";align-items:center;gap:16px;
+}
+.metrics-export-heading[data-panel-screenshot-display="grid"] > :first-child {grid-area:report;min-width:0;}
+.metrics-export-heading[data-panel-screenshot-display="grid"] > :last-child {grid-area:date;justify-self:end;text-align:right;}
+.metrics-export-heading .metrics-driver-targets {width:100%;text-align:center;}
+.metrics-export-heading .metrics-driver-targets h3 {display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 9px;}
+.metrics-export-heading .metrics-driver-targets h3::before,
+.metrics-export-heading .metrics-driver-targets h3::after {content:"";flex:1;min-width:0;border-top:1px solid var(--fmo-theme-line,#535353);}
+@media(max-width:850px){
+    .metrics-export-heading[data-panel-screenshot-display="grid"] {
+        grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"report date" "targets targets";row-gap:12px;
+    }
+}
 .metrics-response-table .metrics-grand-total td:first-child { text-align: center; }
 .metrics-response-table .metric-missing { color: var(--fmo-theme-muted, #a4b3c6); }
 .metrics-response-table .response-meter {
@@ -8559,6 +8604,103 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
 .metrics-response-table .response-track { width: 92%; justify-self: end; display: block; height: 4px; border-radius: 3px; overflow: hidden; background: var(--response-track, rgb(255 255 255 / 15%)); }
 .response-fill { display: block; height: 100%; border-radius: inherit; background: var(--response-fill); }
 .response-value { display: block; min-width: 6.5ch; text-align: right; line-height: 1.15; }
+</style>
+<style id="dashboard-typography">
+:root { --dashboard-font:ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"; --dashboard-heading-weight:600; }
+
+html, body.balanced-picture-theme, .dashboard-page-shell.font-sans {font-family:var(--dashboard-font);}
+body.balanced-picture-theme :where(button,input,textarea,select,option,table) {font-family:inherit;}
+@media screen {
+  html body.balanced-picture-theme #root :is(h1,h2,h3,h4,h5,h6,.dashboard-card-title),
+  html[data-dashboard-theme] body.balanced-picture-theme #root .dashboard-page-shell .dashboard-main-content :is(h1,h2,h3,h4,h5,h6,.dashboard-card-title) {
+    font-weight:var(--dashboard-heading-weight)!important;
+    letter-spacing:normal!important;
+    text-transform:none;
+  }
+  .dashboard-card-title {font-size:14px;line-height:1.3;}
+  .overview-check-label {min-width:0;white-space:normal;overflow-wrap:anywhere;}
+  .overview-check-badge {flex-shrink:0;font-family:var(--dashboard-font);font-weight:var(--dashboard-heading-weight);font-size:12px;letter-spacing:normal;text-transform:none;line-height:1.3;}
+}
+</style>
+<style id="overview-ring-design">
+.metric-ring-row.overview-rings { display:grid; grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:8px; }
+.overview-ring-card, .overview-performance-header, .ring-settings-sample {
+  --dial-ink:var(--fmo-theme-ink,#f1f5f9); --dial-muted:var(--fmo-theme-muted,#bac6d8);
+  --dial-line:var(--fmo-theme-line,#39475d); --dial-panel:var(--fmo-theme-card,#192436);
+  --dial-good:var(--fmo-theme-good,#72dfb0); --dial-watch:var(--fmo-theme-warn,#f5c374);
+  --dial-bad:var(--fmo-theme-bad,#fb9d9e); --dial-volume:var(--fmo-theme-info,#adc7db);
+}
+[data-dashboard-export-dark] :is(.overview-ring-card,.overview-performance-header,.ring-settings-sample),:is(.overview-ring-card,.overview-performance-header)[data-dashboard-export-dark] {
+  --dial-ink:#f2f2f2;--dial-muted:#c2c2c2;--dial-line:#535353;--dial-panel:#2b2b2b;
+  --dial-good:#8ad6ae;--dial-watch:#efc56c;--dial-bad:#ffaaa0;--dial-volume:#a7c5dc;
+}
+.overview-ring-card {background:var(--dial-panel);color:var(--dial-ink);border:1px solid var(--dial-line);
+  border-radius:14px;padding:13px 10px 10px;min-width:0;position:relative;overflow:hidden;display:flex;flex-direction:column;text-align:center;align-items:stretch;}
+.overview-ring-card h3 {font-size:14px;font-weight:var(--dashboard-heading-weight);line-height:1.3;margin:0;}
+[data-ring-status="good"] {--dial-tone:var(--dial-good);}
+[data-ring-status="watch"] {--dial-tone:var(--dial-watch);}
+[data-ring-status="bad"] {--dial-tone:var(--dial-bad);}
+[data-ring-status="volume"] {--dial-tone:var(--dial-volume);}
+[data-ring-status="missing"] {--dial-tone:var(--dial-muted);}
+.overview-dial {position:relative;isolation:isolate;width:min(100%,132px);aspect-ratio:120/76;margin:2px auto;color:var(--dial-tone);}
+.overview-performance-header {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 16px;border:1px solid var(--dial-line);border-radius:14px;padding:12px 16px;margin-bottom:10px;background:var(--dial-panel);color:var(--dial-ink);}
+.overview-performance-header h3 {margin:0;font-size:17px;font-weight:650;}
+.overview-performance-header small,.arc-range {font-size:12px;color:var(--dial-muted);}
+.overview-ring-card:is([data-metric="surveyCnt"],[data-metric="response"]) {grid-column:span 2;}
+.overview-period {display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--dial-line);border-radius:999px;background:color-mix(in srgb,var(--dial-panel),var(--dial-line) 12%);}
+.overview-period button {background:transparent;color:var(--dial-muted);padding:7px 12px;border:1px solid transparent;border-radius:999px;font-size:12px;font-weight:600;}
+.overview-period button[aria-pressed=true] {border-color:var(--dial-line);color:var(--dial-ink);background:color-mix(in srgb,var(--dial-panel),var(--dial-ink) 15%);}
+.overview-period button:focus-visible {outline:2px solid currentColor;}
+.overview-dial .dial-effects {position:absolute;top:0;left:0;width:100%;aspect-ratio:1;pointer-events:none;clip-path:inset(0 0 47%);mask-image:radial-gradient(circle closest-side,transparent 59%,black 68% 87%,transparent 97%);}
+.overview-dial .metric-ring-motion,.overview-dial .dial-effect-svg {position:absolute;inset:0;width:100%;height:100%;}
+.overview-dial[data-ring-glow="off"][data-ring-motion="none"]:not([data-ring-showcase-motion="on"]) .dial-effects {display:none;}
+.overview-dial .dial-effect-svg {opacity:.62;}
+.overview-ring-card:hover .overview-dial .metric-ring-value,.ring-settings-sample:hover .overview-dial .metric-ring-value {animation:none!important;transform:none!important;}
+.arc-range {display:flex;justify-content:space-between;width:min(100%,115px);margin:-8px auto 7px;}
+@media(max-width:600px) {.metric-ring-row.overview-rings {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}.overview-ring-card:is([data-metric="surveyCnt"],[data-metric="response"]) {grid-column:span 1;}.overview-period button {min-height:44px;}}
+@media(max-width:300px) {.metric-ring-row.overview-rings {grid-template-columns:1fr;}}
+.overview-dial .dial-svg {position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+.overview-dial .dial-reading {position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:11%;pointer-events:none;color:var(--dial-ink);}
+.overview-dial .metric-ring-value {font-size:19px;line-height:1.1;opacity:1;filter:none;}
+.overview-dial .metric-ring-percent {font-size:11px;}
+.overview-dial .dial-period,.overview-ring-target,.overview-ring-history {color:var(--dial-muted);font-size:11px;}
+.overview-ring-detail {margin:4px 0 9px;color:var(--dial-tone);font-weight:650;font-size:12px;}
+.overview-ring-history {border-top:1px solid var(--dial-line);margin-top:auto;padding-top:5px;}
+.overview-ring-history div {display:flex;align-items:baseline;justify-content:space-between;gap:5px;margin:2px 0;}
+.overview-ring-history dd {margin:0;color:var(--dial-ink);font-variant-numeric:tabular-nums;font-weight:600;}
+.overview-period-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.arc-replay {font:inherit;font-size:12px;font-weight:600;border:1px solid var(--dial-line,var(--fmo-theme-line,#586171));color:inherit;background:transparent;padding:7px 12px;border-radius:999px;}
+.arc-replay:focus-visible {outline:2px solid currentColor;outline-offset:2px;}
+.arc-replay:disabled {opacity:.5;}
+.arc-preview-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;scroll-margin-top:12px;}
+.arc-preview-heading .arc-replay {flex:none;}
+.arc-settings-grid {--arc-entry-lit:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+.arc-settings-grid .overview-ring-card {padding:9px 5px;}
+.arc-settings-grid h3 {font-size:12px;}
+.arc-target-core {opacity:.84;}
+.arc-target-halo {filter:blur(2px);opacity:calc(var(--arc-strength)*.6);}
+.overview-ring-card[data-metric="surveyCnt"] {--arc-night:#60edff;--arc-day:#00778b;}
+.overview-ring-card[data-metric="response"] {--arc-night:#d0a1ff;--arc-day:#813bb4;}
+.overview-ring-card[data-metric="surveyAvg"] {--arc-night:#64f5b9;--arc-day:#007b56;}
+.overview-ring-card[data-metric="onTime"] {--arc-night:#ffd275;--arc-day:#a06000;}
+.overview-ring-card[data-metric="completion"] {--arc-night:#ff9bb2;--arc-day:#bf3f65;}
+.overview-ring-card[data-metric="exchange"] {--arc-night:#89b7ff;--arc-day:#245db2;}
+.overview-ring-card {--arc-accent:var(--arc-night);}
+html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dashboard-theme="linen"]) .overview-ring-card {--arc-accent:var(--arc-day);}
+.arc-underlight {--shine:1;--length:24;--arc-from:24px;--arc-to:-116px;opacity:0;stroke-dasharray:var(--length) 150;pointer-events:none;}
+.arc-settings-grid .arc-underlight {--arc-from:6px;}
+.arc-settings-grid .arc-underlight.tail {--arc-from:20px;}
+.arc-underlight.tail {--shine:.8;--length:38;--arc-from:38px;--arc-to:-102px;filter:blur(1.8px);}
+@media(prefers-reduced-motion:no-preference) {
+  .arc-light-playing .arc-target-segment {stroke-dasharray:100 101;animation:arcTargetTrace 850ms cubic-bezier(.25,.65,.27,1) both;}
+  .arc-light-playing .arc-underlight {animation:arcUnderpass var(--arc-duration) linear infinite;}
+}
+@keyframes arcTargetTrace {from{stroke-dashoffset:100;}to{stroke-dashoffset:0;}}
+@keyframes arcUnderpass {0%{stroke-dashoffset:var(--arc-from);opacity:calc(var(--arc-strength)*var(--shine)*var(--arc-entry-lit,0));}6%,94%{opacity:calc(var(--arc-strength)*var(--shine));}100%{stroke-dashoffset:var(--arc-to);opacity:0;}}
+[data-dashboard-export-dark] .arc-target-segment {animation:none!important;stroke-dasharray:none!important;}
+[data-dashboard-export-dark] :is(.arc-underlight,.arc-target-halo),[data-dashboard-export-dark] .arc-replay {display:none!important;}
+@media(max-width:600px) {.arc-settings-grid {grid-template-columns:repeat(2,minmax(0,1fr));}.arc-replay {min-height:44px;}}
+.overview-ring-legend {margin:0 0 18px;font-size:11px;color:var(--fmo-theme-muted,#bac6d8);}
 </style>
 </head>
 <body class="balanced-picture-theme bg-slate-900 text-slate-100 font-sans antialiased overflow-x-hidden">
@@ -10980,6 +11122,7 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
         const isOwnerAccount = account => Boolean(account?.uid && MASTER_ADMIN_ACCOUNTS.has(account.uid)
             && MASTER_ADMIN_ACCOUNTS.get(account.uid) === normalizedLoginEmail(account.email));
         const isProtectedMasterAdminProfile = account => Boolean(account?.uid && MASTER_ADMIN_ACCOUNTS.has(account.uid));
+        const canManageRingSettings = account => account?.uid === OWNER_UID && isOwnerAccount(account);
         const isMasterAdminUid = uid => Boolean(uid && MASTER_ADMIN_ACCOUNTS.has(uid));
         const validateNewLogin = draft => {
             const name = String(draft.name || '').trim(), email = String(draft.email || '').trim();
@@ -12087,7 +12230,7 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
         };
         const copyRoutePictureToClipboard = async imagePromise => {
             return copyScreenshotImageForEmail(async () => routePicturePngBlob(await imagePromise), {
-                background:SCREENSHOT_BACKGROUND,maxWidth:730,label:'Route update'
+                maxWidth:730,label:'Route update'
             });
         };
         const prepareAndOpenLateRouteEmail = async (call,draft) => {
@@ -12672,6 +12815,11 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
         };
         const validateBusinessWrite = (kind, before, after, operation = 'update', preloadHistory = false) => {
             requireTeamAccount();
+            if (kind === 'config' && !canManageRingSettings(auth.currentUser)) {
+                const hasRings = record => Object.prototype.hasOwnProperty.call(record || {}, 'ringSettings');
+                if (hasRings(before) !== hasRings(after) || !sameSavedValue(before?.ringSettings, after?.ringSettings) || (operation === 'delete' && hasRings(before)))
+                    throw new Error('Only the primary dashboard owner can change ring settings.');
+            }
             if (kind === 'teamTasks') { validateTeamTaskWrite(before, after, operation); return; }
             if (isOwnerAccount(auth.currentUser)) return;
             if(kind==='accessProfiles'){
@@ -12723,7 +12871,6 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
                 if (changed('overviewHalloweenEnabled')) throw new Error('Only the dashboard owner can change the Halloween decorations.');
                 if (changed('billingCompaniesForExport')) throw new Error('Only the dashboard owner can change billing companies for export.');
                 if (changed('soundSettings') && !canSaveLocationAppearance()) throw new Error('Only the dashboard owner can choose or mute dashboard sounds.');
-                if (changed('ringSettings') && !canSaveLocationAppearance()) throw new Error('Only the dashboard owner can change dashboard ring effects.');
                 if (changed('managerAlertSettings') && !canSaveLocationAppearance()) throw new Error('Only the dashboard owner can change Manager Alerts.');
                 if (changed('teamChatClear')) throw new Error('Only the dashboard owner can clear Team Chat.');
                 if (changed('deletedDashboardUsers')) throw new Error('Only the dashboard owner can change shared deleted-user history.');
@@ -13047,20 +13194,7 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
                 });
                 messageLines.forEach((line, i) => drawText(line, padding, 201 + titleOffset + detailOffset + i * 22, bodyFont, ink));
 
-                // Cut the curve at full resolution to avoid partially transparent edge pixels.
-                context.setTransform(1, 0, 0, 1, 0, 0);
-                const pixelRadius = radius * scale;
-                for (let row = 0; row < pixelRadius; row++) {
-                    const offset = pixelRadius - row - 0.5;
-                    const cut = Math.round(pixelRadius - Math.sqrt(pixelRadius ** 2 - offset ** 2));
-                    if (!cut) break;
-                    const right = canvas.width - cut;
-                    const bottom = canvas.height - 1 - row;
-                    context.clearRect(0, row, cut, 1);
-                    context.clearRect(right, row, cut, 1);
-                    context.clearRect(0, bottom, cut, 1);
-                    context.clearRect(right, bottom, cut, 1);
-                }
+                clearScreenshotCorners(context, radius * scale);
                 return await new Promise((resolve, reject) => {
                     canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The PNG could not be created.')), 'image/png');
                 });
@@ -13537,7 +13671,9 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
             else pendingNotificationChime = null;
         };
 
-        const defaultDashboardRingSettings = () => ({ enabled: true, motion: 'dance', motionInterval: 60, motionDuration: 45, motionStrength: 30,
+        const arcSweepIntervals = [3, ...Array.from({length:12}, (_, index) => (index + 1) * 5)];
+        const defaultDashboardRingSettings = () => ({ arcMode:'sweep', arcBrightness:100, arcSeconds:15,
+            arcPasses:1, arcPalette:'ring', arcColor:'#60edff', arcSecondColor:'#d0a1ff', enabled: true, motion: 'dance', motionInterval: 60, motionDuration: 45, motionStrength: 30,
             glowMode: 'pulse', glowStyle: 'soft', glowStrength: 20, glowInterval: 15, temperature: 0, hoverEffect: 'expand', autoRotate: false, rotateInterval: 60,
             showcase: true, showcaseSpeed: 1.8, showcaseMood: 'mix', showcaseAccent: 'comet' });
         const DASHBOARD_RING_LIGHTING_STYLES = [
@@ -13562,7 +13698,11 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
             const defaults = defaultDashboardRingSettings(), input = saved || {};
             const number = (key, min, max) => typeof input[key] === 'number' && Number.isFinite(input[key]) ? Math.min(max, Math.max(min, input[key])) : defaults[key];
             const choice = (key, options) => options.includes(input[key]) ? input[key] : defaults[key];
-            return { enabled: typeof input.enabled === 'boolean' ? input.enabled : defaults.enabled,
+            const color = key => typeof input[key] === 'string' && /^#[0-9a-f]{6}$/i.test(input[key]) ? input[key].toLowerCase() : defaults[key];
+            const previousMode = input.glowMode === 'off' || input.glowStrength === 0 ? 'classic' : input.showcase === false && input.motion === 'none' && input.glowMode === 'steady' ? 'steady' : defaults.arcMode;
+            return { arcMode:['sweep','steady','classic'].includes(input.arcMode) ? input.arcMode : previousMode, arcBrightness:number('arcBrightness',0,100), arcSeconds:choice('arcSeconds',arcSweepIntervals),
+                arcPasses:choice('arcPasses',[1,2,3]), arcPalette:choice('arcPalette',['ring','single','blend','rainbow']),
+                arcColor:color('arcColor'), arcSecondColor:color('arcSecondColor'), enabled: typeof input.enabled === 'boolean' ? input.enabled : defaults.enabled,
                 motion: choice('motion', DASHBOARD_RING_MOVEMENT_STYLES.map(style => style.id)), motionInterval: number('motionInterval', 1, 120),
                 motionDuration: number('motionDuration', 5, 60), motionStrength: number('motionStrength', 0, 100),
                 glowMode: choice('glowMode', ['off','pulse','steady']), glowStyle: choice('glowStyle', DASHBOARD_RING_LIGHTING_STYLES.map(style => style.id)),
@@ -13594,8 +13734,8 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
                 '--ring-drop': `${2 * value.motionStrength / 30}px`, '--ring-tilt': `${1.2 * value.motionStrength / 30}deg`,
                 '--ring-swell': String(1 + .025 * value.motionStrength / 30),
                 '--ring-turn-duration': `${18 - value.motionStrength * .14}s`,
-                '--ring-showcase-cycle': `${value.showcaseSpeed * 10}s`,
-                '--ring-showcase-beacon': `metricRingShowcase${Math.max(0,Math.min(4,Math.floor(Number(sequenceIndex) || 0))) + 1}`,
+                '--ring-showcase-cycle': `${value.showcaseSpeed * overviewRingMetrics.length * 2}s`,
+                '--ring-showcase-beacon': `metricRingShowcase${Math.max(0,Math.min(overviewRingMetrics.length-1,Math.floor(Number(sequenceIndex) || 0))) + 1}`,
                 '--ring-showcase-motion-delay': `${-(Number(sequenceIndex) || 0) * .4}s`,
                 '--ring-showcase-wave-delay': `${-(Number(sequenceIndex) || 0) * value.showcaseSpeed * .6}s`,
                 '--ring-showcase-orbit-delay': `${-(Number(sequenceIndex) || 0) * 1.1}s` };
@@ -13660,6 +13800,24 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
             }
         };
 
+        // Trim the outside curve on the output pixel grid. The PNG owns the corners in every app.
+        const clearScreenshotCorners = (context, radius) => {
+            const {width,height} = context.canvas;
+            const r = Math.min(radius, width / 2, height / 2);
+            context.save();
+            context.setTransform(1, 0, 0, 1, 0, 0);
+            for (let y = 0; y + 0.5 < r; y++) {
+                const offset = r - y - 0.5;
+                const cut = Math.round(r - Math.sqrt(r * r - offset * offset));
+                if (!cut) break;
+                for (const row of [y, height - 1 - y]) {
+                    context.clearRect(0, row, cut, 1);
+                    context.clearRect(width - cut, row, cut, 1);
+                }
+            }
+            context.restore();
+        };
+
         const getScreenshotScale = (width, height) => {
             if (!(width > 0 && height > 0 && Number.isFinite(width) && Number.isFinite(height))) {
                 throw new Error('The screenshot area has no usable size.');
@@ -13685,12 +13843,14 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
                         if (options.onclone) await options.onclone(clonedDoc, clonedElement);
                         // Re-enable dashboard theme styles on the renderer's private copy.
                         clonedElement.removeAttribute('data-dashboard-export-dark');
+                        // Render the full surface; the final PNG receives one rounded edge.
+                        clonedElement.style.setProperty('border-radius', '0', 'important');
                         // Dark Gray type can wrap differently from the user's theme.
                         renderOptions.height = Math.max(options.height, Math.ceil(clonedElement.getBoundingClientRect().height));
                     } };
                     canvas = await window.html2canvas(element, renderOptions);
                     if (!canvas.width || !canvas.height) throw new Error('Unable to allocate screenshot canvas.');
-                    // Flatten any remaining transparency before copying or downloading the PNG.
+                    // Keep the report body opaque before trimming its outer corners.
                     const context = canvas.getContext('2d');
                     if (!context) throw new Error('Unable to finish screenshot background.');
                     context.save();
@@ -13699,17 +13859,8 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
                     context.globalCompositeOperation = 'destination-over';
                     context.fillStyle = options.backgroundColor || SCREENSHOT_BACKGROUND;
                     context.fillRect(0, 0, canvas.width, canvas.height);
-                    // Only the rounded outer corners are transparent; the report stays opaque.
-                    const radius = Math.min(16 * scale * factor, canvas.width / 2, canvas.height / 2);
-                    context.globalCompositeOperation = 'destination-in';
-                    context.beginPath();
-                    context.moveTo(radius, 0);
-                    context.arcTo(canvas.width, 0, canvas.width, canvas.height, radius);
-                    context.arcTo(canvas.width, canvas.height, 0, canvas.height, radius);
-                    context.arcTo(0, canvas.height, 0, 0, radius);
-                    context.arcTo(0, 0, canvas.width, 0, radius);
-                    context.closePath(); context.fill();
                     context.restore();
+                    clearScreenshotCorners(context, 16 * canvas.width / options.width);
                     blob = await new Promise((resolve, reject) => {
                         canvas.toBlob(result => result ? resolve(result) : reject(new Error('Unable to encode screenshot.')), 'image/png');
                     });
@@ -13731,7 +13882,6 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
                 // Camera actions retain the full-resolution download and prepare an email paste.
                 try {
                     const copied = await copyScreenshotImageForEmail(() => blob, {
-                        background:options.backgroundColor || SCREENSHOT_BACKGROUND,
                         maxWidth:options.width,
                         label:fileName.replace(/\.png$/i, '').replace(/[-_]/g, ' ')
                     });
@@ -15371,42 +15521,222 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
         const MetricRingRow = ({ children }) => {
             const [paused,setPaused]=useState(()=>document.hidden);
             useEffect(()=>{const sync=()=>setPaused(document.hidden);document.addEventListener('visibilitychange',sync);return ()=>document.removeEventListener('visibilitychange',sync);},[]);
-            return <div className="metric-ring-row grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6" data-ring-showcase-paused={paused?'true':undefined}>{children}</div>;
+            return <div className="metric-ring-row overview-rings mb-6" data-ring-showcase-paused={paused?'true':undefined}>{children}</div>;
         };
         const MetricRingNumber = ({ value }) => {
             const text = String(value ?? '');
             return text.endsWith('%') ? <>{text.slice(0, -1)}<span className="metric-ring-percent">%</span></> : value;
         };
-        const MetricRingVisual = ({ settings, moving, percentage, displayValue, colors, preview = false, sequenceIndex, centered = false }) => {
-            const glow = settings.enabled && settings.glowStrength > 0 ? settings.glowMode : 'off';
-            const showcase=settings.enabled && settings.showcase && (sequenceIndex != null || (preview && moving));
+        const overviewRingMetrics = [
+            {key:'surveyCnt',title:'Survey Count'},
+            {key:'response',title:'Survey Response Rate',min:0,scale:100},
+            {key:'surveyAvg',title:'Survey Average',target:'Goal ≥ 9.65 / 10',goal:9.65,min:9,scale:10},
+            {key:'onTime',title:'On-Time Delivery',target:'Goal ≥ 97.50%',goal:97.50,min:94,scale:100,amber:94},
+            {key:'completion',title:'Completion',target:'Goal ≥ 98.05%',goal:98.05,min:96,scale:100,amber:96.05},
+            {key:'exchange',title:'Exchange',target:'Limit ≤ 1.70%',goal:1.70,min:0,scale:3,amber:3,lower:true}
+        ];
+        const overviewRingValue = (metric, raw) => {
+            if (metric.key === 'surveyCnt') return surveyNumber(raw);
+            const value = metricScoreNumber(raw);
+            const max = metric.key === 'surveyAvg' ? 10 : 100;
+            return value === null || value < 0 || value > max ? null : Number(value.toFixed(2));
+        };
+        const formatRingValue = (metric, value) => {
+            if (value === null) return '—';
+            if (metric.key === 'surveyCnt') return String(value);
+            return value.toFixed(2) + (metric.key === 'surveyAvg' ? '' : '%');
+        };
+        const ringReading = (metric, value) => {
+            if (value === null) return {tone:'missing',detail:'No report yet'};
+            if (metric.key === 'surveyCnt') return {tone:'volume',detail:'Surveys received'};
+            const delta = Math.round((value - metric.goal) * 100);
+            if (delta === 0) return {tone:'good',detail:metric.lower ? 'At limit' : 'At goal'};
+            const meets = metric.lower ? delta < 0 : delta > 0;
+            const near = metric.lower ? value <= metric.amber : value >= metric.amber;
+            const unit = metric.key === 'surveyAvg' ? '' : ' pts';
+            const direction = metric.lower ? (delta < 0 ? ' below limit' : ' over limit') : (delta < 0 ? ' below goal' : ' above goal');
+            return {tone:meets ? 'good' : near ? 'watch' : 'bad',detail:(Math.abs(delta)/100).toFixed(2)+unit+direction};
+        };
+        const openArcPath = 'M 14 60 A 46 46 0 0 1 106 60';
+        const arcPoint = (metric, value, radius = 46) => {
+            const fraction = Math.max(0, Math.min(1, (value - metric.min) / (metric.scale - metric.min)));
+            return {x:60 - radius * Math.cos(Math.PI * fraction), y:60 - radius * Math.sin(Math.PI * fraction)};
+        };
+        const allArcKeys = overviewRingMetrics.map(metric => metric.key).join(',');
+        const canReplayArcs = settings => settings.enabled && settings.arcMode === 'sweep' && settings.arcBrightness > 0;
+        const useArcSweep = (enabled, eligibleKeys, seconds, period) => {
+            const [active, setActive] = useState(null);
+            const [restart, setRestart] = useState(0);
+            useEffect(() => {
+                if (!enabled || !eligibleKeys) {
+                    setActive(null);
+                    return;
+                }
+                const keys = eligibleKeys.split(',');
+                const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+                let timer;
+                const sync = () => {
+                    window.clearInterval(timer);
+                    if (document.hidden || reducedMotion.matches) {
+                        setActive(null);
+                        return;
+                    }
+                    let index = 0;
+                    const advance = () => {
+                        const key = keys[index];
+                        setActive(previous => ({key, run:(previous?.run || 0) + 1}));
+                        index = (index + 1) % keys.length;
+                    };
+                    advance();
+                    timer = window.setInterval(advance, seconds * 1000);
+                };
+                sync();
+                document.addEventListener('visibilitychange', sync);
+                reducedMotion.addEventListener('change', sync);
+                return () => {
+                    window.clearInterval(timer);
+                    document.removeEventListener('visibilitychange', sync);
+                    reducedMotion.removeEventListener('change', sync);
+                };
+            }, [enabled, eligibleKeys, seconds, period, restart]);
+            return [active, () => setRestart(value => value + 1)];
+        };
+        const rainbowSweepColors = ['#ff779b','#ffae6a','#ffe27a','#60e8a9','#59d8ff','#9b98ff','#e59bff'];
+        const MetricRingVisual = ({ settings, moving, metric, value, preview = false, sequenceIndex, lightRun = 0 }) => {
+            const classic = settings.arcMode === 'classic';
+            const effectsEnabled = classic && settings.enabled && value !== null;
+            const mark = value === null || metric.scale == null ? null : arcPoint(metric, value);
+            const target = metric.goal == null ? null : {inner:arcPoint(metric,metric.goal,39), outer:arcPoint(metric,metric.goal,53)};
+            const glow = effectsEnabled && settings.glowStrength > 0 ? settings.glowMode : 'off';
+            const showcase=effectsEnabled && settings.showcase && (sequenceIndex != null || (preview && moving));
             const accent=normalizeDashboardRingSettings(settings).showcaseAccent;
-            return <div className="metric-ring-visual relative w-32 h-32 z-10 flex items-center justify-center" style={ringVisualProperties(settings,sequenceIndex)}
-                data-ring-glow={glow} data-ring-style={settings.glowStyle} data-ring-motion={settings.enabled && moving && !showcase ? settings.motion : 'none'} data-ring-hover={settings.enabled ? (showcase && settings.hoverEffect==='expand'?'highlight':settings.hoverEffect) : 'none'}
+            const arcLit = !classic && settings.enabled && settings.arcBrightness > 0 && value !== null;
+            const play = arcLit && settings.arcMode === 'sweep' && lightRun > 0;
+            const gradientId = 'ring-sweep-' + React.useId().replace(/:/g,'');
+            const colors = settings.arcPalette === 'rainbow' ? rainbowSweepColors
+                : settings.arcPalette === 'blend' ? [settings.arcColor, settings.arcSecondColor] : null;
+            const sweepPaint = colors ? 'url(#' + gradientId + ')' : settings.arcPalette === 'single' ? settings.arcColor : 'var(--arc-accent)';
+            let segment;
+            if (!classic && mark) {
+                const start = metric.goal == null ? arcPoint(metric,metric.min) : mark;
+                const end = metric.goal == null ? mark : arcPoint(metric,metric.goal);
+                if (start.x !== end.x) segment = 'M '+start.x+' '+start.y+' A 46 46 0 0 '+(end.x>start.x?1:0)+' '+end.x+' '+end.y;
+            }
+            return <div className="metric-ring-visual overview-dial" style={{...ringVisualProperties(settings,sequenceIndex), "--arc-duration":(settings.arcSeconds / settings.arcPasses)+"s", "--arc-strength":settings.arcBrightness/100}}
+                data-ring-glow={glow} data-ring-style={settings.glowStyle} data-ring-motion={effectsEnabled && moving && !showcase ? settings.motion : 'none'} data-ring-hover={effectsEnabled ? (showcase && settings.hoverEffect==='expand'?'highlight':settings.hoverEffect) : 'none'}
                 data-ring-showcase={showcase?'on':undefined} data-ring-showcase-motion={showcase && settings.motionStrength>0?'on':'off'} data-ring-showcase-mood={settings.showcaseMood} data-ring-showcase-accent={showcase?accent:undefined}>
-                <div className="metric-ring-motion absolute inset-0 flex items-center justify-center">
-                    {showcase && <><span aria-hidden="true" data-html2canvas-ignore="true" className={`metric-ring-showcase-halo ${colors.ring}`} />
-                        {accent==='soft' && <span aria-hidden="true" data-html2canvas-ignore="true" className={`metric-ring-showcase-orbit ${colors.ring}`}><span className="metric-ring-showcase-glint" /></span>}
-                        {['comet','mix'].includes(accent) && <span aria-hidden="true" data-html2canvas-ignore="true" className={`metric-ring-showcase-comet ${colors.ring}`} />}
-                        {['ripple','mix'].includes(accent) && <span aria-hidden="true" data-html2canvas-ignore="true" className={`metric-ring-showcase-ripple ${colors.ring}`} />}
+                <svg aria-hidden="true" className="dial-svg" viewBox="0 0 120 76">
+                    <path d={openArcPath} fill="none" stroke={metric.key === 'surveyCnt' && value !== null ? 'currentColor' : 'var(--dial-line)'} strokeWidth="4" strokeLinecap="round"/>
+                </svg>
+                {effectsEnabled && <div className="dial-effects" data-html2canvas-ignore="true" aria-hidden="true">
+                  <div className="metric-ring-motion">
+                    {showcase && <><span aria-hidden="true" data-html2canvas-ignore="true" className="metric-ring-showcase-halo" />
+                        {accent==='soft' && <span aria-hidden="true" data-html2canvas-ignore="true" className="metric-ring-showcase-orbit"><span className="metric-ring-showcase-glint" /></span>}
+                        {['comet','mix'].includes(accent) && <span aria-hidden="true" data-html2canvas-ignore="true" className="metric-ring-showcase-comet" />}
+                        {['ripple','mix'].includes(accent) && <span aria-hidden="true" data-html2canvas-ignore="true" className="metric-ring-showcase-ripple" />}
                     </>}
-                    <span aria-hidden="true" data-html2canvas-ignore="true" className={`metric-ring-lighting ${colors.ring}`} />
-                    <svg aria-hidden="true" className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="40" className={`metric-ring-track stroke-current ${colors.text} opacity-20`} strokeWidth="6" fill="transparent" />
-                        <circle cx="50" cy="50" r="40" className={`metric-ring-stroke stroke-current ${colors.ring} transition-all duration-1000 ease-out`} style={preview && glow === 'pulse' ? { animationDelay: `${-settings.glowInterval * .55}s` } : undefined} strokeWidth="6" fill="transparent" strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * Math.max(0, Math.min(100, percentage || 0))) / 100} strokeLinecap="round" />
+                    <span aria-hidden="true" data-html2canvas-ignore="true" className="metric-ring-lighting" />
+                    <svg className="dial-effect-svg" viewBox="0 0 120 120">
+                        <path className="metric-ring-stroke" d={openArcPath} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                     </svg>
-                    {centered&&<span className={`metric-ring-value text-base md:text-lg font-semibold tracking-normal z-10 ${colors.text}`}><MetricRingNumber value={displayValue}/></span>}
-                </div>
-                {settings.enabled && moving && settings.motion === 'fireworks' && settings.motionStrength > 0 && <MetricRingFireworks strength={settings.motionStrength} />}
-                {!centered&&<span className={`metric-ring-value text-base md:text-lg font-semibold tracking-normal z-10 ${colors.text}`}><MetricRingNumber value={displayValue}/></span>}
+                  </div>
+                </div>}
+                <svg aria-hidden="true" className="dial-svg" viewBox="0 0 120 76">
+                    {!classic && <g key={play ? lightRun : 'still'} className={play ? 'arc-light-playing' : undefined} fill="none" strokeLinecap="round">
+                        {segment && <>
+                            {arcLit && <path data-html2canvas-ignore="true" className="arc-target-segment arc-target-halo" d={segment} pathLength="100" stroke="currentColor" strokeWidth="7"/>}
+                            <path className="arc-target-segment arc-target-core" d={segment} pathLength="100" stroke="currentColor" strokeWidth="4.5"/>
+                        </>}
+                        {play && <g data-html2canvas-ignore="true" stroke={sweepPaint}>
+                            {colors && <defs><linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1="14" y1="0" x2={settings.arcPalette==='rainbow'?62:106} y2="0" spreadMethod="reflect">
+                                {colors.map((color,index)=><stop key={index} offset={index/(colors.length-1)} stopColor={color}/>)}
+                            </linearGradient></defs>}
+                            <path className="arc-underlight tail" d={openArcPath} pathLength="100" strokeWidth="6"/>
+                            <path className="arc-underlight" d={openArcPath} pathLength="100" strokeWidth="3"/>
+                        </g>}
+                    </g>}
+                    {target && <g className="dial-target" fill="none"><line x1={target.inner.x} y1={target.inner.y} x2={target.outer.x} y2={target.outer.y} stroke="var(--dial-ink)" strokeWidth="1.6"/></g>}
+                    {mark && <circle className="dial-score-dot" cx={mark.x} cy={mark.y} r="4.3" fill="currentColor" stroke="var(--dial-panel)" strokeWidth="1.3"/>}
+                </svg>
+                <div className="dial-reading"><span className="metric-ring-value"><MetricRingNumber value={formatRingValue(metric,value)}/></span></div>
+                {effectsEnabled && moving && settings.motion === 'fireworks' && settings.motionStrength > 0 && <MetricRingFireworks strength={settings.motionStrength} />}
             </div>;
+        };
+        const OverviewPerformance = ({ month, week, prior, settings, moving, reportDate, locationName, history, historyReady, settingsOpen }) => {
+            const [period, setPeriod] = useState('mtd');
+            const monthly = period === 'mtd', selected = monthly ? month : week;
+            const periodLabel = monthly ? 'Month to date' : 'Week to date';
+            const other = monthly ? week : month;
+            const stopTotals = useMemo(() => {
+                if (!historyReady) return {};
+                const stops = (date,scope) => getSurveyPeriodRoutes(history,getMetricsReportingPeriod(date,scope)).total;
+                return {wtd:stops(reportDate,'wtd'),mtd:stops(reportDate,'mtd'),prior:prior ? stops(getMetricsReportingDate(reportDate),'mtd') : null};
+            },[historyReady,history,reportDate,Boolean(prior)]);
+            const response = getSurveyResponse(selected?.surveyCnt,stopTotals[period]);
+            const surveys = response.surveys, stops = response.recordedStops;
+            const surveyDetail = [
+                surveys === null ? 'Survey count pending' : surveys.toLocaleString() + (surveys === 1 ? ' survey' : ' surveys'),
+                stops === null ? 'Stops pending' : stops.toLocaleString() + (stops === 1 ? ' stop' : ' stops')
+            ].join(' / ');
+            const read = (metric,totals,scope) => metric.key === 'response'
+                ? getSurveyResponse(totals?.surveyCnt,stopTotals[scope]).rate
+                : overviewRingValue(metric,totals?.[metric.key]);
+            const eligibleKeys = overviewRingMetrics.filter(metric => read(metric, selected, period) !== null).map(metric => metric.key).join(',');
+            const [activeLight] = useArcSweep(canReplayArcs(settings) && !settingsOpen, eligibleKeys, settings.arcSeconds, period);
+            return <>
+                <header className="overview-performance-header">
+                    <div><h3>Performance overview</h3><small>{locationName} · Through {getMetricsReportingPeriod(reportDate,period).throughLabel}</small></div>
+                    <div className="overview-period-actions"><div className="overview-period" role="group" aria-label="Performance period">
+                        {[['wtd','Week to date'],['mtd','Month to date']].map(([key,label])=><button type="button" key={key} aria-pressed={period===key} onClick={()=>setPeriod(key)}>{label}</button>)}
+                    </div></div>
+                </header>
+                <MetricRingRow>
+                    {overviewRingMetrics.map((metric,index) => {
+                        const isResponse = metric.key === 'response', value = read(metric,selected,period);
+                        const {tone,detail} = isResponse
+                            ? {tone:value === null ? 'missing' : 'volume',detail:surveyDetail}
+                            : ringReading(metric,value);
+                        const suffix = metric.key === 'surveyAvg' ? '' : '%';
+                        return <article key={metric.key} data-dashboard-card="metric" data-dashboard-card-tone={tone} data-ring-status={tone} data-metric={metric.key} className="metric-ring-card overview-ring-card" aria-label={metric.title+' '+periodLabel}>
+                            <h3>{metric.title}</h3>
+                            <MetricRingVisual metric={metric} value={value} settings={settings} moving={moving} sequenceIndex={index} lightRun={activeLight?.key === metric.key ? activeLight.run : 0}/>
+                            {metric.goal != null && <div className="arc-range" aria-label="Scale endpoints"><span>{metric.min}{suffix}</span><span>{metric.scale}{suffix}</span></div>}
+                            {metric.target && <div className="overview-ring-target">{metric.target}</div>}<div className="overview-ring-detail">{detail}</div>
+                            <dl className="overview-ring-history">
+                                <div><dt>{monthly ? 'Week to date' : 'Month to date'}</dt><dd>{formatRingValue(metric,read(metric,other,monthly ? 'wtd' : 'mtd'))}</dd></div>
+                                <div><dt>Prior MTD</dt><dd>{formatRingValue(metric,read(metric,prior,'prior'))}</dd></div>
+                            </dl>
+                        </article>;
+                    })}
+                </MetricRingRow>
+                <p className="overview-ring-legend">The dot shows the score. The line marks the target. Lower is better for Exchange.</p>
+            </>;
         };
         const DashboardRingSettings = ({ settings, change, save, discard, busy, loaded, dirty }) => {
             const [previewRun, setPreviewRun] = useState(0);
-            const moving = useMetricRingMotion({...settings,motion:settings.showcase?'dance':settings.motion}, previewRun, true);
-            const previewSettings = useMetricRingLighting(settings, loaded);
+            const [activeLight,replay] = useArcSweep(loaded && canReplayArcs(settings), allArcKeys, settings.arcSeconds);
+            const previewHeading = useRef(null);
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const activeMetric = overviewRingMetrics.find(metric => metric.key === activeLight?.key);
+            let previewStatus = 'Sample scores';
+            if (settings.arcMode === 'sweep') {
+                if (!loaded) previewStatus = 'Loading ring settings…';
+                else if (!settings.enabled) previewStatus = 'Effects are off';
+                else if (!settings.arcBrightness) previewStatus = 'Raise Arc brightness to see the sweep';
+                else if (reducedMotion) previewStatus = 'Motion is paused by your device’s Reduce Motion setting';
+                else if (activeMetric) previewStatus = 'Sample scores · Playing ' + activeMetric.title;
+            }
+            const restartPreview = () => {
+                replay();
+                previewHeading.current?.scrollIntoView({block:'start',inline:'nearest',behavior:'instant'});
+            };
+            const classic = settings.arcMode === 'classic';
+            const moving = useMetricRingMotion({...settings,enabled:classic && settings.enabled,motion:settings.showcase?'dance':settings.motion}, previewRun, true);
+            const previewSettings = useMetricRingLighting(settings, loaded && classic);
             const lighting = DASHBOARD_RING_LIGHTING_STYLES.find(style => style.id === previewSettings.glowStyle);
-            const preset = DASHBOARD_RING_PRESETS.find(item => sameSavedValue(item.settings, settings))?.id || 'custom';
+            const arcOptions = {arcMode:'classic', arcBrightness:settings.arcBrightness, arcSeconds:settings.arcSeconds, arcPasses:settings.arcPasses,
+                arcPalette:settings.arcPalette, arcColor:settings.arcColor, arcSecondColor:settings.arcSecondColor};
+            const preset = DASHBOARD_RING_PRESETS.find(item => sameSavedValue({...item.settings,...arcOptions}, settings))?.id || 'custom';
             const disabled = busy || !loaded;
             const fieldClass = 'mt-1 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm font-normal text-slate-100';
             const warmth = settings.temperature === 0 ? 'Neutral' : settings.temperature < 0 ? 'Cool' : 'Warm';
@@ -15414,17 +15744,56 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
             const rotationLabel = seconds => seconds < 60 ? `${seconds} seconds` : `${seconds / 60} ${seconds === 60 ? 'minute' : 'minutes'}`;
             return <section aria-label="Ring settings" className="space-y-5">
                 <div className="flex items-start justify-between gap-4"><div><h3 className="font-bold text-white">Rings</h3><p className="text-xs text-slate-400 mt-1">Pick your lighting, check the preview, then save it for everyone.</p></div><label className="flex shrink-0 items-center gap-2 text-xs font-semibold text-slate-200">Effects<input type="checkbox" aria-label="Enable ring effects" disabled={disabled} checked={settings.enabled} onChange={event => change({...settings,enabled:event.target.checked})} className="h-5 w-5 accent-emerald-500" /></label></div>
-                <fieldset disabled={disabled || !settings.enabled} className="rounded-xl border border-slate-700 bg-slate-800/30 p-4 space-y-3 disabled:opacity-50">
+                <label className="block text-sm font-bold text-slate-200">Arc lighting<select aria-label="Arc lighting" value={settings.arcMode} disabled={disabled || !settings.enabled} onChange={event=>change({...settings,arcMode:event.target.value})} className={fieldClass}>
+                    <option value="sweep">Target glow with sweep</option><option value="steady">Steady target glow</option><option value="classic">Classic ring effects</option>
+                </select></label>
+                {!classic && <div className="space-y-3">
+                    <fieldset disabled={disabled || !settings.enabled} className="space-y-3 disabled:opacity-50">
+                        <label className="block text-xs font-bold text-slate-300">Arc brightness · {settings.arcBrightness}%<input aria-label="Arc brightness" type="range" min="0" max="100" step="5" value={settings.arcBrightness} onChange={event=>change({...settings,arcBrightness:Number(event.target.value)})} className="mt-2 w-full accent-emerald-400"/></label>
+                        {settings.arcMode==='sweep' && <>
+                            <label className="block text-xs font-bold text-slate-300">Time per ring
+                                <select aria-label="Time per ring" value={settings.arcSeconds} onChange={event=>change({...settings,arcSeconds:Number(event.target.value)})} className={fieldClass}>
+                                    {arcSweepIntervals.map(seconds=><option key={seconds} value={seconds}>{seconds} seconds</option>)}
+                                </select>
+                            </label>
+                            <label className="block text-xs font-bold text-slate-300">Sweep speed
+                                <select aria-label="Sweep speed" value={settings.arcPasses} onChange={event=>change({...settings,arcPasses:Number(event.target.value)})} className={fieldClass}>
+                                    <option value={1}>Normal · 1 pass per ring</option><option value={2}>Faster · 2 passes per ring</option><option value={3}>Fastest · 3 passes per ring</option>
+                                </select>
+                            </label>
+                            <label className="block text-xs font-bold text-slate-300">Sweep colors
+                                <select aria-label="Sweep colors" value={settings.arcPalette} onChange={event=>change({...settings,arcPalette:event.target.value})} className={fieldClass}>
+                                    <option value="ring">Color by ring</option><option value="single">Single color</option><option value="blend">Two-color blend</option><option value="rainbow">Rainbow</option>
+                                </select>
+                            </label>
+                            {['single','blend'].includes(settings.arcPalette) && <div className="flex flex-wrap gap-4">
+                                <label className="flex items-center gap-2 text-xs text-slate-200">Sweep color<input type="color" aria-label="Sweep color" value={settings.arcColor} onChange={event=>change({...settings,arcColor:event.target.value})}/></label>
+                                {settings.arcPalette==='blend' && <label className="flex items-center gap-2 text-xs text-slate-200">Second color<input type="color" aria-label="Second color" value={settings.arcSecondColor} onChange={event=>change({...settings,arcSecondColor:event.target.value})}/></label>}
+                            </div>}
+                        </>}
+                    </fieldset>
+                    <div className="arc-preview-heading" ref={previewHeading}>
+                        <div><h4 className="text-sm font-bold text-slate-200">Lighting preview</h4>
+                            <small className="text-slate-400">{previewStatus}</small></div>
+                        {settings.arcMode==='sweep' && <button type="button" className="arc-replay" disabled={disabled || !canReplayArcs(settings) || reducedMotion} onClick={restartPreview}>Replay lights</button>}
+                    </div>
+                    <div className="arc-settings-grid">{overviewRingMetrics.map((metric,index)=>{
+                        const value = {surveyCnt:20,response:5.60,surveyAvg:9.90,onTime:98.58,completion:99.22,exchange:1.74}[metric.key];
+                        const tone = metric.key === 'response' ? 'volume' : ringReading(metric,value).tone;
+                        return <article key={metric.key} data-metric={metric.key} data-ring-status={tone} className="overview-ring-card"><h3>{metric.title}</h3><MetricRingVisual metric={metric} value={value} settings={settings} sequenceIndex={index} lightRun={activeLight?.key === metric.key ? activeLight.run : 0}/></article>;
+                    })}</div>
+                </div>}
+                {classic && <><fieldset disabled={disabled || !settings.enabled} className="rounded-xl border border-slate-700 bg-slate-800/30 p-4 space-y-3 disabled:opacity-50">
                     <label className="flex items-center justify-between gap-3 text-sm font-bold text-slate-200">Light dance<input type="checkbox" aria-label="Enable one-by-one ring light dance" checked={settings.showcase} onChange={event=>change({...settings,showcase:event.target.checked})} className="h-5 w-5 accent-emerald-500" /></label>
-                    <p className="text-xs text-slate-400">A traveling glow from 1 → 2 → 3 → 4 → 5, then back 5 → 4 → 3 → 2 → 1. Add a comet sweep or ripple glow. Scores stay upright.</p>
+                    <p className="text-xs text-slate-400">The light moves across the arcs and back. Add a comet sweep or ripple glow. Scores stay upright.</p>
                     {settings.showcase && <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-slate-300">Pace<select aria-label="Ring light dance pace" value={settings.showcaseSpeed} onChange={event=>change({...settings,showcaseSpeed:Number(event.target.value)})} className={fieldClass}>{![1.2,1.8,2.5].includes(settings.showcaseSpeed) && <option value={settings.showcaseSpeed}>Custom</option>}<option value={2.5}>Relaxed</option><option value={1.8}>Balanced</option><option value={1.2}>Lively</option></select></label><label className="text-xs font-bold text-slate-300">Movement<select aria-label="Ring light dance movement" value={settings.showcaseMood} onChange={event=>change({...settings,showcaseMood:event.target.value})} className={fieldClass}><option value="mix">Dance, float & tilt</option><option value="calm">Gentle float</option><option value="sway">Elegant sway</option><option value="wave">Rolling wave</option><option value="drift">Orbit drift</option></select></label><label className="text-xs font-bold text-slate-300">Finish<select aria-label="Ring light dance finish" value={settings.showcaseAccent} onChange={event=>change({...settings,showcaseAccent:event.target.value})} className={fieldClass}><option value="soft">Soft halo</option><option value="comet">Comet</option><option value="ripple">Ripple glow</option><option value="mix">Comet and ripples</option></select></label></div>}
                     <p className="text-xs text-slate-400">Light dance runs continuously. Turn it off to use your scheduled movements.</p>
                 </fieldset>
                 <div className="grid gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
                     <div className="space-y-3 min-w-0">
-                        <div className="metric-ring-card rounded-xl border border-slate-700 bg-slate-800/40 p-5 flex flex-col items-center gap-3" aria-label="Ring preview">
+                        <div className="metric-ring-card ring-settings-sample rounded-xl border border-slate-700 bg-slate-800/40 p-5 flex flex-col items-center gap-3" data-ring-status="good" aria-label="Ring preview">
                             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Live preview</span>
-                            <MetricRingVisual key={previewRun} settings={previewSettings} moving={moving} percentage={99.06} displayValue="99.06%" colors={{text:'text-emerald-400',ring:'text-emerald-500'}} preview />
+                            <MetricRingVisual key={previewRun} settings={previewSettings} moving={moving} metric={overviewRingMetrics.find(metric=>metric.key==='onTime')} value={99.06} preview />
                             <span aria-live="polite" className="text-xs font-semibold text-slate-200">{settings.enabled && settings.glowMode !== 'off' ? lighting.name : 'Lighting off'}</span>
                             <span className="text-center text-[11px] text-slate-400">{settings.enabled && settings.autoRotate && settings.glowMode !== 'off' && settings.glowStrength > 0 ? `Rotating every ${rotationLabel(settings.rotateInterval)}` : 'Your selected look'}</span>
                         </div>
@@ -15458,12 +15827,13 @@ html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #56
                                     <fieldset disabled={settings.motion === 'none'} className="space-y-4 disabled:opacity-40"><label className="block text-xs font-bold text-slate-300">{settings.motion === 'rotation' ? 'Rotation speed' : 'Movement strength'}: {settings.motionStrength}%<input aria-label="Ring movement strength" type="range" min="0" max="100" step="5" value={settings.motionStrength} onInput={event => change({...settings,motionStrength:Number(event.currentTarget.value)})} className="mt-3 w-full accent-indigo-400" /></label><label className="block text-xs font-bold text-slate-300">Repeat every {settings.motionInterval === 60 ? '1 hour' : `${settings.motionInterval} minutes`}<input aria-label="Ring movement repeat interval" type="range" min="1" max="120" step="1" value={settings.motionInterval} onInput={event => change({...settings,motionInterval:Number(event.currentTarget.value)})} className="mt-3 w-full accent-indigo-400" /></label><label className="block text-xs font-bold text-slate-300">Move for {settings.motionDuration} seconds<input aria-label="Ring movement duration" type="range" min="5" max="60" step="5" value={settings.motionDuration} onInput={event => change({...settings,motionDuration:Number(event.currentTarget.value)})} className="mt-3 w-full accent-indigo-400" /></label></fieldset>
                                     <label className="block text-xs font-bold text-slate-300">Mouse hover<select aria-label="Ring hover effect" value={settings.hoverEffect} onChange={event => change({...settings,hoverEffect:event.target.value})} className={fieldClass}><option value="none">Off / Steady</option><option value="highlight">Highlight score</option><option value="expand">Expand ring</option></select></label>
                                 </div>
-                                <label className="block border-t border-slate-700 pt-4 text-xs font-bold text-slate-300">Full ring presets<select aria-label="Ring look preset" value={preset} onChange={event => change({...DASHBOARD_RING_PRESETS.find(item => item.id === event.target.value).settings})} className={fieldClass}><option value="custom" disabled>Custom look</option>{DASHBOARD_RING_PRESETS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                                <label className="block border-t border-slate-700 pt-4 text-xs font-bold text-slate-300">Full ring presets<select aria-label="Ring look preset" value={preset} onChange={event => change({...DASHBOARD_RING_PRESETS.find(item => item.id === event.target.value).settings,...arcOptions})} className={fieldClass}><option value="custom" disabled>Custom look</option>{DASHBOARD_RING_PRESETS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
                             </fieldset>
                         </details>
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={save} disabled={disabled || !dirty} className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">{busy ? 'Saving…' : 'Save ring settings'}</button><button type="button" disabled={disabled} onClick={() => change({...settings,enabled:true,motion:'none',glowMode:settings.glowMode === 'off' ? 'off' : 'steady',hoverEffect:'none',autoRotate:false,showcase:false})} className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-bold text-slate-300">Make rings steady</button><button type="button" disabled={disabled} onClick={() => change({...defaultDashboardRingSettings(),showcase:false})} className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-bold text-slate-300">Restore original look</button><button type="button" disabled={disabled || !dirty} onClick={discard} className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-bold text-slate-300">Discard ring changes</button></div>
+                </>}
+                <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={save} disabled={disabled || !dirty} className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">{busy ? 'Saving…' : 'Save ring settings'}</button><button type="button" disabled={disabled} onClick={() => change({...settings,arcMode:'steady',enabled:true,motion:'none',glowMode:settings.glowMode === 'off' ? 'off' : 'steady',hoverEffect:'none',autoRotate:false,showcase:false})} className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-bold text-slate-300">Make rings steady</button><button type="button" disabled={disabled} onClick={() => change({...defaultDashboardRingSettings(),showcase:false})} className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-bold text-slate-300">Restore defaults</button><button type="button" disabled={disabled || !dirty} onClick={discard} className="rounded-lg border border-slate-600 px-4 py-2 text-xs font-bold text-slate-300">Discard ring changes</button></div>
                 <p className="text-xs text-slate-400">Only you can change these settings. Devices set to reduced motion keep animated effects still.</p>
             </section>;
         };
@@ -15659,29 +16029,13 @@ const prepareScreenshotEmailCopy = async (source, options = {}) => {
         ? Math.min(SCREENSHOT_EMAIL_WIDTH, requestedWidth) : SCREENSHOT_EMAIL_WIDTH;
     const width = Math.max(1, Math.min(Math.round(limit), image.width));
     const height = Math.max(1, Math.round(image.height * width / image.width));
-    const pixelWidth = image.width, pixelHeight = image.height;
-    const canvas = document.createElement('canvas');
-    canvas.width = pixelWidth; canvas.height = pixelHeight;
-    try {
-        const context = canvas.getContext('2d');
-        if (!context) throw new Error('The screenshot could not be prepared.');
-        // Direct coaching copies preserve the PNG alpha; other report copies keep their existing matte.
-        if (!options.preserveTransparency) {
-            context.fillStyle = options.background || SCREENSHOT_BACKGROUND;
-            context.fillRect(0, 0, pixelWidth, pixelHeight);
-        }
-        context.imageSmoothingEnabled = false;
-        context.drawImage(image, 0, 0);
-        const dataUrl = canvas.toDataURL('image/png');
-        const png = await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The screenshot could not be prepared.')), 'image/png'));
-        const label = String(options.label || 'Dashboard screenshot').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-        const imageMarkup = '<img src="' + dataUrl + '" width="' + width + '" height="' + height + '" alt="' + label + '" style="display:inline-block;width:' + width + 'px;max-width:100%;height:auto;margin:0;border:0;border-radius:14px;background-color:transparent!important;outline:none;box-shadow:none;">';
-        const markup = options.preserveTransparency
-            ? '<table role="presentation" class="MsoNormalTable" align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;padding:0;border:0;border-collapse:collapse;background:transparent!important;box-shadow:none;"><tbody><tr><td style="padding:0;border:0;background:transparent!important;box-shadow:none;">' + imageMarkup + '</td></tr></tbody></table>'
-            : '<div align="center" style="width:100%;margin:0;padding:0;text-align:center;border:0;outline:none;box-shadow:none;background-color:transparent;">' + imageMarkup + '</div>';
-        const html = new Blob([markup], {type:'text/html'});
-        return {png, html, width, height, pixelWidth, pixelHeight};
-    } finally { image.close(); canvas.width = 0; canvas.height = 0; }
+    image.close();
+    const dataUrl = 'data:image/png;base64,' + await encodeChatFile(source);
+    const label = String(options.label || 'Dashboard screenshot').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+    const clearStyle = 'padding:0;border:0;background:transparent!important;box-shadow:none;';
+    const imageMarkup = '<img src="' + dataUrl + '" width="' + width + '" height="' + height + '" alt="' + label + '" style="display:block;width:' + width + 'px;max-width:100%;height:auto;margin:0;outline:none;' + clearStyle + '">';
+    const markup = '<table role="presentation" class="MsoNormalTable" align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;' + clearStyle + '"><tbody><tr><td style="' + clearStyle + '">' + imageMarkup + '</td></tr></tbody></table>';
+    return {png:source, html:new Blob([markup], {type:'text/html'})};
 };
 const copyScreenshotImageForEmail = async (createImage, options = {}) => {
     if (!navigator.clipboard?.write || !window.ClipboardItem || (ClipboardItem.supports && !ClipboardItem.supports('image/png'))) throw new Error('Image copying is unavailable.');
@@ -15692,15 +16046,16 @@ const copyScreenshotImageForEmail = async (createImage, options = {}) => {
     if (!ClipboardItem.supports || ClipboardItem.supports('text/html')) {
         const html = prepared.then(result => result.html);
         html.catch(() => {});
-        if (options.preserveTransparency) {
-            try { await navigator.clipboard.write([new ClipboardItem({'text/html':html,'image/png':png})]); return {formatted:true}; }
-            catch (error) {
-                if (!['DataError','NotSupportedError'].includes(error?.name) || options.requireFormatting) throw error;
-                await navigator.clipboard.write([new ClipboardItem({'image/png':png})]);return {formatted:false};
-            }
+        try {
+            await navigator.clipboard.write([new ClipboardItem({'image/png':png,'text/html':html})]);
+            return {formatted:true};
+        } catch (error) {
+            if (!['DataError','NotSupportedError'].includes(error?.name)) throw error;
         }
-        try { await navigator.clipboard.write([new ClipboardItem({'text/html':html})]); return {formatted:true}; }
-        catch (error) { if (!['DataError','NotSupportedError'].includes(error?.name)) throw error; }
+        if (options.requireFormatting) {
+            await navigator.clipboard.write([new ClipboardItem({'text/html':html})]);
+            return {formatted:true};
+        }
     }
     if (options.requireFormatting) throw new Error('Formatted image copying is unavailable.');
     await navigator.clipboard.write([new ClipboardItem({'image/png':png})]);
@@ -15852,7 +16207,7 @@ const copyScreenshotImageForEmail = async (createImage, options = {}) => {
                 if (!image?.blob || copying) return;
                 const blob=image.blob;setCopying(true);setCopyNotice('');
                 try {
-                    await copyScreenshotImageForEmail(()=>blob,{preserveTransparency:true,maxWidth:900,label:'Driver coaching card'});
+                    await copyScreenshotImageForEmail(()=>blob,{maxWidth:900,label:'Driver coaching card'});
                     setCopyNotice('Image copied. Paste into Signal or another app.');
                 } catch (error) { setCopyNotice(error.message || 'Copying was unavailable. You can still download the PNG.'); }
                 finally { setCopying(false); }
@@ -16643,7 +16998,7 @@ const TeamAssignmentReport = ({data, activeDate, displayDateString, preloadSched
         const SameDayRouteCards = ({teams,onOpen,openRowId}) => !teams.length?null:<div className={'mt-4 grid grid-cols-1 gap-4'+(teams.length>1?' md:grid-cols-2':'')}>
             {teams.map(team=>{const {row,spec,tone,label,eta}=team;const statusColor=tone==='red'?'text-rose-400':tone==='green'?'text-emerald-400':tone==='amber'?'text-amber-400':'text-slate-400';return <div key={String(row.id)} data-dashboard-card="same-day" data-same-day-route={String(row.id)} role="region" aria-label={spec.name+' '+(row.serviceUnit || '')} className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md flex justify-between items-center relative overflow-hidden group">
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none"><Truck className="w-24 h-24 text-slate-100"/></div>
-                <div className="flex flex-col relative z-10 min-w-0"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-indigo-400 shrink-0"/>{spec.name}</span><span className="text-lg font-semibold text-white leading-tight mt-1">{row.serviceUnit || 'Same-day route'}</span><button type="button" aria-expanded={String(openRowId)===String(row.id)} onClick={()=>onOpen(String(row.id))} className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-300 mt-1.5 text-left">Arrival details<ChevronRight className="w-3 h-3"/></button></div>
+                <div className="flex flex-col relative z-10 min-w-0"><span className="dashboard-card-title text-slate-400 mb-1 flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-indigo-400 shrink-0"/>{spec.name}</span><span className="text-lg font-semibold text-white leading-tight mt-1">{row.serviceUnit || 'Same-day route'}</span><button type="button" aria-expanded={String(openRowId)===String(row.id)} onClick={()=>onOpen(String(row.id))} className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-300 mt-1.5 text-left">Arrival details<ChevronRight className="w-3 h-3"/></button></div>
                 <div className="text-right flex flex-col items-end gap-1.5 mt-1 relative z-10 shrink-0"><div className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-700/60 pb-1.5 w-full text-right">Team arrival</div><div className={'text-[11px] font-black uppercase tracking-wide inline-flex items-center justify-end gap-1 '+statusColor}><span className="inline-block w-1.5 h-1.5 rounded-full bg-current shrink-0"/>{label}</div><div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">ETA {preloadClockLabel(eta)}</div></div>
             </div>;})}
         </div>;
@@ -18263,23 +18618,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                 context.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
                 context.fillStyle = SCREENSHOT_BACKGROUND;
                 context.fillRect(0, 0, width, height);
-                // Cut the curve at export resolution so there are no shaded pixels in the corners.
-                const radiusX = 16 * canvas.width / width;
-                const radiusY = 16 * canvas.height / height;
-                context.save();
-                context.setTransform(1, 0, 0, 1, 0, 0);
-                for (let row = 0; row + 0.5 < radiusY; row++) {
-                    const offset = 1 - (row + 0.5) / radiusY;
-                    const cut = Math.round(radiusX * (1 - Math.sqrt(1 - offset * offset)));
-                    if (!cut) break;
-                    const right = canvas.width - cut;
-                    const bottom = canvas.height - 1 - row;
-                    context.clearRect(0, row, cut, 1);
-                    context.clearRect(right, row, cut, 1);
-                    context.clearRect(0, bottom, cut, 1);
-                    context.clearRect(right, bottom, cut, 1);
-                }
-                context.restore();
+                clearScreenshotCorners(context, 16 * canvas.width / width);
 
                 const text = (value, x, y, size, color, bold = false, align = 'left', maxWidth = titleWidth) => {
                     context.font = (bold ? '700 ' : '400 ') + size + 'px "Segoe UI", sans-serif';
@@ -18359,7 +18698,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                         return blob;
                     });
                     const emailCopy = copyScreenshotImageForEmail(() => png, {
-                        background:SCREENSHOT_BACKGROUND, maxWidth:740, label:contractor.name + ' insurance policy', requireFormatting:true
+                        maxWidth:740, label:contractor.name + ' insurance policy', requireFormatting:true
                     }).catch(() => null);
                     await png;
                     const copied = await emailCopy;
@@ -19067,10 +19406,20 @@ function LeadershipAccessPage(){
             return Number.isSafeInteger(number) && number >= 0 ? number : null;
         };
         
+        const driverSurveyMinimum = period => period === 'wtd' ? 10 : 40;
+        const MetricsDriverTargets = ({period}) => {
+            if (!['wtd','mtd'].includes(period)) return null;
+            return <section className="metrics-driver-targets" aria-label="Driver targets">
+                <h3>Driver targets</h3>
+                <dl><div><dt>Survey count</dt><dd>≥ {driverSurveyMinimum(period)}</dd></div>
+                    {overviewRingMetrics.filter(metric=>metric.goal!=null).map(metric=><div key={metric.key}><dt>{metric.title}</dt><dd>{metric.lower?'≤':'≥'} {metric.goal.toFixed(2)}{metric.key==='surveyAvg'?'':'%'}</dd></div>)}
+                </dl>
+            </section>;
+        };
         const surveyCountTone = (count, period, total = false) => {
             const value = surveyNumber(count);
             if (total || value === null) return 'response-neutral';
-            if (value >= (period === 'wtd' ? 10 : 40)) return 'response-green';
+            if (value >= driverSurveyMinimum(period)) return 'response-green';
             if (value >= (period === 'wtd' ? 6 : 20)) return 'response-amber';
             return 'response-red';
         };
@@ -19245,6 +19594,26 @@ function LeadershipAccessPage(){
             return {resolve, format, idMatch, needsReview, confirmedKey, workedTogether, roster:canonicalRoster};
         };
 
+        const getSurveyPeriodRoutes = (history, period) => {
+            const routes = [], reportedDates = new Set();
+            for (const day of history) {
+                if (day.date < period.startDate || day.date > period.throughDate || !Array.isArray(day.routeTable)) continue;
+                reportedDates.add(day.date);
+                for (const row of getCountableRouteRows(day)) routes.push(row);
+            }
+            const expectedDays = 1 + (Date.parse(period.throughDate+'T00:00:00Z') - Date.parse(period.startDate+'T00:00:00Z')) / 86400000;
+            const missingDays = Math.max(0, expectedDays - reportedDates.size);
+            let total = null;
+            if (expectedDays > 0 && !missingDays) {
+                total = 0;
+                for (const route of routes) {
+                    const stops = surveyNumber(route.stops);
+                    if (stops === null) {total = null; break;}
+                    total += stops;
+                }
+            }
+            return {routes, total, missingDays};
+        };
         const buildSurveyStopTotals = (history, period, metrics, master, nameMappings = {}, location, directory) => {
             const people=directory || createMetricsPeople(master,history,nameMappings,location,period.throughDate);
             const names=new Set(people.roster);
@@ -19270,30 +19639,21 @@ function LeadershipAccessPage(){
                 return routeLinks.get(key);
             };
             const assignments = [], spellings = new Map(), separateCrew = new Set();
-            const reportedDates = new Set();
-            for (const day of history) {
-                if (day.date < period.startDate || day.date > period.throughDate) continue;
-                if (Array.isArray(day.routeTable)) reportedDates.add(day.date);
-                for (const route of getCountableRouteRows(day)) {
-                    const crew = [...new Set([personKey(route.driver),personKey(route.helper)].filter(Boolean))];
-                    assignments.push({crew, stops:surveyNumber(route.stops)});
-                    for (const key of crew) {
-                        const match = routePerson(key);
-                        if (key === match) continue;
-                        if (!spellings.has(match)) spellings.set(match,new Set());
-                        spellings.get(match).add(key);
-                        if (crew.some(other => other !== key && routePerson(other) === match)) separateCrew.add(key);
-                    }
+            const {routes,total,missingDays} = getSurveyPeriodRoutes(history,period);
+            if (missingDays) return {byRow:metrics.map(()=>null), total:null, missingDays};
+            for (const route of routes) {
+                const crew = [...new Set([personKey(route.driver),personKey(route.helper)].filter(Boolean))];
+                assignments.push({crew, stops:surveyNumber(route.stops)});
+                for (const key of crew) {
+                    const match = routePerson(key);
+                    if (key === match) continue;
+                    if (!spellings.has(match)) spellings.set(match,new Set());
+                    spellings.get(match).add(key);
+                    if (crew.some(other => other !== key && routePerson(other) === match)) separateCrew.add(key);
                 }
             }
-            const expectedDays = 1 + (Date.parse(period.throughDate+'T00:00:00Z') - Date.parse(period.startDate+'T00:00:00Z')) / 86400000;
-            if (expectedDays < 1 || reportedDates.size !== expectedDays) {
-                return {byRow:metrics.map(()=>null), total:null, missingDays:Math.max(0,expectedDays-reportedDates.size)};
-            }
             const byPerson = new Map();
-            let total = 0;
             for (const {crew,stops} of assignments) {
-                total = stops === null || total === null ? null : total + stops;
                 for (const key of crew) {
                     const match = routePerson(key);
                     const name = separateCrew.has(key) || (spellings.get(match)?.size > 1 && !people.roster.has(match)) ? key : match;
@@ -19348,7 +19708,7 @@ function LeadershipAccessPage(){
             const number = metricScoreNumber(value);
             return number === null ? '—' : number.toFixed(2) + suffix;
         };
-        const SurveyResponseBar = ({count, stops, period, total = false}) => {
+        const getSurveyResponse = (count, stops) => {
             const surveys = surveyNumber(count);
             const recordedStops = surveyNumber(stops);
             let rate = null, reason;
@@ -19358,6 +19718,10 @@ function LeadershipAccessPage(){
                 rate = 0;
                 reason = 'No recorded stops for this period. Response rate displays as 0.00%.';
             } else rate = surveys / recordedStops * 100;
+            return {rate,reason,surveys,recordedStops};
+        };
+        const SurveyResponseBar = ({count, stops, period, total = false}) => {
+            const {rate,reason,surveys} = getSurveyResponse(count,stops);
             return <span className={'response-meter ' + surveyCountTone(surveys, period, total)} title={reason}>
                 <span className="response-track" aria-hidden="true"><span className="response-fill" style={{width: Math.min(rate ?? 0,100) + '%'}} /></span>
                 <span className="response-value" aria-label={rate === null ? reason : undefined}>{formatMetricScore(rate,'%')}</span>
@@ -19377,6 +19741,7 @@ function LeadershipAccessPage(){
             const canActivateLocations = isAdminUser && locationContext?.registryAvailable && !locationEnabled;
             const isLocationAdmin = hasSiteAdmin(locationContext,ACTIVE_LOCATION);
             const canManageRecords = isAdminUser || isLocationAdmin;
+            const allowRingSettings = canManageRingSettings(user);
             const allowLocationAppearance = canManageRecords || (locationContext?.registry.locationRolesVersion !== 1 && locationContext?.assignment.role === 'admin');
             const routesEnabled = !locationEnabled || canUseLocationFeature(locationContext.registry, ACTIVE_LOCATION, 'routes');
             const preloadEnabled = routesEnabled && (!locationEnabled || canUseLocationFeature(locationContext.registry, ACTIVE_LOCATION, 'preload'));
@@ -19499,8 +19864,8 @@ function LeadershipAccessPage(){
                 if (!routesEnabled && activeTab === 'routes') updateActiveTab('overview');
             },[routesEnabled,activeTab]);
             const [routesSubTab, setRoutesSubTab] = useState('table');
-            const ringMotionActive = useMetricRingMotion({ ...savedDashboardRings, enabled: savedDashboardRings.enabled && !savedDashboardRings.showcase && ringSettingsLoaded && activeTab === 'overview' });
-            const displayedDashboardRings = useMetricRingLighting(savedDashboardRings, ringSettingsLoaded && activeTab === 'overview');
+            const ringMotionActive = useMetricRingMotion({ ...savedDashboardRings, enabled: savedDashboardRings.enabled && savedDashboardRings.arcMode === 'classic' && !savedDashboardRings.showcase && ringSettingsLoaded && activeTab === 'overview' });
+            const displayedDashboardRings = useMetricRingLighting(savedDashboardRings, savedDashboardRings.arcMode === 'classic' && ringSettingsLoaded && activeTab === 'overview');
             const canEditSection = section => accountHasPermission(user,ownerPermissionKey(section),accessProfile) && (!ownerPolicyEnabled || (ownerLocksReady && !ownerIsSectionLocked(section,activeDate))); 
             const activeEditPermission = activeTab === 'routes' && ['morning-report','team-assignment'].includes(routesSubTab) ? 'overview' : (({ notes: 'shiftNotes', driverHub: 'preload' })[activeTab] || activeTab);
             const isEditing = isEditMode && accountHasPermission(user, activeEditPermission, accessProfile) && !ownerActiveLock;
@@ -21643,7 +22008,7 @@ function LeadershipAccessPage(){
                             node.style.display = 'none';
                         });
                         screenshotClone.querySelectorAll('[data-panel-screenshot-only="true"], [data-master-screenshot-only="true"]').forEach(node => {
-                            node.style.display = 'flex';
+                            node.style.display = node.dataset.panelScreenshotDisplay || 'flex';
                         });
                         if (isMorningReport) {
                             screenshotClone.querySelectorAll('.report-edit-only').forEach(node => node.style.setProperty('display', 'none', 'important'));
@@ -21692,13 +22057,18 @@ function LeadershipAccessPage(){
                         }
                         await new Promise(resolve => requestAnimationFrame(resolve));
                         await new Promise(resolve => setTimeout(resolve, 80));
+                        if (element === metricsScreenshotRef.current && screenshotClone.querySelector('#metrics-period-table')) {
+                            // On small screens the exported table can be wider than its on-screen card.
+                            screenshotClone.style.boxSizing = 'border-box';
+                            screenshotClone.style.width = Math.max(screenshotClone.offsetWidth, screenshotClone.scrollWidth) + 'px';
+                        }
                         const captureRect = screenshotClone.getBoundingClientRect();
                         const captureWidth = Math.ceil(isMasterPanel || isPreloadTable || isReportPanel
                             ? captureRect.width
                             : Math.max(screenshotClone.scrollWidth, captureRect.width, baseWidth));
                         const captureHeight = isMasterPanel || isPreloadTable || isReportPanel
                             ? Math.ceil(captureRect.height)
-                            : Math.ceil(Math.max(screenshotClone.scrollHeight, captureRect.height)) + (isBonusPanel ? 0 : 6);
+                            : Math.ceil(Math.max(screenshotClone.scrollHeight, captureRect.height)) + (isBonusPanel || element === metricsScreenshotRef.current ? 0 : 6);
                         const image = await downloadScreenshotPng(screenshotClone, fileName, {
                             backgroundColor: SCREENSHOT_BACKGROUND,
                             useCORS: true,
@@ -22369,7 +22739,7 @@ function LeadershipAccessPage(){
                 finally { setSettingsBusy(false); }
             };
             const editDashboardRingDraft = next => {
-                if (!allowLocationAppearance || !ringSettingsLoaded || settingsBusy) return;
+                if (!allowRingSettings || !ringSettingsLoaded || settingsBusy) return;
                 if (!ringDraftDirtyRef.current) ringDraftBaselineRef.current = savedDashboardRings;
                 const normalized = normalizeDashboardRingSettings(next), dirty = !sameSavedValue(normalized, savedDashboardRings);
                 ringDraftDirtyRef.current = dirty; setRingDraftDirty(dirty); setRingDraft(normalized);
@@ -22381,7 +22751,7 @@ function LeadershipAccessPage(){
                 setSettingsError(''); setSettingsMessage('');
             };
             const saveDashboardRingSettings = async () => {
-                if (!allowLocationAppearance || settingsBusy || !ringSettingsLoaded || !ringDraftDirty || !settingsReady) return;
+                if (!canManageRingSettings(auth.currentUser) || settingsBusy || !ringSettingsLoaded || !ringDraftDirty || !settingsReady) return;
                 const next = normalizeDashboardRingSettings(ringDraft), baseline = ringDraftBaselineRef.current || savedDashboardRings;
                 setSettingsBusy(true); setSettingsError(''); setSettingsMessage('');
                 try {
@@ -23916,9 +24286,9 @@ function LeadershipAccessPage(){
                 return <span className={`text-[11px] font-bold ${isBetter ? 'text-emerald-400' : 'text-rose-400'} flex items-center gap-1`}><ArrowUp className={`w-3 h-3 ${diff < 0 ? 'rotate-180' : ''}`} /> {toFixedSafe(Math.abs(diff))}{isPercent ? '%' : ''}</span>;
             };
 
-            const StatusBadge = ({ status, onClick, isEditing, trueLabel = 'COMPLIANT', actionLabel }) => (
-                <button type="button" disabled={!isEditing} onClick={onClick} aria-label={actionLabel} className={`px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 transition-all ${status ?"bg-emerald-900/40 text-emerald-400 border border-emerald-500/30" :"bg-amber-900/40 text-amber-400 border border-amber-500/30"} ${isEditing ?"hover:scale-105 cursor-pointer ring-2 ring-transparent hover:ring-indigo-500/50" :""}`}>
-                    {status ? <CheckCircle2 className="w-3 h-3" /> : <Info className="w-3 h-3" />} {status ? trueLabel :"PENDING"}
+            const StatusBadge = ({ status, onClick, isEditing, trueLabel = 'Compliant', actionLabel }) => (
+                <button type="button" disabled={!isEditing} onClick={onClick} aria-label={actionLabel} className={`overview-check-badge px-3 py-1 rounded-full flex items-center gap-1.5 transition-all ${status ?"bg-emerald-900/40 text-emerald-400 border border-emerald-500/30" :"bg-amber-900/40 text-amber-400 border border-amber-500/30"} ${isEditing ?"hover:scale-105 cursor-pointer ring-2 ring-transparent hover:ring-indigo-500/50" :""}`}>
+                    {status ? <CheckCircle2 className="w-3 h-3" /> : <Info className="w-3 h-3" />} {status ? trueLabel :"Pending"}
                 </button>
             );
 
@@ -24372,7 +24742,7 @@ function LeadershipAccessPage(){
                                             className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md relative overflow-hidden group w-full text-left enabled:cursor-pointer disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
                                         >
                                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none"><Truck className="w-24 h-24 text-slate-100" /></div>
-                                            <span className="text-slate-400 text-[11px] font-bold uppercase tracking-widest block mb-1 relative z-10">Number of Routes</span>
+                                            <span className="dashboard-card-title text-slate-400 block mb-1 relative z-10">Number of Routes</span>
                                             <div className="flex items-baseline gap-3 relative z-10">
                                                 <div className="text-3xl font-black text-white">{String(currentKPI.routes || 0)}</div>
                                                 <TrendIndicator current={Number(currentKPI.routes || 0)} previous={trends.yesterday.routes} isPercent={false} />
@@ -24383,7 +24753,7 @@ function LeadershipAccessPage(){
                                         <div data-dashboard-card="same-day" className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md relative overflow-hidden group transition-all">
                                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none text-slate-100"><Package className="w-20 h-20" /></div>
                                             <div className="relative z-10">
-                                                <span className="text-slate-400 text-[11px] font-bold uppercase tracking-widest block mb-1">Number of Same Day Routes</span>
+                                                <span className="dashboard-card-title text-slate-400 block mb-1">Number of Same Day Routes</span>
                                                 <div className="flex items-baseline gap-3 relative z-10">
                                                     <div className="text-3xl font-black text-white">{String(currentKPI.sameDayRoutes || 0)}</div>
                                                     <TrendIndicator current={Number(currentKPI.sameDayRoutes || 0)} previous={trends.yesterday.sameDayRoutes} isPercent={false} />
@@ -24414,7 +24784,7 @@ function LeadershipAccessPage(){
                                             return (
                                                 <div key={idx} data-dashboard-card="performance" data-dashboard-card-tone={textColor} className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md">
                                                     <div className="dashboard-kpi-heading flex justify-between items-center mb-1">
-                                                        <span className="text-xs font-bold text-slate-400 uppercase block">{String(item.label)}</span>
+                                                        <span className="dashboard-card-title text-slate-400 block">{String(item.label)}</span>
                                                         <div className="flex items-center gap-2">
                                                             <span className={`text-base font-bold ${textColor}`}>{String(displayValue)}</span>
                                                             <span className="text-[9px] font-bold text-slate-500 uppercase border-l border-slate-600 pl-2">TGT: {String(item.target)}</span>
@@ -24438,63 +24808,24 @@ function LeadershipAccessPage(){
                                     </div>
 
                                     {(() => {
-                                        const activeDateObj = new Date(activeDate + 'T12:00:00');
-                                        const yesterdayObj = new Date(activeDateObj.getTime() - 86400000);
-                                        const yesterdayStr = yesterdayObj.toISOString().split('T')[0];
-                                        
-                                        const yesterdayData = historyData.find(h => h.date === yesterdayStr) || null;
-                                        const yesterdayMtdTotals = yesterdayData?.metricsTracker?.mtdTotals || calculateMetricsTotals(yesterdayData?.metricsTracker?.mtd) || { surveyCnt: 0, surveyAvg: 0, onTime: 0, completion: 0, exchange: 0 };
-                                        
-                                        const mtdTotals = data.metricsTracker?.mtdTotals || calculateMetricsTotals(data.metricsTracker?.mtd) || { surveyCnt: 0, surveyAvg: 0, onTime: 0, completion: 0, exchange: 0 };
-                                        const mtdTargetCnt = 800;
-                                        const wtdTotals = data.metricsTracker?.wtdTotals || calculateMetricsTotals(data.metricsTracker?.wtd) || { surveyCnt: 0, surveyAvg: 0, onTime: 0, completion: 0, exchange: 0 };
-
-                                        const getScoreColor = (type, val) => {
-                                            const num = Number(val);
-                                            if (type === 'cnt') {
-                                                const pct = mtdTargetCnt > 0 ? (num / mtdTargetCnt) * 100 : 0;
-                                                if (pct >= 100) return { text: 'text-emerald-400', ring: 'text-emerald-500' };
-                                                if (pct >= 50) return { text: 'text-amber-400', ring: 'text-amber-500' };
-                                                return { text: 'text-rose-400', ring: 'text-rose-500' };
+                                        const priorDate = getMetricsReportingDate(activeDate);
+                                        const sameReportMonth = getMetricsReportingDate(priorDate).slice(0,7) === priorDate.slice(0,7);
+                                        const priorDay = sameReportMonth ? historyData.find(day => day.date === priorDate) : null;
+                                        const totals = (tracker,period) => {
+                                            const saved = tracker?.[period+'Totals'];
+                                            if (saved) return saved;
+                                            const rows = tracker?.[period], derived = calculateMetricsTotals(rows);
+                                            if (derived && rows.some(row=>surveyNumber(row.surveyCnt) === null)) {
+                                                return {...derived,surveyCnt:null,surveyAvg:null};
                                             }
-                                            if (type === 'avg') return num >= 9.65 ? { text: 'text-emerald-400', ring: 'text-emerald-500' } : { text: 'text-rose-400', ring: 'text-rose-500' };
-                                            if (type === 'ot') return num >= 97.50 ? { text: 'text-emerald-400', ring: 'text-emerald-500' } : num >= 94.00 ? { text: 'text-amber-400', ring: 'text-amber-500' } : { text: 'text-rose-400', ring: 'text-rose-500' };
-                                            if (type === 'comp') return num >= 98.05 ? { text: 'text-emerald-400', ring: 'text-emerald-500' } : num >= 96.05 ? { text: 'text-amber-400', ring: 'text-amber-500' } : { text: 'text-rose-400', ring: 'text-rose-500' };
-                                            if (type === 'exch') return num <= 1.70 ? { text: 'text-emerald-400', ring: 'text-emerald-500' } : num <= 3.00 ? { text: 'text-amber-400', ring: 'text-amber-500' } : { text: 'text-rose-400', ring: 'text-rose-500' };
-                                            return { text: 'text-slate-400', ring: 'text-slate-500' };
+                                            return derived;
                                         };
-
-                                        const ringCards = [
-                                            { title:"Survey Count", type: 'cnt', value: mtdTotals.surveyCnt, displayValue: String(mtdTotals.surveyCnt), targetDisplay: `Target: ${mtdTargetCnt}/Month`, pct: mtdTargetCnt > 0 ? (Number(mtdTotals.surveyCnt) / mtdTargetCnt) * 100 : 0, icon: Users, yestValue: String(yesterdayMtdTotals.surveyCnt), wtdValue: String(wtdTotals.surveyCnt) },
-                                            { title:"Survey Average", type: 'avg', value: mtdTotals.surveyAvg, displayValue: String(Number(mtdTotals.surveyAvg).toFixed(2)), targetDisplay:"Target: 9.65", pct: (Number(mtdTotals.surveyAvg) / 10) * 100, icon: Target, yestValue: String(Number(yesterdayMtdTotals.surveyAvg).toFixed(2)), wtdValue: String(Number(wtdTotals.surveyAvg).toFixed(2)) },
-                                            { title:"On-Time Delivery", type: 'ot', value: mtdTotals.onTime, displayValue: `${Number(mtdTotals.onTime).toFixed(2)}%`, targetDisplay:"Target: 97.50%", pct: Number(mtdTotals.onTime), icon: Clock, yestValue: `${Number(yesterdayMtdTotals.onTime).toFixed(2)}%`, wtdValue: `${Number(wtdTotals.onTime).toFixed(2)}%` },
-                                            { title:"Completion", type: 'comp', value: mtdTotals.completion, displayValue: `${Number(mtdTotals.completion).toFixed(2)}%`, targetDisplay:"Target: 98.05%", pct: Number(mtdTotals.completion), icon: CheckCircle2, yestValue: `${Number(yesterdayMtdTotals.completion).toFixed(2)}%`, wtdValue: `${Number(wtdTotals.completion).toFixed(2)}%` },
-                                            { title:"Exchange", type: 'exch', value: mtdTotals.exchange, displayValue: `${Number(mtdTotals.exchange).toFixed(2)}%`, targetDisplay:"Target: 1.70%", pct: 100 - Number(mtdTotals.exchange), icon: ActivitySquare, yestValue: `${Number(yesterdayMtdTotals.exchange || 0).toFixed(2)}%`, wtdValue: `${Number(wtdTotals.exchange || 0).toFixed(2)}%` }
-                                        ];
-
-                                        return (
-                                            <MetricRingRow>
-                                                {ringCards.map((card, idx) => {
-                                                    const colors = getScoreColor(card.type, card.value);
-                                                    const pctSafeguard = Math.max(0, Math.min(100, isNaN(card.pct) ? 0 : card.pct));
-                                                    const Icon = card.icon;
-                                                    return (
-                                                        <div key={idx} data-dashboard-card="metric" data-dashboard-card-tone={colors.text} className="metric-ring-card bg-slate-900 px-5 pt-2 pb-2 rounded-2xl border border-slate-800 shadow-2xl flex flex-col items-center justify-center relative overflow-hidden">
-                                                            <div className="absolute top-4 right-4 opacity-[0.03]"><Icon className="w-16 h-16 text-white" /></div>
-                                                            <div className="w-full h-[156px] grid place-items-center shrink-0"><MetricRingVisual centered settings={displayedDashboardRings} moving={ringMotionActive} percentage={pctSafeguard} displayValue={card.displayValue} colors={colors} sequenceIndex={idx} /></div>
-                                                            <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-widest z-10 text-center mb-1 ${colors.text}`}>{card.title}</span>
-                                                            <div className="z-10 text-[9px] font-black text-indigo-200/90 uppercase tracking-[0.1em] text-center bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 shadow-inner flex items-center gap-2 whitespace-nowrap">
-                                                                <span>{card.yestValue} YEST</span><span className="text-slate-700">|</span><span>{card.wtdValue} WTD</span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </MetricRingRow>
-                                        );
+                                        const month = totals(data.metricsTracker,'mtd'), week = totals(data.metricsTracker,'wtd'), prior = totals(priorDay?.metricsTracker,'mtd');
+                                        return <OverviewPerformance settingsOpen={isSettingsOpen} reportDate={activeDate} locationName={locationName} history={historyData} historyReady={routeWindowHistoryLoaded} month={month} week={week} prior={prior} settings={displayedDashboardRings} moving={ringMotionActive}/>;
                                     })()}
 
                                     <div data-dashboard-card="checklist" className="dashboard-compliance-panel bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-md mb-4">
-                                        <div className="dashboard-compliance-heading px-4 py-3 bg-slate-900/50 border-b border-slate-700 flex justify-between items-center"><span className="text-xs font-bold text-slate-400 uppercase">Compliance Checklist</span></div>
+                                        <div className="dashboard-compliance-heading px-4 py-3 bg-slate-900/50 border-b border-slate-700 flex justify-between items-center"><span className="dashboard-card-title text-slate-400">Compliance Checklist</span></div>
                                         <div className="p-4">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 {(data.loadout?.compliance || []).map((item, idx) => {
@@ -24505,7 +24836,7 @@ function LeadershipAccessPage(){
                                                     const canEmail = routeUpdatePending && !isLoading && canEditSection('overview') && !routeUpdateEmailNotice?.busy;
                                                     return (
                                                         <div key={idx} className="dashboard-compliance-item flex items-center justify-between h-full bg-slate-900/30 px-4 py-3 rounded-lg border border-slate-700 gap-4">
-                                                            <span className="text-slate-300 font-medium text-xs uppercase block">{displayComplianceLabel(displayLabel)}</span>
+                                                            <span className="dashboard-card-title overview-check-label text-slate-300 block">{displayComplianceLabel(displayLabel)}</span>
                                                             <StatusBadge status={item.status} isEditing={routeUpdatePending ? canEmail : isEditing}
                                                                 actionLabel={canEmail ? 'Pending. Open Outlook for ' + getRouteUpdateSubject(activeDate, displayComplianceLabel(displayLabel)) : undefined}
                                                                 onClick={routeUpdatePending ? () => emailRouteUpdate(item.label) : () => { const nd = JSON.parse(JSON.stringify(data)); nd.loadout.compliance[idx].status = !nd.loadout.compliance[idx].status; setData(nd); }} />
@@ -24523,7 +24854,7 @@ function LeadershipAccessPage(){
                                         <div data-dashboard-card="completed" role="region" aria-label="Completed Routes" className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md flex justify-between items-center relative overflow-hidden group">
                                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none"><CheckCircle2 className="w-24 h-24 text-slate-100" /></div>
                                             <div className="flex flex-col relative z-10 w-full">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Route className="w-3.5 h-3.5 text-emerald-400" /> Completed routes</span>
+                                                <span className="dashboard-card-title text-slate-400 mb-1 flex items-center gap-1.5"><Route className="w-3.5 h-3.5 text-emerald-400" /> Completed Routes</span>
                                                 {isEditing ? (
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <div className="w-16 bg-slate-900/50 text-lg font-bold p-1 rounded border border-slate-700 text-slate-400 text-center cursor-not-allowed" title="Counted automatically from ETA in the Routes tab">{currentKPI.completedRoutesCount}</div>
@@ -24546,7 +24877,7 @@ function LeadershipAccessPage(){
                                         <div data-dashboard-card="check-in" className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md flex justify-between items-center relative overflow-hidden group">
                                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none"><UserCheck className="w-24 h-24 text-slate-100" /></div>
                                             <div className="flex flex-col relative z-10 w-full">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-indigo-400" /> Drivers Checked In</span>
+                                                <span className="dashboard-card-title text-slate-400 mb-1 flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-indigo-400" /> Drivers Checked In</span>
                                                 {isEditing ? (
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <div className="w-16 bg-slate-900/50 text-lg font-bold p-1 rounded border border-slate-700 text-slate-400 text-center cursor-not-allowed" title="Checked automatically from the Routes tab">{currentKPI.checkedInCount}</div>
@@ -24574,24 +24905,24 @@ function LeadershipAccessPage(){
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                                     <div data-dashboard-card="next-day" role="region" aria-label="Next Day Routes" className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col text-center">
-                                        <div className="px-4 py-3 bg-slate-900/50 border-b border-slate-700 text-xs font-bold uppercase text-indigo-300 tracking-widest">Next Day Routes</div>
+                                        <div className="dashboard-card-title px-4 py-3 bg-slate-900/50 border-b border-slate-700 text-indigo-300">Next Day Routes</div>
                                         <div className="p-4 space-y-3 flex-1 flex flex-col justify-center">
                                             <div className="flex items-center justify-center gap-3 text-sm pb-3 border-b border-slate-700/50">
-                                                <span className="text-slate-400 font-bold uppercase text-[10px]">Planned Routes</span>
+                                                <span className="dashboard-card-title overview-check-label text-slate-400">Planned Routes</span>
                                                 <span className="font-black text-indigo-400 flex flex-col items-center leading-tight">
                                                     <span>{String(plannedNextDayRoutes)}</span>
                                                     {isEditing && <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Auto</span>}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-center gap-3 text-sm pb-3 border-b border-slate-700/50">
-                                                <span className="text-slate-400 font-bold uppercase text-[10px]">Confirmed Routes</span>
+                                                <span className="dashboard-card-title overview-check-label text-slate-400">Confirmed Routes</span>
                                                 <span className="font-black text-emerald-400 flex flex-col items-center leading-tight">
                                                     <span>{String(confirmedNextDayRoutes)}</span>
                                                     {isEditing && <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Auto</span>}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-center gap-3 text-xs font-bold uppercase" data-next-day-confirmation="true">
-                                                <span>All {plannedNextDayRoutes} Confirmed</span>
+                                                <span className="dashboard-card-title overview-check-label">All {plannedNextDayRoutes} Confirmed</span>
                                                 <StatusBadge status={plannedNextDayRoutes > 0 && confirmedNextDayRoutes >= plannedNextDayRoutes} isEditing={false} />
                                             </div>
                                             {(data.endOfDay?.admin || []).map((item, idx) => {
@@ -24600,7 +24931,7 @@ function LeadershipAccessPage(){
                                                 if (labelKey === 'action center clear' || labelKey === 'all routes confirmed') return null;
                                                 return (
                                                     <div key={idx} className="flex items-center justify-center gap-3 text-xs font-bold uppercase">
-                                                        <span>{displayLabel}</span>
+                                                        <span className="dashboard-card-title overview-check-label">{displayLabel}</span>
                                                         <StatusBadge status={item.status} isEditing={isEditing} onClick={() => { const nd = JSON.parse(JSON.stringify(data)); nd.endOfDay.admin[idx].status = !nd.endOfDay.admin[idx].status; setData(nd); }} />
                                                     </div>
                                                 );
@@ -24609,11 +24940,11 @@ function LeadershipAccessPage(){
                                     </div>
 
                                     <div data-dashboard-card="final-tasks" className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col text-center">
-                                        <div className="px-4 py-3 bg-slate-900/50 border-b border-slate-700 text-xs font-black uppercase text-slate-100 tracking-widest">End-of-Day Final Tasks</div>
+                                        <div className="dashboard-card-title px-4 py-3 bg-slate-900/50 border-b border-slate-700 text-slate-100">End-of-Day Final Tasks</div>
                                         <div className="p-4 space-y-4 flex-1 flex flex-col justify-center">
                                             {(data.midDay?.status || []).map((item, idx) => (
-                                                <div key={idx} className="mx-auto flex w-full max-w-[22rem] items-center justify-between gap-2 text-left text-xs font-bold uppercase [&>button]:shrink-0" style={{ containerType: 'inline-size' }}>
-                                                    <span className="whitespace-nowrap text-slate-300" style={{ fontSize: 'clamp(8px, calc((100cqw - 116px) / 18), 12px)' }}>{String(item.label)}</span>
+                                                <div key={idx} className="mx-auto flex w-full max-w-[22rem] items-center justify-between gap-2 text-left text-xs font-bold uppercase [&>button]:shrink-0">
+                                                    <span className="dashboard-card-title overview-check-label text-slate-300">{String(item.label)}</span>
                                                     <StatusBadge status={item.status} isEditing={isEditing} onClick={() => { const nd = JSON.parse(JSON.stringify(data)); nd.midDay.status[idx].status = !nd.midDay.status[idx].status; setData(nd); }} />
                                                 </div>
                                             ))}
@@ -24621,7 +24952,7 @@ function LeadershipAccessPage(){
                                     </div>
 
                                     <div data-dashboard-card="preload" className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col">
-                                        <div className="px-4 py-3 bg-slate-900/50 border-b border-slate-700 text-xs font-bold uppercase text-indigo-300 tracking-widest flex items-center gap-2">
+                                        <div className="dashboard-card-title px-4 py-3 bg-slate-900/50 border-b border-slate-700 text-indigo-300 flex items-center gap-2">
                                             <Truck className="w-5 h-5 text-slate-100" /> Driver Preload Schedule
                                         </div>
                                         <div className="p-4 space-y-4 flex-1">
@@ -24643,7 +24974,7 @@ function LeadershipAccessPage(){
                                                                     <StatusBadge
                                                                         status={isPreloadArrivedStatus(todayPreload.status)}
                                                                         isEditing={isEditing}
-                                                                        trueLabel="ARRIVED"
+                                                                        trueLabel="Arrived"
                                                                         onClick={() => updatePreloadDay(activeDate, 'status', isPreloadArrivedStatus(todayPreload.status) ? 'Pending' : 'Arrived')}
                                                                     />
                                                                 )}
@@ -24766,7 +25097,7 @@ function LeadershipAccessPage(){
                                             <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Paste Route Data From Excel Here</span>
                                         </div>
                                         <textarea 
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none resize-none font-mono"
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-300 focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
                                             rows="3"
                                             placeholder="Click here and press Ctrl+V / Cmd+V to paste your table from Excel..."
                                             onPaste={handlePasteRoutes}
@@ -24796,7 +25127,7 @@ function LeadershipAccessPage(){
                                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{displayDateString}</div>
                                     </div>
                                     <div className={`overflow-x-auto ${isRoutesFullscreen ? 'flex-1 overflow-y-auto' : ''}`}>
-                                        <table className="w-full text-center align-middle border-collapse min-w-[1200px]" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
+                                        <table className="w-full text-center align-middle border-collapse min-w-[1200px]" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%' }}>
                                             <thead>
                                                 <tr className="bg-slate-900/80" style={{ backgroundColor: '#0f172a' }}>
                                                     {ROUTE_COLUMNS.map((col, idx) => (
@@ -24911,8 +25242,8 @@ function LeadershipAccessPage(){
                         ) : activeTab === 'metrics' ? (
                             
                             <div className="animate-in fade-in duration-500 relative">
-                                <div className="dashboard-mobile-toolbar flex justify-between items-center mb-4 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
-                                    <div className="flex items-center gap-3">
+                                <div className={`dashboard-mobile-toolbar ${metricsSubTab==='feedback' ? '' : 'metrics-period-heading'} flex justify-between items-center mb-4 bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg`}>
+                                    <div className="metrics-report-info flex items-center gap-3">
                                         <Activity className="w-7 h-7 text-slate-100" />
                                         <div>
                                             <h2 className="text-lg font-black text-white">Metrics Tracker</h2>
@@ -24920,7 +25251,8 @@ function LeadershipAccessPage(){
                                             {metricsSubTab !== 'feedback' && <p className="text-xs text-slate-400 mt-1">Scores through <span className="text-slate-200">{getMetricsReportingPeriod(activeDate, metricsSubTab).throughLabel}</span> · {metricsSubTab === 'wtd' ? 'Week' : 'Month'}: {getMetricsReportingPeriod(activeDate, metricsSubTab).rangeLabel}</p>}
                                         </div>
                                     </div>
-                                     <div className="flex items-center gap-2">
+                                    <MetricsDriverTargets period={metricsSubTab}/>
+                                    <div className="metrics-actions flex items-center gap-2">
                                         
                                         <MetricsSortControl tab={metricsSubTab} uid={user?.uid} scope={[metricsSubTab,activeDate,ACTIVE_LOCATION,user?.uid].join('|')} enabled={isEditing&&['wtd','mtd'].includes(metricsSubTab)&&canEditSection('metrics')} onSave={saveMetricsSort}/>
                                         <button onClick={handleDownloadMetricsScreenshot} className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white border border-slate-600 transition-colors cursor-pointer" title="Download Metrics Screenshot">
@@ -24942,7 +25274,7 @@ function LeadershipAccessPage(){
                                             <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Paste {metricsSubTab.toUpperCase()} Excel Data Here</span>
                                         </div>
                                         <textarea 
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none resize-none font-mono"
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm text-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
                                             rows="3"
                                             placeholder="Click here and press Ctrl+V / Cmd+V to paste the table from Excel..."
                                             onPaste={handlePasteMetrics}
@@ -24965,7 +25297,7 @@ function LeadershipAccessPage(){
                                         <span className="text-xs font-bold text-slate-300">{metricsSubTab.toUpperCase()} table · {(data.metricsTracker?.[metricsSubTab]||[]).length} rows</span>
                                         <button type="button" aria-label={'Delete all '+metricsSubTab.toUpperCase()+' rows'} title={'Delete the entire '+metricsSubTab.toUpperCase()+' table for this date'} disabled={recentDeletionBusy||!canDeleteTodayRows('metrics')} onClick={()=>beginRecentDeletion('metrics','metricsTracker.'+metricsSubTab,null,true)} className="inline-flex items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300 hover:bg-rose-500/20 disabled:opacity-40"><Trash2 className="h-4 w-4"/>Delete table</button>
                                     </div>}
-                                    <div data-panel-screenshot-only="true" className="hidden items-center justify-between gap-4 px-5 py-4 bg-slate-900 border-b border-slate-700">
+                                    <div data-panel-screenshot-only="true" data-panel-screenshot-display={metricsSubTab==='feedback' ? undefined : 'grid'} className="metrics-export-heading hidden items-center justify-between gap-4 px-5 py-4 bg-slate-900 border-b border-slate-700">
                                         <div className="flex items-center gap-3">
                                             <Activity className="w-6 h-6 text-slate-100" />
                                             <div>
@@ -24974,13 +25306,14 @@ function LeadershipAccessPage(){
                                                 {metricsSubTab !== 'feedback' && <div className="text-xs text-slate-400 mt-1">Scores through {getMetricsReportingPeriod(activeDate, metricsSubTab).throughLabel} · {getMetricsReportingPeriod(activeDate, metricsSubTab).rangeLabel}</div>}
                                             </div>
                                         </div>
+                                        <MetricsDriverTargets period={metricsSubTab}/>
                                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{displayDateString}</div>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <span id={metricsRowDrag.helpId} className="sr-only" data-panel-screenshot-ignore="true">While editing, hold a row to drag it up or down. With a keyboard, focus a row, press Space, use the arrow keys, then press Space again. Escape cancels. Select Save Changes to save the order.</span>
                                         <span className="sr-only" role="status" aria-live="polite" aria-atomic="true" data-panel-screenshot-ignore="true">{metricsRowDrag.announcement}</span>
                                         {metricsSubTab === 'feedback' ? (
-                                            <table {...metricsRowDrag.tableProps} data-dashboard-feedback="true" className="w-full text-left border-collapse" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
+                                            <table {...metricsRowDrag.tableProps} data-dashboard-feedback="true" className="w-full text-left border-collapse" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%' }}>
                                                 <thead>
                                                     <tr className="bg-slate-900/80">
                                                         <th className="px-3 py-3 text-[10px] font-black uppercase text-slate-400 tracking-wider border-b border-slate-700">Date</th>
@@ -25028,18 +25361,13 @@ function LeadershipAccessPage(){
                                                 </tbody>
                                             </table>
                                         ) : (
-                                            <table {...metricsRowDrag.tableProps} className="metrics-response-table w-full text-left border-collapse whitespace-nowrap" id="metrics-period-table" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%', fontFamily: 'sans-serif' }}>
+                                            <table {...metricsRowDrag.tableProps} className="metrics-response-table w-full text-left border-collapse whitespace-nowrap" id="metrics-period-table" style={{ backgroundColor: '#1e293b', color: '#f8fafc', borderCollapse: 'collapse', width: '100%' }}>
                                                 {surveyStops?.missingDays > 0 && <caption className="text-left text-xs text-slate-400 pb-2">Stops and response rates are pending route data for {surveyStops.missingDays} {surveyStops.missingDays === 1 ? 'day' : 'days'} in this reporting period.</caption>}
                                                 <thead>
                                                     <tr className="bg-slate-900/80">
-                                                        {[
-                                                            ['First Name'], ['Last Name'], ['Stops'],
-                                                            ['Survey Count', metricsSubTab === 'wtd' ? '≥ 10' : '≥ 40'], ['Response Rate'],
-                                                            ['Survey Average', '≥ 9.65'], ['On-Time Delivery', '≥ 97.50%'],
-                                                            ['Completion', '≥ 98.05%'], ['Exchange', '≤ 1.70%']
-                                                        ].map(([label, target], col) => (
+                                                        {['First Name','Last Name','Stops','Survey Count','Response Rate','Survey Average','On-Time Delivery','Completion','Exchange'].map((label,col) => (
                                                             <th key={label} scope="col" className={'text-[10px] font-black uppercase text-slate-400 tracking-wider ' + (col < 2 ? 'text-left' : 'text-center')}>
-                                                                {label}{target && <span className="metric-target">{target}</span>}
+                                                                {label}
                                                             </th>
                                                         ))}
                                                         {isEditing && <th scope="col" data-panel-screenshot-ignore="true" className="text-[10px] font-black uppercase text-slate-400 text-center">Action</th>}
@@ -26097,7 +26425,8 @@ function LeadershipAccessPage(){
                                         key==='personal' ? true : key==='leadership' ? isAdminUser || leadershipAccess.canManageAccess : key==='locations' ? isAdminUser && (locationEnabled || canActivateLocations)
                                         : key==='users' ? canManageUserAccounts || isLocationAdmin
                                         : ['history','backup'].includes(key) ? canManageRecords
-                                        : ['sounds','managerAlerts','rings'].includes(key) ? allowLocationAppearance
+                                        : key === 'rings' ? allowRingSettings
+                                        : ['sounds','managerAlerts'].includes(key) ? allowLocationAppearance
                                         : isAdminUser).map(([key, label]) => (
                                         <button key={key} type="button" aria-current={settingsTab === key ? 'page' : undefined} onClick={() => { setSettingsTab(key); setSettingsError(''); setSettingsMessage(''); }} className={`shrink-0 px-3 py-3 text-xs font-bold border-b-2 transition-colors ${settingsTab === key ? 'border-indigo-400 text-indigo-200' : 'border-transparent text-slate-400 hover:text-white'}`}>{label}</button>
                                     ))}
@@ -26212,7 +26541,7 @@ function LeadershipAccessPage(){
                                         </div>
                                     )}
                                     {allowLocationAppearance && settingsTab === 'managerAlerts' && <ManagerAlertsSettings owner={allowLocationAppearance} settings={managerAlertDraft} change={editManagerAlertDraft} save={saveManagerAlertSettings} discard={discardManagerAlertDraft} preview={previewManagerAlertSound} busy={settingsBusy} loaded={managerAlertSettingsLoaded && settingsReady} dirty={managerAlertDirty} />}
-                                    {allowLocationAppearance && settingsTab === 'rings' && <DashboardRingSettings settings={ringDraft} change={editDashboardRingDraft} save={saveDashboardRingSettings} discard={discardDashboardRingDraft} busy={settingsBusy} loaded={ringSettingsLoaded && settingsReady} dirty={ringDraftDirty} />}
+                                    {allowRingSettings && settingsTab === 'rings' && <DashboardRingSettings settings={ringDraft} change={editDashboardRingDraft} save={saveDashboardRingSettings} discard={discardDashboardRingDraft} busy={settingsBusy} loaded={ringSettingsLoaded && settingsReady} dirty={ringDraftDirty} />}
                                     {allowLocationAppearance && settingsTab === 'sounds' && <div className="space-y-5">
                                         <div><h3 className="font-bold text-white">Sounds & Alerts</h3><p className="text-xs text-slate-400 mt-1">Only you can choose or mute sounds. Saved choices apply to every user and device. Previews play here only.</p></div>
                                         <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4 space-y-4">
