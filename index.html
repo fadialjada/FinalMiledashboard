@@ -572,7 +572,9 @@
             .dashboard-reminder > .flex-1 { flex-basis: calc(100% - 4rem); }
             .dashboard-reminder > button { margin-left: auto; }
             .dashboard-page-shell .dashboard-parking-table { overflow-x: auto !important; overscroll-behavior-x: contain; }
-            .dashboard-page-shell .dashboard-parking-table > div { min-width: 32rem; }
+            .dashboard-page-shell .dashboard-parking-table[data-editing="true"] > div { min-width: 32rem; }
+            .dashboard-page-shell .dashboard-parking-table[data-editing="false"] :is(.grid,[data-parking-spot]) { grid-template-columns: minmax(3rem,.65fr) minmax(0,1.65fr) minmax(4.6rem,1fr); }
+            .dashboard-page-shell .dashboard-parking-table[data-editing="false"] .grid > div { min-width: 0; padding-inline: .4rem; overflow-wrap: anywhere; }
 
             .dashboard-modal {
                 top: var(--phone-viewport-top, 0px) !important;
@@ -8542,6 +8544,7 @@ html[data-screenshot-theme="grey"] .balanced-picture-theme [data-screenshot-surf
 }
 /* Keep the Dark Gray dividers in a color format the PNG renderer understands. */
 html[data-screenshot-theme="grey"] .metrics-response-table { --metrics-rule: #565a5e; --metrics-line: #474a4c; }
+html[data-screenshot-theme="dark"] .metrics-response-table { --metrics-rule: #455c76; --metrics-line: #374a60; }
 .metrics-response-table th, .metrics-response-table td { white-space: nowrap; }
 .metrics-response-table thead th:nth-child(5) { width: 16%; min-width: 10.5rem; }
 #root #metrics-period-table > thead > tr > th { white-space:nowrap; padding: 9px 10px; vertical-align: top; border-bottom: 2px solid var(--metrics-rule) !important; }
@@ -11835,15 +11838,15 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
         const getTaskAssignedUids = task => Array.isArray(task?.assignedUids) ? task.assignedUids : task?.assignedUid ? [task.assignedUid] : [];
         const isTaskAssignedTo = (task, uid) => Boolean(uid && getTaskAssignedUids(task).includes(uid));
         const getTaskAssignedName = (task, uid, accounts = []) => accounts.find(account => account.uid === uid)?.name || task.assignedNames?.[uid] || (task.assignedUid === uid ? task.assignedName : 'Team member');
-        const getTaskRecipientUids = (task, account) => {
+        const getTaskRecipientUids = (task, account, canManage = canManageLocationRecords(account)) => {
             const assigned = getTaskAssignedUids(task);
-            if (canManageLocationRecords(account)) return assigned;
+            if (canManage) return assigned;
             return [...new Set([OWNER_UID, task.createdByUid, ...assigned].filter(uid => uid && uid !== account?.uid))];
         };
         const getTaskEventRecipients = event => Array.isArray(event.recipientUids) ? event.recipientUids : [event.recipientUid];
         const TEAM_TASK_FIELDS = ['id', 'title', 'instructions', 'assignedUid', 'assignedName', 'assignedUids', 'assignedNames', 'dueAt', 'status', 'createdAt', 'createdByUid', 'createdBy', 'updatedAt', 'updatedByUid', 'updatedBy', 'events', '_auditId'];
-        const validateTeamTaskWrite = (before, after, operation, account = auth.currentUser) => {
-            const canManage = canManageLocationRecords(account);
+        const validateTeamTaskWrite = (before, after, operation, account = auth.currentUser, assigneeOnly = false) => {
+            const canManage = !assigneeOnly && canManageLocationRecords(account);
             if (operation === 'delete') { if (!canManage) throw new Error('Only a location admin can delete tasks.'); return; }
             const validString = (value, max, required = true) => typeof value === 'string' && value.length <= max && (!required || value.trim().length > 0);
             if (!after || Object.keys(after).some(key => !TEAM_TASK_FIELDS.includes(key)) || !validString(after.id, 128)
@@ -11872,8 +11875,8 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
                 || !validString(event.author, 100) || event.authorUid !== account?.uid || event.status !== after.status
                 || event.timestamp !== after.updatedAt || !Number.isFinite(Date.parse(event.timestamp))
                 || !['assigned', 'edited', 'status', 'update-request', 'update'].includes(event.type)
-                || !sameSavedValue(getTaskEventRecipients(event), getTaskRecipientUids(after, account))
-                || event.recipientUid !== getTaskRecipientUids(after, account)[0]) throw new Error('The task update is invalid.');
+                || !sameSavedValue(getTaskEventRecipients(event), getTaskRecipientUids(after, account, canManage))
+                || event.recipientUid !== getTaskRecipientUids(after, account, canManage)[0]) throw new Error('The task update is invalid.');
             if (!canManage && !['status', 'update'].includes(event.type)) throw new Error('Only a location admin can request updates or assign tasks.');
             if (event.type !== 'status' && operation !== 'create' && before.status !== after.status) throw new Error('Choose a status action to change progress.');
             if (['update-request', 'update'].includes(event.type) && !event.text.trim()) throw new Error('Enter your update message.');
@@ -12216,7 +12219,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
                 }
                 const bounds=card.getBoundingClientRect(),width=Math.ceil(bounds.width),height=Math.ceil(bounds.height);
                 const png=await downloadScreenshotPng(card,'route-update.png',{
-                    backgroundColor:SCREENSHOT_BACKGROUND,logging:false,useCORS:false,width,height,windowWidth:1024,windowHeight:height
+                    logging:false,useCORS:false,width,height,windowWidth:1024,windowHeight:height
                 },true);
                 return await new Promise((resolve,reject)=>{
                     const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('The route picture could not be created.'));reader.readAsDataURL(png);
@@ -12813,14 +12816,14 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
             }
             return historyDays;
         };
-        const validateBusinessWrite = (kind, before, after, operation = 'update', preloadHistory = false) => {
+        const validateBusinessWrite = (kind, before, after, operation = 'update', preloadHistory = false, taskAssigneeOnly = false) => {
             requireTeamAccount();
             if (kind === 'config' && !canManageRingSettings(auth.currentUser)) {
                 const hasRings = record => Object.prototype.hasOwnProperty.call(record || {}, 'ringSettings');
                 if (hasRings(before) !== hasRings(after) || !sameSavedValue(before?.ringSettings, after?.ringSettings) || (operation === 'delete' && hasRings(before)))
                     throw new Error('Only the primary dashboard owner can change ring settings.');
             }
-            if (kind === 'teamTasks') { validateTeamTaskWrite(before, after, operation); return; }
+            if (kind === 'teamTasks') { validateTeamTaskWrite(before, after, operation, auth.currentUser, taskAssigneeOnly); return; }
             if (isOwnerAccount(auth.currentUser)) return;
             if(kind==='accessProfiles'){
                 const uid=after?.uid||before?.uid;userAdministrationTarget(uid);
@@ -12923,7 +12926,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
                     const changes = describeSavedChanges(before, after);
                     if (!changes.length && !entry.deleted) continue;
                     const operation = entry.deleted ? 'delete' : snapshot.exists() ? 'update' : 'create';
-                    validateBusinessWrite(kind, before, after, operation, kind === 'dailyRecaps' && preloadHistoryDays.has(id));
+                    validateBusinessWrite(kind, before, after, operation, kind === 'dailyRecaps' && preloadHistoryDays.has(id), options?.taskAssigneeOnly);
                     business.push({ ...entry, kind, id, changes, operation, beforeRecord: before, afterRecord: after });
                 }
                 const managementWrites=await prepareUserManagementWrites(database,native,business,snapshots,queued);
@@ -12953,7 +12956,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
                     else native.set(entry.ref, entry.value);
                 }
                 return result;
-            }, options?.auditAction ? undefined : options);
+            }, options?.auditAction || options?.taskAssigneeOnly ? undefined : options);
             } catch (error) { failure = error; throw error; }
             finally { finishSave?.(failure, attemptedWrite); }
         };
@@ -13135,6 +13138,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
             const padding = 24;
             const scale = 4;
             const radius = 16;
+            const {background, ink, muted, line:dividerColor} = getScreenshotPalette();
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d', { alpha: true });
             if (!context) throw new Error('Image creation is unavailable.');
@@ -13167,7 +13171,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
             canvas.height = height * scale;
             try {
                 context.scale(scale, scale);
-                context.fillStyle = SCREENSHOT_BACKGROUND;
+                context.fillStyle = background;
                 context.fillRect(0, 0, width, height);
                 const drawText = (text, x, y, font, color, maxWidth = textWidth) => {
                     context.font = font;
@@ -13175,12 +13179,10 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
                     context.fillStyle = color;
                     context.fillText(text, x, y, maxWidth);
                 };
-                const muted = SCREENSHOT_MUTED;
-                const ink = SCREENSHOT_INK;
                 drawText(heading, padding, 23, '700 12px "Segoe UI", sans-serif', '#ffd280');
                 titleLines.forEach((line, i) => drawText(line, padding, 43 + i * 33, titleFont, ink));
                 drawText(dateLabel, padding, 82 + titleOffset, '400 13px "Segoe UI", sans-serif', muted);
-                context.fillStyle = SCREENSHOT_LINE;
+                context.fillStyle = dividerColor;
                 context.fillRect(padding, 111 + titleOffset, textWidth, 1);
                 context.fillRect(padding, 184 + titleOffset + detailOffset, textWidth, 1);
                 const rightColumn = width / 2 + 6;
@@ -13781,18 +13783,21 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
         };
         const PRESENCE_AWAY_AFTER_MS = 10 * 60 * 1000;
         const PRESENCE_HEARTBEAT_MS = 5 * 60 * 1000;
-        // Canvas-drawn cards and clipboard mattes share the Dark Gray dashboard palette.
-        const SCREENSHOT_BACKGROUND = '#2b2b2b';
-        const SCREENSHOT_INK = '#f2f2f2';
-        const SCREENSHOT_MUTED = '#c2c2c2';
-        const SCREENSHOT_LINE = '#535353';
-        const prepareScreenshotSurface = (surface, background = SCREENSHOT_BACKGROUND, cornerRadius = 16) => {
+        const SCREENSHOT_PALETTES = {
+            grey: { theme:'grey', background:'#2b2b2b', ink:'#f2f2f2', muted:'#c2c2c2', line:'#535353' },
+            dark: { theme:'dark', background:'#1f2937', ink:'#f7f9fc', muted:'#a4afc1', line:'#465269' }
+        };
+        // Dark is stored as grey. Deep Navy is stored as dark.
+        const getScreenshotPalette = () => window.dashboardAppearance.getMode() === 'grey'
+            ? SCREENSHOT_PALETTES.grey : SCREENSHOT_PALETTES.dark;
+        const prepareScreenshotSurface = (surface) => {
+            const {background, ink} = getScreenshotPalette();
             surface.setAttribute('data-screenshot-surface', 'true');
             surface.setAttribute('data-dashboard-export-dark', 'true');
-            surface.style.setProperty('color', SCREENSHOT_INK, 'important');
+            surface.style.setProperty('color', ink, 'important');
             // Export copies keep rounded edges without theme shadows.
             surface.style.setProperty('background', background, 'important');
-            for (const [property, value] of Object.entries({ 'border-radius':cornerRadius + 'px', border:'0', outline:'none', 'box-shadow':'none', 'text-shadow':'none', filter:'none', 'backdrop-filter':'none' })) {
+            for (const [property, value] of Object.entries({ 'border-radius':'16px', border:'0', outline:'none', 'box-shadow':'none', 'text-shadow':'none', filter:'none', 'backdrop-filter':'none' })) {
                 surface.style.setProperty(property, value, 'important');
             }
             for (const node of surface.querySelectorAll('*')) {
@@ -13829,6 +13834,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
         };
 
         const downloadScreenshotPng = async (element, fileName, options, returnBlob = false) => {
+            const palette = getScreenshotPalette();
             if (document.fonts?.ready) await document.fonts.ready;
             const scale = getScreenshotScale(options.width, options.height);
             let lastError;
@@ -13837,15 +13843,17 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
                 let canvas;
                 let blob;
                 try {
-                    const renderOptions = { ...options, scale: scale * factor, onclone:async (clonedDoc,clonedElement)=>{
-                        clonedDoc.documentElement.dataset.dashboardTheme = 'grey';
-                        clonedDoc.documentElement.dataset.screenshotTheme = 'grey';
+                    const renderOptions = { ...options, backgroundColor:palette.background, scale: scale * factor, onclone:async (clonedDoc,clonedElement)=>{
+                        clonedDoc.documentElement.dataset.dashboardTheme = palette.theme;
+                        clonedDoc.documentElement.dataset.screenshotTheme = palette.theme;
                         if (options.onclone) await options.onclone(clonedDoc, clonedElement);
                         // Re-enable dashboard theme styles on the renderer's private copy.
                         clonedElement.removeAttribute('data-dashboard-export-dark');
+                        clonedElement.style.setProperty('background', palette.background, 'important');
+                        clonedElement.style.setProperty('color', palette.ink, 'important');
                         // Render the full surface; the final PNG receives one rounded edge.
                         clonedElement.style.setProperty('border-radius', '0', 'important');
-                        // Dark Gray type can wrap differently from the user's theme.
+                        // Recheck height using the export theme.
                         renderOptions.height = Math.max(options.height, Math.ceil(clonedElement.getBoundingClientRect().height));
                     } };
                     canvas = await window.html2canvas(element, renderOptions);
@@ -13857,7 +13865,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
                     context.setTransform(1, 0, 0, 1, 0, 0);
                     context.globalAlpha = 1;
                     context.globalCompositeOperation = 'destination-over';
-                    context.fillStyle = options.backgroundColor || SCREENSHOT_BACKGROUND;
+                    context.fillStyle = palette.background;
                     context.fillRect(0, 0, canvas.width, canvas.height);
                     context.restore();
                     clearScreenshotCorners(context, 16 * canvas.width / options.width);
@@ -15897,9 +15905,9 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
             </fieldset>;
         };
 
-        const TeamTasksWindow = ({ dialogRef, close, owner, uid, loaded, busy, error, message, tasks, assignees, notifications, readAlert,
+        const TeamTasksWindow = ({ dialogRef, close, owner, browseAssigned, uid, loaded, busy, error, message, tasks, assignees, notifications, readAlert,
             filter, setFilter, person, setPerson, selectedId, selectTask, draft, setDraft, startDraft, commit, updates, setUpdates, requests, setRequests }) => {
-            const filtered = owner ? tasks.filter(task => (filter === 'all' || (filter === 'active' ? task.status !== 'completed' : task.status === filter)) && (!person || isTaskAssignedTo(task, person))) : tasks.filter(task => task.id === selectedId && isTaskAssignedTo(task, uid));
+            const filtered = owner ? tasks.filter(task => (filter === 'all' || (filter === 'active' ? task.status !== 'completed' : task.status === filter)) && (!person || isTaskAssignedTo(task, person))) : tasks.filter(task => (task.id === selectedId || (browseAssigned && !selectedId)) && isTaskAssignedTo(task, uid));
             const draftAccounts = draft ? [...assignees, ...(draft.assignedUids || []).filter(id => !assignees.some(account => account.uid === id)).map(id => ({ uid: id, name: getTaskAssignedName(draft.baseline || {}, id), inactive: true }))] : [];
             const fieldClass = 'w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-400';
             const eventLabels = { assigned: 'Assignment', edited: 'Details updated', status: 'Progress', 'update-request': 'Update requested', update: 'Update' };
@@ -15907,7 +15915,7 @@ html:is([data-dashboard-theme="steel"],[data-dashboard-theme="stone"],[data-dash
             return <div className="dashboard-modal settings-modal fixed inset-0 z-[125] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4" data-dashboard-edit-ignore="true" data-html2canvas-ignore="true">
                 <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="team-tasks-title" className="settings-window flex flex-col min-h-0 w-full max-w-4xl max-h-[90dvh] rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden">
                     <div className="dashboard-mobile-toolbar flex items-center justify-between gap-3 border-b border-slate-700 bg-slate-800 px-5 py-4 shrink-0">
-                        <div className="min-w-0"><h2 id="team-tasks-title" className="text-lg font-black text-white">{owner ? 'Team Tasks' : 'Your Assignment'}</h2><p className="text-xs text-slate-400">{owner ? 'Assignments, progress, and follow-ups · Deadlines in ' : 'Update your progress or reply to the task request · Deadline in '}{locationClockLabel()} time</p></div>
+                        <div className="min-w-0"><h2 id="team-tasks-title" className="text-lg font-black text-white">{owner ? 'Team Tasks' : browseAssigned && !selectedId ? 'Your Tasks' : 'Your Assignment'}</h2><p className="text-xs text-slate-400">{owner ? 'Assignments, progress, and follow-ups · Deadlines in ' : 'Update your progress or reply to the task request · Deadline in '}{locationClockLabel()} time</p></div>
                         <button type="button" data-tasks-close aria-label={owner ? 'Close Team Tasks' : 'Close Assignment'} onClick={close} disabled={busy} className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-40"><X className="w-5 h-5" /></button>
                     </div>
                     <div className="dashboard-scroll-area settings-content min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4">
@@ -16022,20 +16030,51 @@ const MorningReportTime = ({value, onChange, label}) => {
 };
 // Keep the PNG sharp; control its email display size independently.
 const SCREENSHOT_EMAIL_WIDTH = 900;
-const prepareScreenshotEmailCopy = async (source, options = {}) => {
+// Outlook can replace transparent image pixels with white during paste. Give the
+// clipboard an opaque PNG and let compatible mail clients round it at display time.
+const prepareEmailScreenshotPng = async source => {
     const image = await createImageBitmap(source);
+    const canvas = document.createElement('canvas');
+    try {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not prepare the email image.');
+        ctx.drawImage(image, 0, 0);
+        const {width, height} = canvas;
+        const top = ctx.getImageData(0, 0, width, 1).data;
+        // The first solid pixel on each side is inside the rounded cutout.
+        // Extend that column behind the curve to match each header and footer.
+        let left = 0, right = width - 1;
+        while (left < right && top[left * 4 + 3] < 255) left++;
+        while (right > left && top[right * 4 + 3] < 255) right--;
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.imageSmoothingEnabled = false;
+        if (left) ctx.drawImage(image, left, 0, 1, height, 0, 0, left, height);
+        if (right < width - 1) ctx.drawImage(image, right, 0, 1, height, right + 1, 0, width - right - 1, height);
+        ctx.fillStyle = getScreenshotPalette().background;
+        ctx.fillRect(0, 0, width, height);
+        const png = await new Promise((resolve, reject) => canvas.toBlob(
+            blob => blob ? resolve(blob) : reject(new Error('Could not encode the email image.')), 'image/png'));
+        return {png, width, height};
+    } finally {
+        image.close();
+        canvas.width = canvas.height = 0;
+    }
+};
+const prepareScreenshotEmailCopy = async (source, options = {}) => {
+    const image = await prepareEmailScreenshotPng(source);
     const requestedWidth = Number(options.maxWidth);
     const limit = Number.isFinite(requestedWidth) && requestedWidth > 0
         ? Math.min(SCREENSHOT_EMAIL_WIDTH, requestedWidth) : SCREENSHOT_EMAIL_WIDTH;
     const width = Math.max(1, Math.min(Math.round(limit), image.width));
     const height = Math.max(1, Math.round(image.height * width / image.width));
-    image.close();
-    const dataUrl = 'data:image/png;base64,' + await encodeChatFile(source);
+    const dataUrl = 'data:image/png;base64,' + await encodeChatFile(image.png);
     const label = String(options.label || 'Dashboard screenshot').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
     const clearStyle = 'padding:0;border:0;background:transparent!important;box-shadow:none;';
-    const imageMarkup = '<img src="' + dataUrl + '" width="' + width + '" height="' + height + '" alt="' + label + '" style="display:block;width:' + width + 'px;max-width:100%;height:auto;margin:0;outline:none;' + clearStyle + '">';
+    const imageMarkup = '<img src="' + dataUrl + '" width="' + width + '" height="' + height + '" alt="' + label + '" style="display:block;width:' + width + 'px;max-width:100%;height:auto;margin:0;outline:none;border-radius:12px;' + clearStyle + '">';
     const markup = '<table role="presentation" class="MsoNormalTable" align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:collapse;' + clearStyle + '"><tbody><tr><td style="' + clearStyle + '">' + imageMarkup + '</td></tr></tbody></table>';
-    return {png:source, html:new Blob([markup], {type:'text/html'})};
+    return {png:image.png, html:new Blob([markup], {type:'text/html'})};
 };
 const copyScreenshotImageForEmail = async (createImage, options = {}) => {
     if (!navigator.clipboard?.write || !window.ClipboardItem || (ClipboardItem.supports && !ClipboardItem.supports('image/png'))) throw new Error('Image copying is unavailable.');
@@ -16216,7 +16255,7 @@ const copyScreenshotImageForEmail = async (createImage, options = {}) => {
                 if(editing||!selected||capturing)return;setCapturing(true);setError('');
                 try{
                     const element=document.getElementById('driver-coaching-export'),rect=element.getBoundingClientRect();
-                    const blob=await downloadScreenshotPng(element,'Driver-Coaching.png',{width:rect.width,height:rect.height,backgroundColor:SCREENSHOT_BACKGROUND,useCORS:true,logging:false,scrollX:0,scrollY:0,onclone:await driverCoachingScreenshotClone(element)},true);
+                    const blob=await downloadScreenshotPng(element,'Driver-Coaching.png',{width:rect.width,height:rect.height,useCORS:true,logging:false,scrollX:0,scrollY:0,onclone:await driverCoachingScreenshotClone(element)},true);
                     if(imageRef.current)URL.revokeObjectURL(imageRef.current);const url=URL.createObjectURL(blob);imageRef.current=url;
                     const img=new Image();img.src=url;await img.decode();setCopyNotice('');setImage({url,width:img.naturalWidth,height:img.naturalHeight,blob});
                 }catch(error){setError(error.message || 'The coaching screenshot could not be prepared.');}finally{setCapturing(false);}
@@ -18614,6 +18653,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
         };
 
         const createInsuranceScreenshot = async (contractorName, policy) => {
+            const {background, ink, muted, line:dividerColor} = getScreenshotPalette();
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d', { alpha: true });
             if (!context) throw new Error('The screenshot canvas is unavailable.');
@@ -18641,7 +18681,7 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
             canvas.height = Math.round(height * scale);
             try {
                 context.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
-                context.fillStyle = SCREENSHOT_BACKGROUND;
+                context.fillStyle = background;
                 context.fillRect(0, 0, width, height);
                 clearScreenshotCorners(context, 16 * canvas.width / width);
 
@@ -18653,12 +18693,10 @@ const WeeklyBillingFinalReconciliation = ({draft,sourceReport,restoreSource,expo
                     context.fillText(value, x, y, maxWidth);
                 };
                 const divider = y => {
-                    context.fillStyle = SCREENSHOT_LINE;
+                    context.fillStyle = dividerColor;
                     context.fillRect(padding + 1, y, width - 2 * (padding + 1), 1);
                 };
                 const right = width - padding;
-                const muted = SCREENSHOT_MUTED;
-                const ink = SCREENSHOT_INK;
                 text('INSURANCE POLICY', padding, 19, 12, muted, true);
                 titleLines.forEach((title, index) => text(title, padding, 37 + index * 32, 27, ink, true));
                 divider(86 + extraHeight);
@@ -19875,6 +19913,7 @@ function LeadershipAccessPage(){
             const [isTeamTasksOpen, setIsTeamTasksOpen] = useState(false);
             const [teamTasks, setTeamTasks] = useState([]);
             const [teamTasksLoaded, setTeamTasksLoaded] = useState(false);
+            const [restrictedTaskUid,setRestrictedTaskUid]=useState(null);
             const [teamTaskError, setTeamTaskError] = useState('');
             const [teamTaskMessage, setTeamTaskMessage] = useState('');
             const [taskDraft, setTaskDraft] = useState(null);
@@ -21983,7 +22022,7 @@ function LeadershipAccessPage(){
                         const width = Math.ceil(bounds.width);
                         const height = Math.ceil(bounds.height);
                         await downloadScreenshotPng(element, `Geodis-Recap-${activeDate}.png`, {
-                            backgroundColor: SCREENSHOT_BACKGROUND, useCORS: true, logging: false, allowTaint: true, scrollY: 0, scrollX: 0,
+                            useCORS: true, logging: false, allowTaint: true, scrollY: 0, scrollX: 0,
                             width, height,
                             windowWidth: element.scrollWidth, windowHeight: element.scrollHeight,
                             onclone: (clonedDoc, clonedElement) => {
@@ -22121,7 +22160,6 @@ function LeadershipAccessPage(){
                             ? Math.ceil(captureRect.height)
                             : Math.ceil(Math.max(screenshotClone.scrollHeight, captureRect.height)) + (isBonusPanel || element === metricsScreenshotRef.current ? 0 : 6);
                         const image = await downloadScreenshotPng(screenshotClone, fileName, {
-                            backgroundColor: SCREENSHOT_BACKGROUND,
                             useCORS: true,
                             logging: false,
                             allowTaint: true,
@@ -22365,20 +22403,23 @@ function LeadershipAccessPage(){
             const locationTaskAssignees = isLocationAdmin
                 ? (localManagerRecipients || []).filter(person => !masterLists.deletedDashboardUsers?.[person.uid])
                 : taskAssignees;
-            const taskNotifications = useMemo(() => getTeamTaskNotifications(teamTasks, user?.uid, taskReadIds, canManageRecords), [teamTasks, user?.uid, taskReadIds, canManageRecords]);
+            const canManageTeamTasks=canManageRecords && restrictedTaskUid!==user?.uid;
+            useEffect(()=>{setRestrictedTaskUid(null);},[user?.uid,canManageRecords]);
+            useEffect(()=>{setTaskReadIds([]);},[user?.uid]);
+            const taskNotifications = useMemo(() => getTeamTaskNotifications(teamTasks, user?.uid, taskReadIds, canManageTeamTasks), [teamTasks, user?.uid, taskReadIds, canManageTeamTasks]);
             const openTeamTasks = () => {
                 if (!canManageRecords) return;
                 setIsShiftNotificationOpen(false); setIsTeamChatOpen(false); setIsHeaderCalendarOpen(false);
-                setTeamTaskMessage(''); setIsTeamTasksOpen(true);
+                setSelectedTaskId(null); setTeamTaskMessage(''); setIsTeamTasksOpen(true);
             };
             const openTaskAssignment = taskId => {
                 const task = teamTasks.find(item => item.id === taskId);
-                if (!task || (!canManageRecords && !isTaskAssignedTo(task, user?.uid))) return;
+                if (!task || (!canManageTeamTasks && !isTaskAssignedTo(task, user?.uid))) return;
                 setSelectedTaskId(taskId); setTaskFilter('all'); setTaskAssigneeFilter('');
                 setIsShiftNotificationOpen(false); setIsTeamChatOpen(false); setIsHeaderCalendarOpen(false);
                 setTeamTaskMessage(''); setIsTeamTasksOpen(true);
             };
-            const ownActiveTasks = canManageRecords ? [] : teamTasks.filter(task => isTaskAssignedTo(task, user?.uid) && task.status !== 'completed');
+            const ownActiveTasks = canManageTeamTasks ? [] : teamTasks.filter(task => isTaskAssignedTo(task, user?.uid) && task.status !== 'completed');
             const markTaskAlertsRead = async ids => {
                 if (!user || !db || !ids.length) return false;
                 try {
@@ -22393,13 +22434,13 @@ function LeadershipAccessPage(){
                 if (await markTaskAlertsRead([event.id])) saveAccountActivity('task-alert-dismissed',`dismissed the task alert for “${event.title || 'an assigned task'}”.`,account,name);
             };
             useEffect(() => {
-                setTeamTasks([]); setTeamTasksLoaded(false); setTaskReadIds([]); taskSoundKnownRef.current = null;
+                setTeamTasks([]); setTeamTasksLoaded(false); taskSoundKnownRef.current = null;
                 setTaskDraft(null); setTaskUpdateDrafts({}); setTaskRequestDrafts({}); setSelectedTaskId(null); setIsTeamTasksOpen(false);
                 setTeamTaskError(''); setTeamTaskMessage('');
                 if (!user || !db) return;
                 const taskCollection = collection(db, 'artifacts', appId, 'public', 'data', 'teamTasks');
                 // Keep existing single-person records without a data migration.
-                const taskSources = canManageRecords ? [taskCollection] : [query(taskCollection, where('assignedUid', '==', user.uid)), query(taskCollection, where('assignedUids', 'array-contains', user.uid))];
+                const taskSources = canManageTeamTasks ? [taskCollection] : [query(taskCollection, where('assignedUid', '==', user.uid)), query(taskCollection, where('assignedUids', 'array-contains', user.uid))];
                 const snapshots = new Map(); let active = true, failed = false;
                 const unsubscribers = taskSources.map((source, index) => onSnapshot(source, snapshot => {
                     if (!active || failed) return;
@@ -22411,12 +22452,14 @@ function LeadershipAccessPage(){
                         const previous = merged.get(task.id);
                         if (!previous || task.updatedAt >= previous.updatedAt) merged.set(task.id, task);
                     }));
-                    const tasks = [...merged.values()].filter(task => canManageRecords || isTaskAssignedTo(task, user.uid));
+                    const tasks = [...merged.values()].filter(task => canManageTeamTasks || isTaskAssignedTo(task, user.uid));
                     if (taskSoundKnownRef.current === null) taskSoundKnownRef.current = new Set(tasks.flatMap(task => (task.events || []).map(event => event.id)));
                     setTeamTasks(tasks.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))); setTeamTasksLoaded(true);
-                }, error => { if (!active) return; failed = true; setTeamTasks([]); setTeamTasksLoaded(false); setTeamTaskError(error.code === 'permission-denied' ? 'Team Tasks is waiting for its database access rules to be activated.' : 'Team Tasks could not connect. Check your connection and refresh the dashboard.'); }));
+                }, error => { if (!active) return; failed = true; setTeamTasks([]); setTeamTasksLoaded(false);
+                    if(canManageTeamTasks && !isOwnerAccount(user) && error.code==='permission-denied'){setRestrictedTaskUid(user.uid);return;}
+                    setTeamTaskError(error.code === 'permission-denied' ? 'Team Tasks is waiting for its database access rules to be activated.' : 'Team Tasks could not connect. Check your connection and refresh the dashboard.'); }));
                 return () => { active = false; unsubscribers.forEach(unsubscribe => unsubscribe()); };
-            }, [user?.uid, canManageRecords]);
+            }, [user?.uid, canManageTeamTasks]);
             useEffect(() => {
                 if (canManageRecords || !isTeamTasksOpen || !teamTasksLoaded) return;
                 if (!teamTasks.some(task => task.id === selectedTaskId && isTaskAssignedTo(task, user?.uid))) {
@@ -22459,7 +22502,7 @@ function LeadershipAccessPage(){
                 return () => clearTimeout(timer);
             }, [isTeamTasksOpen, selectedTaskId, taskFilter, taskAssigneeFilter]);
             const startTaskDraft = task => {
-                if (!canManageRecords || !teamTasksLoaded || taskPendingRef.current) return;
+                if (!canManageTeamTasks || !teamTasksLoaded || taskPendingRef.current) return;
                 if (isLocationAdmin && localManagerRecipients === null) { setTeamTaskError('The location team list is unavailable. Please try again.'); return; }
                 setTaskDraft(task ? { id: task.id, title: task.title, instructions: task.instructions, assignedUids: getTaskAssignedUids(task).slice(), due: taskDueInput(task.dueAt), baseline: task }
                     : { id: '', title: '', instructions: '', assignedUids: [], due: '', baseline: null });
@@ -22475,7 +22518,7 @@ function LeadershipAccessPage(){
                     await runTransaction(db, async transaction => {
                         const snapshot = await transaction.get(ref), previous = snapshot.exists() ? snapshot.data() : null;
                         if (auth.currentUser?.uid !== user.uid) throw new Error('Your account changed. Reopen Team Tasks.');
-                        const canManage = canManageLocationRecords(auth.currentUser);
+                        const canManage = canManageTeamTasks && canManageLocationRecords(auth.currentUser);
                         if (['create', 'edit', 'request', 'delete'].includes(action) && !canManage) throw new Error('Only a location admin can manage assignments.');
                         if (action === 'create' && previous) throw new Error('This task already exists. Reopen Team Tasks.');
                         if (action !== 'create' && !previous) throw new Error('This task was removed.');
@@ -22513,11 +22556,11 @@ function LeadershipAccessPage(){
                             if (!text) throw new Error('Write your update before sending.');
                             type = 'update';
                         } else throw new Error('Unknown task action.');
-                        const recipientUids = getTaskRecipientUids(next, auth.currentUser);
+                        const recipientUids = getTaskRecipientUids(next, auth.currentUser, canManage);
                         const event = { id: eventId, type, text, status: next.status, authorUid: user.uid, author: getSavedDisplayName(user), timestamp, recipientUid: recipientUids[0], recipientUids };
                         next = { ...next, updatedAt: timestamp, updatedByUid: user.uid, updatedBy: getSavedDisplayName(user), events: [...(previous?.events || []), event] };
                         transaction.set(ref, next);
-                    });
+                    }, canManageTeamTasks ? undefined : {taskAssigneeOnly:true});
                     if (['create', 'edit'].includes(action)) setTaskDraft(null);
                     if (action === 'update') setTaskUpdateDrafts(drafts => ({ ...drafts, [id]: '' }));
                     if (action === 'request') setTaskRequestDrafts(drafts => ({ ...drafts, [id]: '' }));
@@ -24118,7 +24161,8 @@ function LeadershipAccessPage(){
             const managerAlerts=useMemo(()=>managerAlertsLoaded ? getManagerAlerts({account:user,settings:savedManagerAlerts,records:historyData,schedules:allPreloadSchedules,tasks:teamTasks,recipients:managerAlertRecipients,resolutions:managerIssueResolutions,dismissals:managerAlertDismissals,now:managerAlertNow,tasksLoaded:teamTasksLoaded,recipientsLoaded:scopedRecipientsLoaded,managerNoteAcknowledgementUids:masterLists.managerNoteAcknowledgementUids}) : [],
                 [managerAlertsLoaded,user?.uid,savedManagerAlerts,historyData,allPreloadSchedules,teamTasks,taskAssignees,localManagerRecipients,masterLists.deletedDashboardUsers,managerIssueResolutions,managerAlertDismissals,managerAlertNow,teamTasksLoaded,scopedRecipientsLoaded,masterLists.managerNoteAcknowledgementUids]);
             const shiftNoteNotificationCount = shiftNoteNotificationItems.length;
-            const bellNotificationCount=shiftNoteNotificationCount+(canManageRecords?managerAlerts.length:0)+recentInbox.count;
+            const activityNotificationCount=shiftNoteNotificationCount+taskNotifications.length;
+            const bellNotificationCount=activityNotificationCount+(canManageRecords?managerAlerts.length:0)+recentInbox.count;
             useEffect(()=>{
                 managerSoundRef.current=null;managerSourceBaselineRef.current={tasks:false,recipients:false};setManagerIssueResolutions({});setManagerAlertDismissals({});setManagerAlertError('');setManagerAlertBusy(false);setNotificationView('activity');
                 managerAlertWriteRef.current=false;managerAlertDirtyRef.current=false;managerAlertBaselineRef.current=null;setManagerAlertDirty(false);
@@ -24507,7 +24551,7 @@ function LeadershipAccessPage(){
                             <div className="dashboard-header-actions flex items-center justify-end gap-2 shrink-0">
 
                                 <div className="relative">
-                                    <button aria-label={bellNotificationCount ? `Notifications, ${bellNotificationCount} items` : 'Notifications'} onClick={() => { setIsShiftNotificationOpen(prev => !prev); setIsTeamChatOpen(false); setNotificationView(recentInbox.count?'deletions':canManageRecords && managerAlerts.length ? 'manager' : 'activity'); }} className={`relative p-1 bg-transparent border-0 transition-all active:scale-95 cursor-pointer ${bellNotificationCount > 0 ? 'text-rose-300 hover:text-rose-200' : 'text-slate-300 hover:text-white'}`} title="Notifications">
+                                    <button aria-label={bellNotificationCount ? `Notifications, ${bellNotificationCount} items` : 'Notifications'} onClick={() => { setIsShiftNotificationOpen(prev => !prev); setIsTeamChatOpen(false); setNotificationView(taskNotifications.length?'activity':recentInbox.count?'deletions':canManageRecords && managerAlerts.length ? 'manager' : 'activity'); }} className={`relative p-1 bg-transparent border-0 transition-all active:scale-95 cursor-pointer ${bellNotificationCount > 0 ? 'text-rose-300 hover:text-rose-200' : 'text-slate-300 hover:text-white'}`} title="Notifications">
                                         <Bell className="w-4 h-4" />
                                         {bellNotificationCount > 0 && (
                                             <span className="dashboard-notification-badge absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-4 text-center shadow-lg shadow-rose-950/40">{bellNotificationCount > 9 ? '9+' : bellNotificationCount}</span>
@@ -24518,16 +24562,23 @@ function LeadershipAccessPage(){
                                             <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
                                                 <div>
                                                     <div className="text-xs font-black uppercase tracking-widest text-white">Notifications</div>
-                                                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{notificationView==='deletions'?'Deletion requests':canManageRecords && notificationView==='manager' ? 'Manager only' : 'Shift Notes & Mentions'}</div>
+                                                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{notificationView==='deletions'?'Deletion requests':canManageRecords && notificationView==='manager' ? 'Manager only' : 'Tasks, Shift Notes & Mentions'}</div>
                                                 </div>
                                                 {shiftNoteNotificationCount > 0 && notificationView==='activity' && (
-                                                    <button type="button" onClick={markShiftNotesSeen} className="rounded-lg border border-slate-700 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">Mark Read</button>
+                                                    <button type="button" onClick={markShiftNotesSeen} aria-label="Mark shift notes and mentions read" className="rounded-lg border border-slate-700 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer">Mark notes read</button>
                                                 )}
                                                 <button type="button" onClick={() => setIsShiftNotificationOpen(false)} aria-label="Close notifications" className="p-2 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
                                             </div>
-                                            {(canManageRecords||recentInbox.policy.enabled||canApproveDeletion)&&<div className="flex flex-wrap gap-1 border-b border-slate-800 p-2" aria-label="Notification sections"><button type="button" aria-pressed={notificationView==='activity'} onClick={()=>setNotificationView('activity')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='activity'?'bg-slate-800 text-white':'text-slate-400')}>Activity ({shiftNoteNotificationCount})</button>{canManageRecords&&<button type="button" aria-pressed={notificationView==='manager'} onClick={()=>setNotificationView('manager')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='manager'?'bg-slate-800 text-white':'text-slate-400')}>Manager Alerts ({managerAlerts.length})</button>}<button type="button" aria-pressed={notificationView==='deletions'} onClick={()=>setNotificationView('deletions')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='deletions'?'bg-slate-800 text-white':'text-slate-400')}>Deletion requests ({recentInbox.count})</button></div>}
+                                            {(canManageRecords||recentInbox.policy.enabled||canApproveDeletion)&&<div className="flex flex-wrap gap-1 border-b border-slate-800 p-2" aria-label="Notification sections"><button type="button" aria-pressed={notificationView==='activity'} onClick={()=>setNotificationView('activity')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='activity'?'bg-slate-800 text-white':'text-slate-400')}>Activity ({activityNotificationCount})</button>{canManageRecords&&<button type="button" aria-pressed={notificationView==='manager'} onClick={()=>setNotificationView('manager')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='manager'?'bg-slate-800 text-white':'text-slate-400')}>Manager Alerts ({managerAlerts.length})</button>}<button type="button" aria-pressed={notificationView==='deletions'} onClick={()=>setNotificationView('deletions')} className={'rounded-lg px-3 py-2 text-xs '+(notificationView==='deletions'?'bg-slate-800 text-white':'text-slate-400')}>Deletion requests ({recentInbox.count})</button></div>}
                                             {notificationView==='deletions'?<RecentDeletionRequests inbox={recentInbox} account={user} canApprove={canApproveDeletion}/>:canManageRecords && notificationView==='manager' ? <div data-popover-scroll="true" className="max-h-[65dvh] overflow-y-auto"><ManagerAlertsList owner={canManageRecords} alerts={managerAlerts} loaded={managerAlertsLoaded} enabled={savedManagerAlerts.enabled} open={openManagerAlert} resolve={resolveManagerIssue} dismiss={dismissManagerAlert} dismissAll={()=>dismissManagerAlerts(managerAlerts)} busy={managerAlertBusy} error={managerAlertError || (dashboardConnection==='lost' ? 'Connection lost. Warnings use the last synced records.' : '')} /></div> : <div data-popover-scroll="true" className="max-h-80 overflow-y-auto">
-                                                {shiftNoteNotificationItems.length === 0 ? (
+                                                {taskNotifications.map(event => (
+                                                    <button key={'task:'+event.id} type="button" onClick={() => { openTaskAssignment(event.taskId); markTaskAlertsRead([event.id]); }} className="w-full border-b border-slate-800 px-4 py-3 text-left hover:bg-slate-900/80 transition-colors cursor-pointer">
+                                                        <span className="block text-[10px] font-bold text-rose-300">{event.type === 'assigned' ? 'New assignment' : event.type === 'update-request' ? 'Update requested' : 'Task update'}</span>
+                                                        <span className="block text-sm font-bold text-slate-100 break-words">{event.title}</span>
+                                                        <span className="block text-xs text-slate-400 break-words">{event.author}{event.text ? ' · '+event.text : ''}</span>
+                                                    </button>
+                                                ))}
+                                                {activityNotificationCount === 0 ? (
                                                     <div className="px-4 py-8 text-center text-xs font-bold text-slate-500">
                                                         <div>No new notifications.</div>
                                                     </div>
@@ -26493,7 +26544,7 @@ function LeadershipAccessPage(){
                     {profilePhotoOpen&&user&&<ProfilePhotoEditor key={user.uid} user={user} name={accessProfile?.name||getSavedDisplayName(user)} photos={profilePhotos} titles={profileTitles} mode={dashboardTheme} onThemeChange={setDashboardTheme} onView={viewUserProfile} onClose={()=>setProfilePhotoOpen(false)} onSaved={savePersonalProfile}/>}
 
                     {}
-                    {isTeamTasksOpen && (canManageRecords || teamTasks.some(task => task.id === selectedTaskId && isTaskAssignedTo(task, user?.uid))) && <TeamTasksWindow dialogRef={taskDialogRef} close={() => setIsTeamTasksOpen(false)} owner={canManageRecords} uid={user?.uid}
+                    {isTeamTasksOpen && (canManageRecords || teamTasks.some(task => task.id === selectedTaskId && isTaskAssignedTo(task, user?.uid))) && <TeamTasksWindow dialogRef={taskDialogRef} close={() => setIsTeamTasksOpen(false)} owner={canManageTeamTasks} browseAssigned={canManageRecords} uid={user?.uid}
                         loaded={teamTasksLoaded} busy={taskBusy} error={teamTaskError} message={teamTaskMessage} tasks={teamTasks} assignees={locationTaskAssignees}
                         notifications={taskNotifications} readAlert={markTaskAlertsRead} filter={taskFilter} setFilter={setTaskFilter} person={taskAssigneeFilter} setPerson={setTaskAssigneeFilter}
                         selectedId={selectedTaskId} selectTask={setSelectedTaskId} draft={taskDraft} setDraft={setTaskDraft} startDraft={startTaskDraft} commit={commitTeamTaskAction}
@@ -26648,7 +26699,7 @@ function LeadershipAccessPage(){
 
                     {isParkingModalOpen && (
                         <div className={`dashboard-modal fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm transition-all ${isParkingFullscreen ? 'p-0' : 'p-4'}`}>
-                            <div className={`bg-slate-900 border border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 ${isParkingFullscreen ? 'w-full h-full rounded-none' : 'rounded-2xl w-full max-w-4xl max-h-[90vh]'}`}>
+                            <div role="dialog" aria-modal="true" aria-label="Parking Assignments" className={`bg-slate-900 border border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 ${isParkingFullscreen ? 'w-full h-full rounded-none' : 'rounded-2xl w-full max-w-4xl max-h-[90vh]'}`}>
                                 <div className="dashboard-mobile-toolbar px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
                                     <div className="flex items-center gap-3">
                                         <Truck className="w-7 h-7 text-slate-100" />
@@ -26718,7 +26769,7 @@ function LeadershipAccessPage(){
                                             </div>
                                             <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{parkingDraft.length} Spots</div>
                                         </div>
-                                        <div className="dashboard-parking-table bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                                        <div data-editing={isParkingEditing} className="dashboard-parking-table bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
                                         <div className="grid grid-cols-[120px_1fr_120px] gap-0 bg-slate-900/80 border-b border-slate-700">
                                             <div className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Spot</div>
                                             <div className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Assigned To</div>
@@ -26772,7 +26823,7 @@ function LeadershipAccessPage(){
                     {}
                     {preloadEnabled && isPreloadModalOpen && (
                         <div className={`dashboard-modal fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm transition-all ${isPreloadFullscreen ? 'p-0' : 'p-4'}`}>
-                            <div data-dashboard-schedule="preload" className={`bg-slate-900 border border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 ${isPreloadFullscreen ? 'w-full h-full rounded-none' : 'rounded-2xl w-full max-w-5xl max-h-[90vh]'}`}>
+                            <div data-dashboard-schedule="preload" role="dialog" aria-modal="true" aria-label="Driver Preload Schedule" className={`bg-slate-900 border border-slate-700 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 ${isPreloadFullscreen ? 'w-full h-full rounded-none' : 'rounded-2xl w-full max-w-5xl max-h-[90vh]'}`}>
                                 <div className="dashboard-mobile-toolbar px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
                                         <div className="flex items-center gap-2">
                                         <Truck className="w-7 h-7 text-slate-100" />
@@ -26788,7 +26839,7 @@ function LeadershipAccessPage(){
                                         <button onClick={() => setIsPreloadFullscreen(!isPreloadFullscreen)} className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer" title={isPreloadFullscreen ?"Restore Size" :"Maximize"}>
                                             {isPreloadFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                                         </button>
-                                        <button onClick={() => setIsPreloadModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer p-2"><X className="w-5 h-5" /></button>
+                                        <button aria-label="Close Driver Preload Schedule" onClick={() => setIsPreloadModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer p-2"><X className="w-5 h-5" /></button>
                                     </div>
                                 </div>
                                 
